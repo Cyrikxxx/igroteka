@@ -2,7 +2,7 @@
 
 // Вход в комнату по коду. См. DESIGN.md §5.4.
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/ui/Header";
 import Input from "@/components/ui/Input";
@@ -14,7 +14,28 @@ import {
 } from "@/lib/room-session";
 import type { JoinRoomResponse } from "@/types";
 
+// `useSearchParams` требует <Suspense>-обёртки, иначе Next.js не даст
+// статически собрать страницу. См. https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
 export default function JoinPage() {
+  return (
+    <Suspense fallback={<JoinFallback />}>
+      <JoinPageInner />
+    </Suspense>
+  );
+}
+
+function JoinFallback() {
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <main className="flex-1 flex items-center justify-center">
+        <p style={{ color: "var(--fg-2)" }}>Загрузка…</p>
+      </main>
+    </div>
+  );
+}
+
+function JoinPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [code, setCode] = useState("");
