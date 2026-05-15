@@ -1,0 +1,242 @@
+// Alias Online v2 — Prisma schema
+// Источник истины: project-context/PROMPT.md §2.2.1
+// Postgres хранит долговременное состояние; Redis (онлайн) — горячее.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../packages/shared/src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────── Словарь ───────────
+
+model Category {
+  id        Int            @id @default(autoincrement())
+  name      String         @unique
+  slug      String         @unique
+  emoji     String?
+  isPublic  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  words     WordCategory[]
+  games     GameCategory[]
+  rooms     RoomCategory[]
+
+  @@index([slug])
+}
+
+model Word {
+  id         Int            @id @default(autoincrement())
+  text       String         @unique
+  difficulty Int            @default(1)
+  createdAt  DateTime       @default(now())
+  categories WordCategory[]
+  roundWords RoundWord[]
+
+  @@index([text])
+}
+
+model WordCategory {
+  wordId     Int
+  categoryId Int
+  word       Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([wordId, categoryId])
+  @@index([categoryId])
+}
+
+// ─────────── Идентичность ───────────
+
+model User {
+  id          String   @id @default(cuid())
+  displayName String
+  avatarSeed  String?
+  createdAt   DateTime @default(now())
+
+  hostedRooms  Room[]        @relation("RoomHost")
+  participants Participant[]
+  players      Player[]
+}
+
+// ─────────── Комнаты (ОНЛАЙН) ───────────
+
+model Room {
+  id     String     @id @default(cuid())
+  code   String     @unique
+  status RoomStatus @default(LOBBY)
+  hostId String
+  host   User       @relation("RoomHost", fields: [hostId], references: [id])
+
+  roundTime   Int     @default(60)
+  winScore    Int     @default(50)
+  penaltySkip Boolean @default(false)
+
+  isPublic Boolean @default(false)
+  title    String?
+
+  createdAt DateTime  @default(now())
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  game         Game?
+  participants Participant[]
+  categories   RoomCategory[]
+
+  @@index([code])
+  @@index([status])
+}
+
+enum RoomStatus {
+  LOBBY
+  IN_GAME
+  FINISHED
+}
+
+model RoomCategory {
+  roomId     String
+  categoryId Int
+  room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, categoryId])
+  @@index([roomId])
+}
+
+model Participant {
+  id        String          @id @default(cuid())
+  roomId    String
+  userId    String
+  role      ParticipantRole @default(PLAYER)
+  teamId    Int?
+  joinOrder Int
+  joinedAt  DateTime        @default(now())
+  leftAt    DateTime?
+
+  room Room  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team? @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@unique([roomId, userId])
+  @@index([roomId])
+}
+
+enum ParticipantRole {
+  PLAYER
+  SPECTATOR
+}
+
+// ─────────── Игры ───────────
+
+model Game {
+  id       String     @id @default(cuid())
+  mode     GameMode
+  status   GameStatus @default(IN_PROGRESS)
+  ownerKey String
+
+  roomId String? @unique
+  room   Room?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  roundTime          Int     @default(60)
+  winScore           Int     @default(50)
+  penaltySkip        Boolean @default(false)
+  currentTeamIndex   Int     @default(0)
+  currentRoundNumber Int     @default(1)
+  usedWordIds        Int[]   @default([])
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  finishedAt DateTime?
+
+  teams          Team[]
+  rounds         Round[]
+  gameCategories GameCategory[]
+
+  @@index([ownerKey])
+  @@index([status])
+}
+
+enum GameMode {
+  LOCAL
+  ONLINE
+}
+
+enum GameStatus {
+  IN_PROGRESS
+  FINISHED
+}
+
+model GameCategory {
+  gameId     String
+  categoryId Int
+  game       Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([gameId, categoryId])
+  @@index([gameId])
+}
+
+model Team {
+  id                 Int    @id @default(autoincrement())
+  gameId             String
+  name               String
+  color              String
+  score              Int    @default(0)
+  order              Int
+  currentPlayerIndex Int    @default(0)
+
+  game         Game          @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  players      Player[]
+  rounds       Round[]
+  participants Participant[]
+
+  @@index([gameId])
+}
+
+model Player {
+  id     Int     @id @default(autoincrement())
+  teamId Int
+  userId String?
+  name   String
+  order  Int
+
+  team Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([teamId])
+}
+
+model Round {
+  id          Int       @id @default(autoincrement())
+  gameId      String
+  teamId      Int
+  roundNumber Int
+  playerName  String
+  scoreEarned Int       @default(0)
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+
+  game  Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  team  Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  words RoundWord[]
+
+  @@index([gameId])
+  @@index([teamId])
+}
+
+model RoundWord {
+  id      Int     @id @default(autoincrement())
+  roundId Int
+  wordId  Int
+  guessed Boolean
+  order   Int     @default(0)
+
+  round Round @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  word  Word  @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@index([roundId])
+  @@index([wordId])
+}

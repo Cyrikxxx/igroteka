@@ -1,0 +1,31 @@
+{
+  "name": "alias-online",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently --raw -n web,ws -c green,cyan \"npm:dev:web\" \"npm:dev:ws\"",
+    "dev:web": "cd apps/web && next dev",
+    "dev:ws": "cd apps/ws && tsx watch src/index.ts",
+    "dev:web-only": "npm run dev --workspace @alias/web",
+    "build": "prisma generate && prisma migrate deploy && npm run build --workspace @alias/web",
+    "start": "npm run start --workspace @alias/web",
+    "lint": "npm run lint --workspace @alias/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio",
+    "db:generate": "prisma generate"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "prisma": "^6.19.3",
+    "tsx": "^4.19.2"
+  }
+}

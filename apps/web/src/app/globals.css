@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+/* ─────────── Design tokens (Alias Online v2) ─────────── */
+/* Источник: project-context/DESIGN.md §2 */
+
+:root {
+  /* Surfaces — dark default */
+  --bg: #0a0d10;
+  --bg-1: #0e1316;
+  --bg-2: #131a1e;
+  --bg-3: #1a2227;
+  --bg-4: #232c32;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.14);
+
+  /* Text */
+  --fg: #f1f3f4;
+  --fg-1: #c9cfd2;
+  --fg-2: #8a9499;
+  --fg-3: #5b676d;
+  --fg-4: #3a444a;
+
+  /* Accent (mint) */
+  --accent: oklch(0.78 0.16 165);
+  --accent-soft: oklch(0.78 0.16 165 / 0.18);
+  --accent-line: oklch(0.78 0.16 165 / 0.45);
+  --accent-fg: #062017;
+
+  /* Team palette (одинаковая lightness/chroma, варьируется hue) */
+  --team-1: oklch(0.78 0.16 165); /* mint */
+  --team-2: oklch(0.78 0.16 50);  /* amber */
+  --team-3: oklch(0.78 0.16 280); /* violet */
+  --team-4: oklch(0.78 0.16 230); /* sky */
+  --team-5: oklch(0.78 0.16 10);  /* rose */
+  --team-6: oklch(0.78 0.16 110); /* lime */
+
+  /* Status */
+  --success: oklch(0.78 0.16 165);
+  --warn: oklch(0.78 0.16 50);
+  --danger: oklch(0.66 0.20 25);
+
+  /* Radii */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 26px;
+  --card-r: var(--r-lg);
+
+  /* Typography */
+  --font-sans: "Manrope", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Shadows */
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 6px 20px rgba(0, 0, 0, 0.35);
+  --shadow-pop: 0 18px 40px rgba(0, 0, 0, 0.55);
+  --glow: 0 0 0 1px var(--accent-line), 0 0 24px oklch(0.78 0.16 165 / 0.25);
+
+  /* Density (default cozy) */
+  --density-gap: 16px;
+  --density-pad: 20px;
+}
+
+[data-theme="light"] {
+  --bg: #f6f4ee;
+  --bg-1: #ffffff;
+  --bg-2: #f0ede4;
+  --bg-3: #e7e3d6;
+  --bg-4: #d8d2c2;
+  --line: rgba(0, 0, 0, 0.07);
+  --line-strong: rgba(0, 0, 0, 0.14);
+  --fg: #0e1316;
+  --fg-1: #2b3438;
+  --fg-2: #5b676d;
+  --fg-3: #7e8a90;
+  --fg-4: #b8bfc3;
+}
+
+[data-density="compact"] { --density-gap: 12px; --density-pad: 14px; --card-r: var(--r-md); }
+[data-density="cozy"]    { --density-gap: 16px; --density-pad: 20px; --card-r: var(--r-lg); }
+[data-density="roomy"]   { --density-gap: 20px; --density-pad: 28px; --card-r: var(--r-xl); }
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-1: var(--bg-1);
+  --color-bg-2: var(--bg-2);
+  --color-bg-3: var(--bg-3);
+  --color-bg-4: var(--bg-4);
+  --color-fg: var(--fg);
+  --color-fg-1: var(--fg-1);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+}
+
+/* ─────────── Type styles ─────────── */
+
+.h-display {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+.h-mega {
+  font-size: 80px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+.h-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+.h-sub {
+  font-size: 14px;
+  color: var(--fg-2);
+}
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+/* ─────────── Animations ─────────── */
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.45; transform: scale(0.85); }
+}
+.pulse { animation: pulse-dot 1.6s ease-in-out infinite; }
