@@ -1,7 +1,7 @@
 // Singleton Prisma client для WS-сервера. Использует тот же сгенерированный
 // клиент, что и apps/web (`packages/shared/src/generated/prisma/`).
 
-import { PrismaClient } from "@alias/shared/generated/prisma";
+import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 

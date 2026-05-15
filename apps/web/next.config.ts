@@ -38,16 +38,9 @@ const nextConfig: NextConfig = {
   // транспилировать их при импорте.
   transpilePackages: ["@alias/shared"],
   // Монорепо: говорим трассировщику зависимостей, что корень проекта —
-  // на 2 уровня выше apps/web (там лежат packages/shared + prisma).
-  // Без этого Vercel не упаковывает Prisma query engine .so-файлы.
+  // на 2 уровня выше apps/web. Без этого Vercel может пропустить
+  // workspace-зависимости при бандлинге.
   outputFileTracingRoot: resolve(__dirname, "../.."),
-  // Принудительно включаем в бандл сгенерированный Prisma-клиент целиком —
-  // там лежат query-engine .node-файлы под все binaryTargets.
-  outputFileTracingIncludes: {
-    "/**/*": [
-      "../../packages/shared/src/generated/prisma/**/*",
-    ],
-  },
   // Разрешаем LAN-устройствам (телефон с того же Wi-Fi) подключаться к
   // dev-серверу. Next.js 16 по умолчанию блокирует cross-origin доступ
   // к /_next/* ресурсам, из-за чего JS-бандлы не грузятся на телефоне.

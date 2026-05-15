@@ -11,8 +11,6 @@
     "./domain": "./src/domain.ts",
     "./token": "./src/token.ts",
     "./redis-keys": "./src/redis-keys.ts",
-    "./snapshot-builders": "./src/snapshot-builders.ts",
-    "./generated/prisma": "./src/generated/prisma/client.ts",
-    "./generated/prisma/*": "./src/generated/prisma/*"
+    "./snapshot-builders": "./src/snapshot-builders.ts"
   }
 }

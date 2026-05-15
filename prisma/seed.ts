@@ -5,7 +5,7 @@
 // Импорт идёт из сгенерированного клиента (Prisma 6, новый генератор):
 //   prisma/schema.prisma → generator client { output = "../src/generated/prisma" }
 
-import { PrismaClient } from "../packages/shared/src/generated/prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
