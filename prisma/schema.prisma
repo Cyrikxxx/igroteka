@@ -3,8 +3,12 @@
 // Postgres хранит долговременное состояние; Redis (онлайн) — горячее.
 
 generator client {
-  provider = "prisma-client"
-  output   = "../packages/shared/src/generated/prisma"
+  provider      = "prisma-client"
+  output        = "../packages/shared/src/generated/prisma"
+  // `native` — генерация под локальную ОС (Windows/Mac для dev).
+  // `rhel-openssl-3.0.x` — Vercel serverless runtime (Linux).
+  // `debian-openssl-3.0.x` — Railway (Debian/Ubuntu в контейнере).
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {
