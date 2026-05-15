@@ -41,11 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-packages/shared/src/generated/prisma/
-
 # IDE
 .claude
 .vscode
 .idea/
-
-project-context/
