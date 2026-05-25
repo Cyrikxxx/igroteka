@@ -3,7 +3,7 @@
 // Игровой экран онлайн-режима. Три роли: explainer / guesser / spectator.
 // См. DESIGN.md §5.6, PROMPT.md §2.4.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { RoomSnapshotTeam } from "@alias/shared/domain";
 import { loadRoomCreds } from "@/lib/room-session";
@@ -72,14 +72,19 @@ export default function PlayPage() {
   const [pauseModalOpen, setPauseModalOpen] = useState(false);
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
 
-  // Если сервер сам поставил на паузу (а не мы) — синхронизируем модалку.
+  // Закрываем модалку только когда сервер реально снял паузу (true → false).
+  // Без этого эффект срабатывал бы сразу после нажатия «Пауза» —
+  // флаг открытия уже стоит, а tick.paused ещё false (ответ от сервера в пути),
+  // и условие выше закрывало модалку, которая только что открылась.
+  const prevPausedRef = useRef(false);
   useEffect(() => {
-    if (tick?.paused && !pauseModalOpen && snapshot?.phase === "ROUND_ACTIVE") {
-      // Не открываем автоматически, чтобы у других игроков не появлялась модалка.
-    } else if (!tick?.paused && pauseModalOpen) {
+    const prev = prevPausedRef.current;
+    const curr = !!tick?.paused;
+    prevPausedRef.current = curr;
+    if (prev && !curr && pauseModalOpen) {
       setPauseModalOpen(false);
     }
-  }, [tick?.paused, pauseModalOpen, snapshot?.phase]);
+  }, [tick?.paused, pauseModalOpen]);
 
   if (!creds || !snapshot) {
     return (
