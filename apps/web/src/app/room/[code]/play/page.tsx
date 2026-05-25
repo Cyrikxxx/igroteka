@@ -67,6 +67,20 @@ export default function PlayPage() {
     }
   }, [snapshot?.phase, snapshot?.gameId, creds, router]);
 
+  // ВНИМАНИЕ: все хуки должны быть до любых ранних `return`,
+  // иначе при смене ветки рендера их количество меняется и React падает (ошибка #310).
+  const [pauseModalOpen, setPauseModalOpen] = useState(false);
+  const [endConfirmOpen, setEndConfirmOpen] = useState(false);
+
+  // Если сервер сам поставил на паузу (а не мы) — синхронизируем модалку.
+  useEffect(() => {
+    if (tick?.paused && !pauseModalOpen && snapshot?.phase === "ROUND_ACTIVE") {
+      // Не открываем автоматически, чтобы у других игроков не появлялась модалка.
+    } else if (!tick?.paused && pauseModalOpen) {
+      setPauseModalOpen(false);
+    }
+  }, [tick?.paused, pauseModalOpen, snapshot?.phase]);
+
   if (!creds || !snapshot) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -101,9 +115,6 @@ export default function PlayPage() {
     socket?.emit("round:guess", { wordId: currentWord.wordId, guessed }, () => {});
   };
 
-  const [pauseModalOpen, setPauseModalOpen] = useState(false);
-  const [endConfirmOpen, setEndConfirmOpen] = useState(false);
-
   const onPause = () => {
     socket?.emit("round:pause", {}, () => {});
     setPauseModalOpen(true);
@@ -122,16 +133,6 @@ export default function PlayPage() {
     socket?.emit("round:review_toggle", { wordId }, () => {});
   const onReviewConfirm = () =>
     socket?.emit("round:review_confirm", {}, () => {});
-
-  // Если сервер сам поставил на паузу (а не мы) — синхронизируем модалку.
-  useEffect(() => {
-    if (tick?.paused && !pauseModalOpen && snapshot?.phase === "ROUND_ACTIVE") {
-      // Не открываем автоматически, чтобы у других игроков не появлялась модалка.
-      // Кнопка «Продолжить» доступна только тому, кто может (host/explainer).
-    } else if (!tick?.paused && pauseModalOpen) {
-      setPauseModalOpen(false);
-    }
-  }, [tick?.paused, pauseModalOpen, snapshot?.phase]);
 
   const canControlRound = role === "explainer" || creds.userId === snapshot.hostId;
   const showReconnectOverlay =
