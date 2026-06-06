@@ -1,0 +1,46 @@
+# Локальные базы для разработки (НЕ для прода).
+# Поднимают Postgres и Redis в контейнерах прямо на твоём ПК.
+# Прод (Vercel/Railway/Neon/Upstash) это никак не трогает.
+#
+#   docker compose up -d     # поднять базы в фоне
+#   docker compose down      # остановить (данные сохранятся в volume)
+#   docker compose down -v   # остановить и стереть данные начисто
+#
+# Креды нарочно простые — базы доступны только с твоего компьютера.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: alias-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: alias
+      POSTGRES_PASSWORD: alias
+      POSTGRES_DB: alias
+    ports:
+      - "5432:5432"
+    volumes:
+      - alias-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alias -d alias"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: alias-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - alias-redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  alias-pgdata:
+  alias-redisdata:

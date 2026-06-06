@@ -1,17 +1,14 @@
 "use client";
 
-// Создание онлайн-комнаты хостом. Объединяет в одну страницу те же
-// поля, что и /local/settings (время, очки, штраф, категории) +
-// поля онлайна (ник хоста, название комнаты).
+// Создание онлайн-комнаты хостом. Дизайн — CreateRoomScreen из редизайна.
+// Логика реальная: /api/categories → /api/rooms → saveRoomCreds → лобби.
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Header from "@/components/ui/Header";
-import Card from "@/components/ui/Card";
+import { ArrowLeft, Check, Clock, Minus, Sparkles, Target, Wifi } from "lucide-react";
+import AppShell from "@/components/ui/AppShell";
 import Chip from "@/components/ui/Chip";
-import Input from "@/components/ui/Input";
 import Toggle from "@/components/ui/Toggle";
-import Button from "@/components/ui/Button";
 import {
   ROUND_TIME_OPTIONS,
   WIN_SCORE_OPTIONS,
@@ -20,11 +17,7 @@ import {
   PENALTY_SKIP_DEFAULT,
 } from "@/constants/game";
 import type { CategoryFromAPI, CreateRoomResponse } from "@/types";
-import {
-  loadDisplayName,
-  saveDisplayName,
-  saveRoomCreds,
-} from "@/lib/room-session";
+import { loadDisplayName, saveDisplayName, saveRoomCreds } from "@/lib/room-session";
 
 export default function RoomNewPage() {
   const router = useRouter();
@@ -50,11 +43,12 @@ export default function RoomNewPage() {
     .filter((c) => categoryIds.includes(c.id))
     .reduce((sum, c) => sum + (c._count?.words ?? 0), 0);
 
-  const toggleCategory = (id: number) => {
-    setCategoryIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
-  };
+  const toggleCategory = (id: number) =>
+    setCategoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const roomTitle =
+    title.trim() || (hostName.trim() ? `Комната ${hostName.trim()}` : "Комната хоста");
+  const ready = hostName.trim().length > 0 && categoryIds.length > 0;
 
   const onSubmit = async () => {
     setError(null);
@@ -96,181 +90,156 @@ export default function RoomNewPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 mx-auto w-full max-w-3xl px-4 md:px-8 py-8 md:py-12">
-        <div className="eyebrow mb-3">CREATE A ROOM</div>
-        <h1 className="h-display mb-8">Создать комнату</h1>
+    <AppShell className="screen-anim">
+      <button type="button" className="back-link" onClick={() => router.push("/")}>
+        <ArrowLeft /> На главную
+      </button>
 
-        <div className="flex flex-col gap-4">
-          <Card>
-            <h2 className="text-base font-bold mb-3">О хосте</h2>
-            <div className="flex flex-col gap-3">
-              <div>
-                <label htmlFor="hostName" className="eyebrow block mb-2">
-                  ВАШ НИК
-                </label>
-                <Input
-                  id="hostName"
-                  value={hostName}
-                  onChange={(e) => setHostName(e.target.value.slice(0, 50))}
-                  placeholder="Например, Ваня"
-                />
+      <div className="setup-head">
+        <div>
+          <span className="eyebrow">онлайн · новая комната</span>
+          <h1 className="h-display" style={{ marginTop: 10 }}>
+            Создать комнату
+          </h1>
+          <p className="h-sub" style={{ marginTop: 8 }}>
+            Задай имя и правила. Всё это можно поменять потом прямо в лобби.
+          </p>
+        </div>
+        <div className="setup-counter">
+          <span className="sc-v mono">{categoryIds.length ? totalWordsInBank : 0}</span>
+          <span className="sc-l">слов · {categoryIds.length} категорий</span>
+        </div>
+      </div>
+
+      <div className="settings-grid">
+        <div className="stack">
+          {/* Идентичность комнаты */}
+          <div className="card">
+            <span className="eyebrow">комната</span>
+            <label className="field-label" style={{ marginTop: 14 }}>
+              Имя хоста
+            </label>
+            <input
+              className="input"
+              placeholder="Например, Макс"
+              value={hostName}
+              onChange={(e) => setHostName(e.target.value.slice(0, 50))}
+              maxLength={50}
+            />
+            <label className="field-label" style={{ marginTop: 18 }}>
+              Имя комнаты <span className="label-opt">необязательно</span>
+            </label>
+            <input
+              className="input"
+              placeholder={hostName.trim() ? `Комната ${hostName.trim()}` : "Комната хоста"}
+              value={title}
+              onChange={(e) => setTitle(e.target.value.slice(0, 80))}
+              maxLength={80}
+            />
+            <p className="field-note">
+              <Sparkles size={13} /> Если пусто — назовём «{roomTitle}»
+            </p>
+          </div>
+
+          {/* Правила */}
+          <div className="card">
+            <div className="set-row">
+              <div className="set-label">
+                <Clock /> Длительность раунда
               </div>
-              <div>
-                <label htmlFor="title" className="eyebrow block mb-2">
-                  НАЗВАНИЕ КОМНАТЫ · опционально
-                </label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value.slice(0, 80))}
-                  placeholder="Например, Пятничный созвон"
-                />
+              <div className="chip-row">
+                {ROUND_TIME_OPTIONS.map((v) => (
+                  <Chip key={v} active={roundTime === v} onClick={() => setRoundTime(v)}>
+                    {v} сек
+                  </Chip>
+                ))}
               </div>
             </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold">Время раунда</h2>
-              <span
-                className="font-mono text-xs px-2 py-0.5 rounded"
-                style={{ background: "var(--bg-3)", color: "var(--fg-1)" }}
-              >
-                {roundTime} сек
-              </span>
+            <div className="dotted" style={{ margin: "20px 0" }} />
+            <div className="set-row">
+              <div className="set-label">
+                <Target /> Цель по очкам
+              </div>
+              <div className="chip-row">
+                {WIN_SCORE_OPTIONS.map((v) => (
+                  <Chip key={v} active={winScore === v} onClick={() => setWinScore(v)}>
+                    {v}
+                  </Chip>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {ROUND_TIME_OPTIONS.map((v) => (
-                <Chip key={v} active={roundTime === v} onClick={() => setRoundTime(v)}>
-                  {v}
-                </Chip>
-              ))}
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold">Очки для победы</h2>
-              <span
-                className="font-mono text-xs px-2 py-0.5 rounded"
-                style={{ background: "var(--bg-3)", color: "var(--fg-1)" }}
-              >
-                {winScore} очков
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {WIN_SCORE_OPTIONS.map((v) => (
-                <Chip key={v} active={winScore === v} onClick={() => setWinScore(v)}>
-                  {v}
-                </Chip>
-              ))}
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-bold">Штраф за пропуск</h2>
-                <p className="text-sm mt-1" style={{ color: "var(--fg-2)" }}>
-                  Минус 1 очко за каждое пропущенное слово
-                </p>
+            <div className="dotted" style={{ margin: "20px 0" }} />
+            <div className="set-row">
+              <div className="set-label">
+                <Minus /> Штраф за пропуск
+                <span className="set-hint">снимать −1 очко за пропущенное слово</span>
               </div>
               <Toggle checked={penaltySkip} onChange={setPenaltySkip} />
             </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between mb-3 gap-3">
-              <div>
-                <h2 className="text-base font-bold">Категории</h2>
-                <p className="text-sm mt-1" style={{ color: "var(--fg-2)" }}>
-                  Выбрано {categoryIds.length} · {totalWordsInBank} слов в банке
-                </p>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setCategoryIds(categories.map((c) => c.id))}
-                  className="text-xs font-semibold underline"
-                  style={{ color: "var(--accent)" }}
-                >
-                  Все
-                </button>
-                <span style={{ color: "var(--fg-3)" }}>·</span>
-                <button
-                  type="button"
-                  onClick={() => setCategoryIds([])}
-                  className="text-xs font-semibold underline"
-                  style={{ color: "var(--fg-2)" }}
-                >
-                  Очистить
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {categories.map((cat) => {
-                const active = categoryIds.includes(cat.id);
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => toggleCategory(cat.id)}
-                    className="text-left rounded-md p-3 transition-colors min-h-[64px] relative"
-                    style={{
-                      background: active
-                        ? "color-mix(in oklch, var(--accent) 10%, var(--bg-2))"
-                        : "var(--bg-2)",
-                      border: active
-                        ? "1px solid var(--accent-line)"
-                        : "1px solid var(--line)",
-                    }}
-                  >
-                    <div className="absolute top-2 right-2 text-base opacity-70">
-                      {cat.emoji}
-                    </div>
-                    <div
-                      className="text-[13px] font-bold pr-6"
-                      style={{ color: active ? "var(--accent)" : "var(--fg-1)" }}
-                    >
-                      {cat.name}
-                    </div>
-                    <div
-                      className="font-mono text-[11px] mt-1"
-                      style={{ color: "var(--fg-2)" }}
-                    >
-                      {cat._count?.words ?? 0} слов
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </Card>
-        </div>
-
-        {error && (
-          <div
-            className="mt-6 p-3 rounded-md text-sm"
-            style={{
-              background: "color-mix(in oklch, var(--danger) 12%, var(--bg-2))",
-              color: "var(--danger)",
-              border: "1px solid color-mix(in oklch, var(--danger) 30%, transparent)",
-            }}
-          >
-            {error}
           </div>
-        )}
-
-        <div className="mt-8 flex flex-col-reverse md:flex-row gap-3 md:justify-between">
-          <Button variant="ghost" size="lg" onClick={() => router.push("/")}>
-            ← Назад
-          </Button>
-          <Button size="lg" disabled={submitting} onClick={onSubmit}>
-            {submitting ? "Создаём…" : "Создать комнату →"}
-          </Button>
         </div>
-      </main>
-    </div>
+
+        {/* Категории */}
+        <div className="card">
+          <div className="row-between" style={{ marginBottom: 16 }}>
+            <h2 className="h-title">Категории слов</h2>
+            <span className="pill pill-mono">
+              {categoryIds.length} / {categories.length || 10}
+            </span>
+          </div>
+          <div className="cats-grid">
+            {categories.map((cat) => {
+              const active = categoryIds.includes(cat.id);
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  className={"cat-card" + (active ? " on" : "")}
+                  onClick={() => toggleCategory(cat.id)}
+                >
+                  <span className="cat-check">
+                    <Check size={14} />
+                  </span>
+                  <span className="cat-emoji">{cat.emoji}</span>
+                  <span className="cat-name">{cat.name}</span>
+                  <span className="cat-count">{cat._count?.words ?? 0} слов</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div
+          className="card"
+          style={{
+            marginTop: 16,
+            background: "color-mix(in oklch, var(--danger) 12%, var(--bg-2))",
+            border: "1px solid color-mix(in oklch, var(--danger) 30%, transparent)",
+            color: "var(--danger)",
+            boxShadow: "none",
+            padding: 14,
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      <div className="setup-foot">
+        <span className="muted">
+          «{roomTitle}» · {roundTime}с · до {winScore} · {categoryIds.length} категорий
+        </span>
+        <button
+          type="button"
+          className="btn btn-primary btn-lg"
+          style={{ opacity: ready ? 1 : 0.5 }}
+          disabled={submitting}
+          onClick={onSubmit}
+        >
+          <Wifi /> {submitting ? "Создаём…" : "Создать комнату"}
+        </button>
+      </div>
+    </AppShell>
   );
 }

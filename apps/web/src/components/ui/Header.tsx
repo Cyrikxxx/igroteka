@@ -1,42 +1,40 @@
-// Шапка приложения. Тема переключается через ThemeToggle.
+// Шапка приложения (новый дизайн). Самодостаточна: включает .app-header-wrap
+// + .shell, поэтому корректно рендерится и внутри AppShell, и отдельно.
 
 import Link from "next/link";
+import { History } from "lucide-react";
+import Brand from "./Brand";
 import ThemeToggle from "./ThemeToggle";
 
 interface HeaderProps {
-  /** Контент справа от лого и переключателя темы. */
+  /** Контент справа от лого, слева от переключателя темы. */
   right?: React.ReactNode;
+  /** Скрыть кнопку «История» (напр. на самом экране истории). */
+  hideHistory?: boolean;
 }
 
-export function Header({ right }: HeaderProps) {
+export function Header({ right, hideHistory }: HeaderProps) {
   return (
-    <header
-      className="flex items-center justify-between px-4 md:px-8 h-14"
-      style={{ background: "var(--bg-1)", borderBottom: "1px solid var(--line)" }}
-    >
-      <Link href="/" className="flex items-center gap-3">
-        <div
-          className="w-7 h-7 rounded-md flex items-center justify-center"
-          style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-        >
-          <span className="text-sm font-extrabold">A</span>
-        </div>
-        <div className="leading-tight">
-          <div className="font-extrabold tracking-tight flex items-center gap-2">
-            Alias
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full"
-              style={{ background: "var(--accent)" }}
-            />
-            <span style={{ color: "var(--fg-2)" }} className="font-medium">
-              online
-            </span>
+    <header className="app-header-wrap">
+      <div className="shell">
+        <div className="app-header">
+          <Brand />
+          <div className="header-actions">
+            {right}
+            {!hideHistory && (
+              <Link
+                href="/history"
+                className="btn btn-secondary btn-sm header-hist"
+                aria-label="История игр"
+                title="История игр"
+              >
+                <History size={16} />
+                <span className="hist-label">История</span>
+              </Link>
+            )}
+            <ThemeToggle />
           </div>
         </div>
-      </Link>
-      <div className="flex items-center gap-2">
-        {right}
-        <ThemeToggle />
       </div>
     </header>
   );

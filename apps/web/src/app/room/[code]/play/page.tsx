@@ -1,19 +1,18 @@
 "use client";
 
 // Игровой экран онлайн-режима. Три роли: explainer / guesser / spectator.
-// См. DESIGN.md §5.6, PROMPT.md §2.4.
+// Дизайн — GameScreen / RoundSummary из редизайна. Вся realtime-логика
+// (useRoom, фазы, socket.emit, приватность роли, модалки) сохранена.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import type { RoomSnapshotTeam } from "@alias/shared/domain";
+import { Check, Clock, EyeOff, LogOut, Pause, SkipForward, Users, X } from "lucide-react";
 import { loadRoomCreds } from "@/lib/room-session";
 import { useRoom } from "@/hooks/useRoom";
-import Header from "@/components/ui/Header";
-import Pill from "@/components/ui/Pill";
-import Card from "@/components/ui/Card";
-import Button from "@/components/ui/Button";
+import AppShell from "@/components/ui/AppShell";
+import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/ui/Modal";
-import { formatTime } from "@/lib/utils";
+import TimerRing from "@/components/game/TimerRing";
 
 interface Creds {
   code: string;
@@ -22,6 +21,8 @@ interface Creds {
   userId: string;
   displayName: string;
 }
+
+type Role = "explainer" | "guesser" | "spectator";
 
 export default function PlayPage() {
   const params = useParams();
@@ -39,23 +40,11 @@ export default function PlayPage() {
   }, [rawCode, router]);
 
   const opts = useMemo(
-    () =>
-      creds
-        ? { wsUrl: creds.wsUrl, token: creds.wsToken, code: creds.code }
-        : null,
+    () => (creds ? { wsUrl: creds.wsUrl, token: creds.wsToken, code: creds.code } : null),
     [creds],
   );
-  const {
-    socket,
-    snapshot,
-    countdown,
-    tick,
-    currentWord,
-    wordCount,
-    review,
-    error,
-    status,
-  } = useRoom(opts);
+  const { socket, snapshot, countdown, tick, currentWord, wordCount, review, error, status } =
+    useRoom(opts);
 
   // Редирект назад в лобби, если игра ещё не началась
   useEffect(() => {
@@ -67,15 +56,10 @@ export default function PlayPage() {
     }
   }, [snapshot?.phase, snapshot?.gameId, creds, router]);
 
-  // ВНИМАНИЕ: все хуки должны быть до любых ранних `return`,
-  // иначе при смене ветки рендера их количество меняется и React падает (ошибка #310).
+  // ВНИМАНИЕ: все хуки должны быть до любых ранних return.
   const [pauseModalOpen, setPauseModalOpen] = useState(false);
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
 
-  // Закрываем модалку только когда сервер реально снял паузу (true → false).
-  // Без этого эффект срабатывал бы сразу после нажатия «Пауза» —
-  // флаг открытия уже стоит, а tick.paused ещё false (ответ от сервера в пути),
-  // и условие выше закрывало модалку, которая только что открылась.
   const prevPausedRef = useRef(false);
   useEffect(() => {
     const prev = prevPausedRef.current;
@@ -88,38 +72,25 @@ export default function PlayPage() {
 
   if (!creds || !snapshot) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <p style={{ color: "var(--fg-2)" }}>
-            {error ? `Ошибка: ${error}` : "Подключаемся…"}
-          </p>
-        </main>
-      </div>
+      <AppShell centered>
+        <p className="muted" style={{ textAlign: "center" }}>
+          {error ? `Ошибка: ${error}` : "Подключаемся…"}
+        </p>
+      </AppShell>
     );
   }
 
-  const myTeam = snapshot.teams.find((t) =>
-    t.players.some((p) => p.userId === creds.userId),
-  );
+  const myTeam = snapshot.teams.find((t) => t.players.some((p) => p.userId === creds.userId));
   const activeTeam = snapshot.teams.find((t) => t.id === snapshot.currentTeamId);
   const isExplainer = snapshot.currentPlayerId === creds.userId;
   const isMyTeamActive = myTeam && myTeam.id === snapshot.currentTeamId;
-  const role: "explainer" | "guesser" | "spectator" = isExplainer
-    ? "explainer"
-    : isMyTeamActive
-    ? "guesser"
-    : "spectator";
-
-  const explainerPlayer = activeTeam?.players.find(
-    (p) => p.userId === snapshot.currentPlayerId,
-  );
+  const role: Role = isExplainer ? "explainer" : isMyTeamActive ? "guesser" : "spectator";
+  const explainerPlayer = activeTeam?.players.find((p) => p.userId === snapshot.currentPlayerId);
 
   const onGuess = (guessed: boolean) => {
     if (!currentWord) return;
     socket?.emit("round:guess", { wordId: currentWord.wordId, guessed }, () => {});
   };
-
   const onPause = () => {
     socket?.emit("round:pause", {}, () => {});
     setPauseModalOpen(true);
@@ -134,481 +105,395 @@ export default function PlayPage() {
     setEndConfirmOpen(false);
     setPauseModalOpen(false);
   };
-  const onReviewToggle = (wordId: number) =>
-    socket?.emit("round:review_toggle", { wordId }, () => {});
-  const onReviewConfirm = () =>
-    socket?.emit("round:review_confirm", {}, () => {});
+  const onReviewToggle = (wordId: number) => socket?.emit("round:review_toggle", { wordId }, () => {});
+  const onReviewConfirm = () => socket?.emit("round:review_confirm", {}, () => {});
 
   const canControlRound = role === "explainer" || creds.userId === snapshot.hostId;
-  const showReconnectOverlay =
-    status === "reconnecting" || (status === "error" && !!error);
-
-  // Баннер хосту: объясняющий пропал посреди раунда.
+  const showReconnectOverlay = status === "reconnecting" || (status === "error" && !!error);
   const explainerOffline =
-    snapshot.phase === "ROUND_ACTIVE" &&
-    explainerPlayer !== undefined &&
-    !explainerPlayer.online;
-  const showExplainerDropBanner =
-    explainerOffline && creds.userId === snapshot.hostId;
+    snapshot.phase === "ROUND_ACTIVE" && explainerPlayer !== undefined && !explainerPlayer.online;
+  const showExplainerDropBanner = explainerOffline && creds.userId === snapshot.hostId;
 
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Header
-        right={
-          <div className="flex items-center gap-2">
-            {snapshot.phase === "ROUND_ACTIVE" && (
-              <Pill tone="live">LIVE</Pill>
-            )}
-            <Pill mono>{creds.code}</Pill>
-            <Pill mono style={{ color: "var(--accent)" }}>
-              {status === "connected" ? "ONLINE" : status.toUpperCase()}
-            </Pill>
-          </div>
-        }
-      />
+  const teamColor = activeTeam?.color ?? "--team-1";
+  const teamName = activeTeam?.name ?? "—";
+  const explainerName = explainerPlayer?.displayName ?? "?";
+  const roundTime = snapshot.settings.roundTime;
+  const sec = Math.max(0, Math.ceil((tick?.msLeft ?? 0) / 1000));
+  const danger = snapshot.phase === "ROUND_ACTIVE" && sec <= 10;
+  const got = wordCount?.got ?? 0;
+  const skip = wordCount?.skip ?? 0;
 
-      <main className="flex-1 mx-auto w-full max-w-3xl px-4 md:px-8 py-6 flex flex-col">
-        {showExplainerDropBanner && (
-          <div
-            className="mb-4 p-3 rounded-md flex items-center justify-between gap-3 flex-wrap"
-            style={{
-              background: "color-mix(in oklch, var(--warn) 14%, var(--bg-2))",
-              border: "1px solid color-mix(in oklch, var(--warn) 35%, transparent)",
-              color: "var(--warn)",
-            }}
-          >
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold">
-                {explainerPlayer?.displayName ?? "Объясняющий"} отключился
-              </div>
-              <p
-                className="text-xs mt-0.5"
-                style={{ color: "var(--fg-2)" }}
-              >
-                Можно подождать его реконнекта или завершить раунд досрочно.
-              </p>
-            </div>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={onEndRequest}
-            >
-              Завершить раунд
-            </Button>
-          </div>
-        )}
+  const statusRight = <StatusPills code={creds.code} status={status} live={snapshot.phase === "ROUND_ACTIVE"} />;
 
-        {/* Header bar */}
-        <div className="flex items-center justify-between mb-6">
-          <Pill
-            style={
-              activeTeam
-                ? {
-                    background: `color-mix(in oklch, var(${activeTeam.color}) 18%, var(--bg-2))`,
-                    color: `var(${activeTeam.color})`,
-                  }
-                : undefined
-            }
-          >
-            {activeTeam?.name ?? "—"} · {activeTeam?.score ?? 0}
-          </Pill>
-          <div className="eyebrow">РАУНД {snapshot.currentRoundNumber}</div>
-          <div className="flex items-center gap-2">
-            {wordCount && (
-              <>
-                <Pill mono style={{ color: "var(--accent)" }}>
-                  +{wordCount.got}
-                </Pill>
-                <Pill mono style={{ color: "var(--danger)" }}>
-                  -{wordCount.skip}
-                </Pill>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Phase content */}
-        {snapshot.phase === "PRE_ROUND" && (
-          <PreRoundView
-            countdown={countdown}
-            activeTeam={activeTeam}
-            explainerName={explainerPlayer?.displayName ?? "?"}
-            role={role}
-          />
-        )}
-
-        {snapshot.phase === "ROUND_ACTIVE" && (
-          <ActiveRoundView
-            role={role}
-            tick={tick}
-            durationSec={snapshot.settings.roundTime}
-            currentWord={currentWord}
-            explainerName={explainerPlayer?.displayName ?? "?"}
-            teamColor={activeTeam?.color ?? "--team-1"}
-            onGuess={onGuess}
-            onPause={onPause}
-            onResume={onResume}
-            onEnd={onEndRequest}
-          />
-        )}
-
-        {snapshot.phase === "ROUND_REVIEW" && (
-          <ReviewView
-            role={role}
-            review={review}
-            penaltySkip={snapshot.settings.penaltySkip}
-            onToggle={onReviewToggle}
-            onConfirm={onReviewConfirm}
-            isExplainer={isExplainer}
-          />
-        )}
-
-        {snapshot.phase === "BETWEEN_ROUNDS" && (
-          <BetweenRoundsView
-            nextTeam={snapshot.teams.find((t) => t.id === snapshot.currentTeamId)}
-            nextExplainerName={
-              snapshot.teams
-                .find((t) => t.id === snapshot.currentTeamId)
-                ?.players.find((p) => p.userId === snapshot.currentPlayerId)
-                ?.displayName ?? "?"
-            }
-          />
-        )}
-
-        {snapshot.phase === "FINISHED" && (
-          <div className="text-center py-12">
-            <p className="h-title mb-2">Игра окончена</p>
-            <p style={{ color: "var(--fg-2)" }}>Переходим к результатам…</p>
-          </div>
-        )}
-      </main>
-
-      {/* ───────── Pause modal ───────── */}
-      <Modal
-        isOpen={pauseModalOpen && canControlRound}
-        title="Пауза"
-        onClose={onResume}
-      >
-        <p className="text-sm mb-5" style={{ color: "var(--fg-2)" }}>
+  const modals = (
+    <>
+      <Modal isOpen={pauseModalOpen && canControlRound} title="Пауза" onClose={onResume}>
+        <p className="muted" style={{ marginBottom: 18 }}>
           Раунд приостановлен. Таймер не идёт, пока модалка открыта.
         </p>
-        <div className="flex flex-col gap-2">
-          <Button block size="lg" onClick={onResume}>
+        <div className="col" style={{ gap: 8 }}>
+          <button type="button" className="btn btn-primary btn-lg btn-block" onClick={onResume}>
             Продолжить
-          </Button>
-          <Button block size="md" variant="danger" onClick={onEndRequest}>
+          </button>
+          <button type="button" className="btn btn-danger btn-block" onClick={onEndRequest}>
             Завершить раунд
-          </Button>
+          </button>
         </div>
-        {wordCount && (
-          <div
-            className="mt-5 pt-4 flex justify-center gap-4 text-xs"
-            style={{ borderTop: "1px dashed var(--line-strong)", color: "var(--fg-2)" }}
-          >
-            <span>
-              <span className="font-mono font-bold" style={{ color: "var(--accent)" }}>
-                +{wordCount.got}
-              </span>{" "}
-              угадано
-            </span>
-            {tick && (
-              <span>
-                <span className="font-mono font-bold">{formatTime(Math.ceil(tick.msLeft / 1000))}</span>{" "}
-                осталось
-              </span>
-            )}
-          </div>
-        )}
       </Modal>
 
-      {/* ───────── End round confirm ───────── */}
-      <Modal
-        isOpen={endConfirmOpen}
-        title="Завершить раунд?"
-        onClose={() => setEndConfirmOpen(false)}
-      >
-        <p className="text-sm mb-5" style={{ color: "var(--fg-2)" }}>
+      <Modal isOpen={endConfirmOpen} title="Завершить раунд?" onClose={() => setEndConfirmOpen(false)}>
+        <p className="muted" style={{ marginBottom: 18 }}>
           Раунд будет засчитан с текущим счётом. Передадим ход следующей команде.
         </p>
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            size="md"
-            className="flex-1"
+        <div className="row" style={{ gap: 8 }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ flex: 1 }}
             onClick={() => setEndConfirmOpen(false)}
           >
             Отмена
-          </Button>
-          <Button variant="danger" size="md" className="flex-1" onClick={onEndConfirm}>
+          </button>
+          <button type="button" className="btn btn-danger" style={{ flex: 1 }} onClick={onEndConfirm}>
             Да, завершить
-          </Button>
+          </button>
         </div>
       </Modal>
 
-      {/* ───────── Reconnect overlay ───────── */}
       <Modal isOpen={showReconnectOverlay} fullscreen>
-        <div className="text-center py-6">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <span
-              className="pulse inline-block w-2 h-2 rounded-full"
-              style={{ background: "var(--warn)" }}
-            />
-            <span
-              className="font-mono text-[11px] uppercase"
-              style={{ letterSpacing: "0.18em", color: "var(--warn)" }}
-            >
+        <div style={{ textAlign: "center" }}>
+          <div className="row" style={{ justifyContent: "center", gap: 8, marginBottom: 14 }}>
+            <span className="pulse dot" style={{ color: "var(--warn)" }} />
+            <span className="eyebrow" style={{ color: "var(--warn)" }}>
               Соединение потеряно
             </span>
           </div>
-          <h2 className="h-title mb-2">Переподключаемся…</h2>
-          <p className="text-sm" style={{ color: "var(--fg-2)" }}>
+          <h2 className="h-title" style={{ marginBottom: 8 }}>
+            Переподключаемся…
+          </h2>
+          <p className="muted">
             {status === "reconnecting"
               ? "Сервер не отвечает. Пытаемся подключиться заново."
               : error ?? "Что-то пошло не так."}
           </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-6"
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            style={{ marginTop: 18 }}
             onClick={() => router.push("/")}
           >
             На главную
-          </Button>
+          </button>
         </div>
       </Modal>
-    </div>
+    </>
   );
-}
 
-// ─── Pre-round countdown ─────────────────────────────────────────────────
+  // ─── PRE_ROUND / ROUND_ACTIVE — иммерсивный игровой экран ───
+  if (snapshot.phase === "PRE_ROUND" || snapshot.phase === "ROUND_ACTIVE") {
+    const active = snapshot.phase === "ROUND_ACTIVE";
+    return (
+      <>
+        <AppShell noHeader bare>
+          <div className={"game-screen" + (danger ? " danger" : "")}>
+            <div className="game-bg" />
+            <div className="shell game-shell">
+              <GameTop
+                role={role}
+                explainerName={explainerName}
+                teamName={teamName}
+                teamColor={teamColor}
+                roundNumber={snapshot.currentRoundNumber}
+                onLeave={() => router.push("/")}
+                onPause={onPause}
+              />
 
-function PreRoundView({
-  countdown,
-  activeTeam,
-  explainerName,
-  role,
-}: {
-  countdown: number | null;
-  activeTeam: RoomSnapshotTeam | undefined;
-  explainerName: string;
-  role: "explainer" | "guesser" | "spectator";
-}) {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center text-center">
-      <div className="eyebrow mb-4">
-        КОМАНДА «{activeTeam?.name ?? "—"}» · ОБЪЯСНЯЕТ {explainerName.toUpperCase()}
-      </div>
-      <div
-        className="font-mono font-extrabold tabular-nums"
-        style={{
-          fontSize: "clamp(96px, 22vw, 200px)",
-          color:
-            countdown && countdown <= 1 ? "var(--danger)" : "var(--accent)",
-          letterSpacing: "-0.04em",
-          lineHeight: 1,
-        }}
-      >
-        {countdown ?? "—"}
-      </div>
-      <p className="mt-6 text-sm" style={{ color: "var(--fg-2)" }}>
-        {role === "explainer"
-          ? "Приготовьтесь! Сейчас покажем слово."
-          : role === "guesser"
-          ? "Слушайте и угадывайте."
-          : "Смотрите."}
-      </p>
-    </div>
-  );
-}
-
-// ─── Active round ────────────────────────────────────────────────────────
-
-function ActiveRoundView({
-  role,
-  tick,
-  durationSec,
-  currentWord,
-  explainerName,
-  teamColor,
-  onGuess,
-  onPause,
-  onResume,
-  onEnd,
-}: {
-  role: "explainer" | "guesser" | "spectator";
-  tick: { msLeft: number; paused: boolean } | null;
-  durationSec: number;
-  currentWord: { wordId: number; text: string } | null;
-  explainerName: string;
-  teamColor: string;
-  onGuess: (guessed: boolean) => void;
-  onPause: () => void;
-  onResume: () => void;
-  onEnd: () => void;
-}) {
-  const sec = Math.max(0, Math.ceil((tick?.msLeft ?? 0) / 1000));
-  const ratio = Math.max(0, Math.min(1, (tick?.msLeft ?? 0) / (durationSec * 1000)));
-  const lowTime = sec <= 5;
-
-  return (
-    <div className="flex-1 flex flex-col items-center justify-between gap-6">
-      {/* Timer */}
-      <div className="text-center">
-        <div
-          className="font-mono font-extrabold tabular-nums"
-          style={{
-            fontSize: "clamp(64px, 14vw, 96px)",
-            color: lowTime ? "var(--danger)" : "var(--fg)",
-            letterSpacing: "-0.04em",
-          }}
-        >
-          {formatTime(sec)}
-        </div>
-        <div
-          className="mx-auto mt-2 h-1 rounded-full overflow-hidden"
-          style={{ width: 240, background: "var(--bg-3)" }}
-        >
-          <div
-            className="h-full transition-[width] duration-300"
-            style={{
-              width: `${ratio * 100}%`,
-              background: lowTime ? "var(--danger)" : "var(--accent)",
-            }}
-          />
-        </div>
-        {tick?.paused && (
-          <p className="mt-2 text-sm" style={{ color: "var(--warn)" }}>
-            пауза
-          </p>
-        )}
-      </div>
-
-      {/* Center: word or spectator card */}
-      <div className="flex-1 w-full max-w-xl flex items-center justify-center">
-        {role === "explainer" ? (
-          currentWord ? (
-            <div
-              key={currentWord.wordId}
-              className="w-full rounded-2xl px-8 py-16 text-center relative"
-              style={{
-                background: "var(--bg-1)",
-                border: "2px solid var(--accent-line)",
-                boxShadow:
-                  "0 0 0 1px var(--accent-soft), 0 24px 60px rgba(0,0,0,0.35)",
-              }}
-            >
-              <div className="eyebrow mb-3">СЛОВО</div>
-              <div
-                className="font-extrabold leading-none"
-                style={{
-                  fontSize: "clamp(36px, 8vw, 56px)",
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {currentWord.text}
-              </div>
-            </div>
-          ) : (
-            <p style={{ color: "var(--fg-2)" }}>Жду слово…</p>
-          )
-        ) : (
-          <Card className="w-full text-center max-w-md">
-            <div className="eyebrow mb-3">
-              {role === "guesser" ? "ВЫ УГАДЫВАЕТЕ" : "ВЫ СМОТРИТЕ"}
-            </div>
-            <div
-              className="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl font-extrabold mb-3"
-              style={{
-                background: `color-mix(in oklch, var(${teamColor}) 25%, var(--bg-2))`,
-                color: `var(${teamColor})`,
-              }}
-            >
-              {explainerName.charAt(0).toUpperCase()}
-            </div>
-            <div className="text-2xl font-extrabold tracking-tight">
-              {explainerName} объясняет
-            </div>
-            <div className="text-sm mt-1" style={{ color: "var(--fg-2)" }}>
-              {role === "guesser" ? "Слушайте и угадывайте" : "Смотрите за раундом"}
-            </div>
-          </Card>
-        )}
-      </div>
-
-      {/* Bottom: actions */}
-      <div className="w-full max-w-xl">
-        {role === "explainer" ? (
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => onGuess(false)}
-              disabled={!currentWord || tick?.paused}
-              className="h-[72px] rounded-xl font-extrabold text-base transition-transform active:translate-y-px disabled:opacity-50"
-              style={{ background: "oklch(0.55 0.20 25)", color: "#fff" }}
-            >
-              ✕ Пропуск
-            </button>
-            <button
-              type="button"
-              onClick={() => onGuess(true)}
-              disabled={!currentWord || tick?.paused}
-              className="h-[72px] rounded-xl font-extrabold text-base transition-transform active:translate-y-px disabled:opacity-50"
-              style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-            >
-              ✓ Угадал
-            </button>
-            <div className="col-span-2 flex justify-center gap-2 mt-2">
-              {tick?.paused ? (
-                <Button variant="secondary" size="sm" onClick={onResume}>
-                  Продолжить
-                </Button>
-              ) : (
-                <Button variant="secondary" size="sm" onClick={onPause}>
-                  Пауза
-                </Button>
+              {showExplainerDropBanner && (
+                <div
+                  className="card"
+                  style={{
+                    margin: "0 0 12px",
+                    padding: 12,
+                    boxShadow: "none",
+                    background: "color-mix(in oklch, var(--warn) 14%, var(--bg-2))",
+                    border: "1px solid color-mix(in oklch, var(--warn) 35%, transparent)",
+                  }}
+                >
+                  <div className="row-between" style={{ gap: 10, flexWrap: "wrap" }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: "var(--warn)" }}>
+                        {explainerName} отключился
+                      </div>
+                      <p className="muted" style={{ fontSize: 12, margin: "2px 0 0" }}>
+                        Можно подождать реконнекта или завершить раунд досрочно.
+                      </p>
+                    </div>
+                    <button type="button" className="btn btn-danger btn-sm" onClick={onEndRequest}>
+                      Завершить раунд
+                    </button>
+                  </div>
+                </div>
               )}
-              <Button variant="ghost" size="sm" onClick={onEnd}>
-                Завершить раунд
-              </Button>
+
+              <div className="game-center">
+                <TimerRing value={active ? sec : roundTime} total={roundTime} danger={danger} />
+
+                {!active ? (
+                  <p className="muted" style={{ textAlign: "center" }}>
+                    {role === "explainer"
+                      ? "Приготовься! Сейчас покажем слово."
+                      : role === "guesser"
+                        ? "Слушай и угадывай."
+                        : "Смотри за раундом."}
+                  </p>
+                ) : role === "explainer" ? (
+                  currentWord ? (
+                    <div className="word-card-big" key={currentWord.wordId}>
+                      <span className="word-eyebrow">
+                        <EyeOff size={13} /> видишь только ты
+                      </span>
+                      <strong className="word-main">{currentWord.text}</strong>
+                      <span className="word-index mono">слово {got + skip + 1}</span>
+                    </div>
+                  ) : (
+                    <p className="muted">Жду слово…</p>
+                  )
+                ) : (
+                  <div className="guesser-card">
+                    <div className={"guesser-pulse" + (role === "spectator" ? " spectate" : "")}>
+                      <EyeOff size={30} />
+                    </div>
+                    <span className="guesser-hidden mono">
+                      <EyeOff size={14} /> слово скрыто
+                    </span>
+                    <p className="muted" style={{ margin: 0 }}>
+                      {role === "spectator"
+                        ? `Наблюдаешь за раундом. ${explainerName} объясняет своей команде — слово видит только он.`
+                        : "Слушай и выкрикивай слово вслух — очко засчитает объясняющий."}
+                    </p>
+                  </div>
+                )}
+
+                <div className={"game-counts" + (role === "explainer" ? "" : " game-counts--big")}>
+                  <div className="gc gc-got">
+                    <Check /> {got} <span>угадано</span>
+                  </div>
+                  <div className="gc gc-skip">
+                    <SkipForward /> {skip} <span>пропуск</span>
+                  </div>
+                </div>
+              </div>
+
+              {active && role === "explainer" ? (
+                <div className="game-actions">
+                  <button
+                    type="button"
+                    className="game-btn skip"
+                    onClick={() => onGuess(false)}
+                    disabled={!currentWord || tick?.paused}
+                  >
+                    <SkipForward size={24} /> Пропустил
+                  </button>
+                  <button
+                    type="button"
+                    className="game-btn got"
+                    onClick={() => onGuess(true)}
+                    disabled={!currentWord || tick?.paused}
+                  >
+                    <Check size={26} /> Угадал
+                  </button>
+                </div>
+              ) : active ? (
+                <div className="guesser-foot">
+                  <span className="pill pill-mono">
+                    <Clock size={14} /> ход переходит по таймеру
+                  </span>
+                </div>
+              ) : null}
             </div>
+
+            {!active && (
+              <div className="countdown-overlay">
+                <span className="eyebrow">раунд начинается</span>
+                <div className="cd-num mono" key={countdown ?? "go"}>
+                  {countdown && countdown > 0 ? countdown : "GO"}
+                </div>
+                <p className="muted">{countdown && countdown > 0 ? "Приготовься…" : "Поехали!"}</p>
+              </div>
+            )}
           </div>
-        ) : (
-          <p
-            className="text-center text-sm"
-            style={{ color: "var(--fg-3)" }}
-          >
-            {role === "guesser"
-              ? "Ваши очки появятся, когда объясняющий нажмёт «Угадал»."
-              : "Раунд идёт. Дождитесь итогов."}
-          </p>
-        )}
+        </AppShell>
+        {modals}
+      </>
+    );
+  }
+
+  // ─── ROUND_REVIEW — итог раунда ───
+  if (snapshot.phase === "ROUND_REVIEW") {
+    return (
+      <>
+        <AppShell centered right={statusRight} className="screen-anim">
+          <ReviewView
+            role={role}
+            review={review}
+            penaltySkip={snapshot.settings.penaltySkip}
+            teamName={teamName}
+            onToggle={onReviewToggle}
+            onConfirm={onReviewConfirm}
+            isExplainer={isExplainer}
+          />
+        </AppShell>
+        {modals}
+      </>
+    );
+  }
+
+  // ─── BETWEEN_ROUNDS ───
+  if (snapshot.phase === "BETWEEN_ROUNDS") {
+    const nextTeam = snapshot.teams.find((t) => t.id === snapshot.currentTeamId);
+    const nextName =
+      nextTeam?.players.find((p) => p.userId === snapshot.currentPlayerId)?.displayName ?? "?";
+    return (
+      <>
+        <AppShell centered right={statusRight} className="screen-anim">
+          <div style={{ textAlign: "center" }}>
+            <div className="eyebrow" style={{ marginBottom: 12 }}>
+              следующий ход
+            </div>
+            <h1 className="h-display" style={{ marginBottom: 8 }}>
+              Команда «{nextTeam?.name ?? "—"}»
+            </h1>
+            <p className="muted">
+              Объясняет <strong style={{ color: "var(--fg)" }}>{nextName}</strong>
+            </p>
+            <p className="muted" style={{ marginTop: 18, fontSize: 13 }}>
+              Раунд начнётся через несколько секунд…
+            </p>
+          </div>
+        </AppShell>
+        {modals}
+      </>
+    );
+  }
+
+  // ─── FINISHED ───
+  return (
+    <>
+      <AppShell centered right={statusRight}>
+        <div style={{ textAlign: "center" }}>
+          <h1 className="h-title" style={{ marginBottom: 8 }}>
+            Игра окончена
+          </h1>
+          <p className="muted">Переходим к результатам…</p>
+        </div>
+      </AppShell>
+      {modals}
+    </>
+  );
+}
+
+// ─── Game top bar ───
+function GameTop({
+  role,
+  explainerName,
+  teamName,
+  teamColor,
+  roundNumber,
+  onLeave,
+  onPause,
+}: {
+  role: Role;
+  explainerName: string;
+  teamName: string;
+  teamColor: string;
+  roundNumber: number;
+  onLeave: () => void;
+  onPause: () => void;
+}) {
+  return (
+    <div className="game-top">
+      <button type="button" className="back-link" onClick={onLeave}>
+        <LogOut /> Выйти
+      </button>
+      <div className="game-turn">
+        <Avatar name={explainerName} color={teamColor} size={34} online={role !== "explainer"} />
+        <div>
+          <span className="gt-name">{role === "explainer" ? "Твой ход" : `${explainerName} объясняет`}</span>
+          <span className="gt-team mono">
+            {role === "spectator"
+              ? `наблюдаешь · «${teamName}»`
+              : `Команда «${teamName}» · раунд ${roundNumber}`}
+          </span>
+        </div>
       </div>
+      {role === "explainer" ? (
+        <button type="button" className="icon-btn" onClick={onPause} aria-label="Пауза">
+          <Pause />
+        </button>
+      ) : (
+        <span className={"pill pill-mono" + (role === "spectator" ? "" : " pill-accent")}>
+          {role === "spectator" ? (
+            <>
+              <EyeOff size={13} /> зритель
+            </>
+          ) : (
+            <>
+              <Users size={13} /> угадываешь
+            </>
+          )}
+        </span>
+      )}
     </div>
   );
 }
 
-// ─── Round review ────────────────────────────────────────────────────────
+// ─── Status pills (centered screens) ───
+function StatusPills({ code, status, live }: { code: string; status: string; live: boolean }) {
+  const color =
+    status === "connected"
+      ? "var(--accent)"
+      : status === "reconnecting" || status === "connecting"
+        ? "var(--warn)"
+        : "var(--danger)";
+  return (
+    <div className="row" style={{ gap: 8 }}>
+      {live && (
+        <span className="pill pill-live">
+          <span className="dot dot-pulse" /> LIVE
+        </span>
+      )}
+      <span className="pill pill-mono">{code}</span>
+      <span className="pill pill-mono" style={{ color }}>
+        <span className="dot" style={{ color }} />
+        {status === "connected" ? "ONLINE" : status.toUpperCase()}
+      </span>
+    </div>
+  );
+}
 
+// ─── Round review ───
 function ReviewView({
   role,
   review,
   penaltySkip,
+  teamName,
   onToggle,
   onConfirm,
   isExplainer,
 }: {
-  role: "explainer" | "guesser" | "spectator";
+  role: Role;
   review: import("@alias/shared/domain").RoundReviewPayload | null;
   penaltySkip: boolean;
+  teamName: string;
   onToggle: (wordId: number) => void;
   onConfirm: () => void;
   isExplainer: boolean;
 }) {
   if (!review) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <p style={{ color: "var(--fg-2)" }}>Подсчитываем итоги…</p>
-      </div>
+      <p className="muted" style={{ textAlign: "center" }}>
+        Подсчитываем итоги…
+      </p>
     );
   }
   const guessedCount = review.words.filter((w) => w.guessed).length;
@@ -616,112 +501,70 @@ function ReviewView({
   const score = guessedCount - (penaltySkip ? skipped : 0);
 
   return (
-    <div className="w-full">
-      <div className="eyebrow mb-2">ИТОГИ РАУНДА</div>
-      <p className="text-sm mb-4" style={{ color: "var(--fg-2)" }}>
-        {isExplainer
-          ? "Нажмите на слово, чтобы изменить статус."
-          : `Команда подтверждает итоги (вы — ${role === "guesser" ? "в команде" : "наблюдатель"}).`}
-      </p>
-
-      <ul className="flex flex-col gap-2 mb-4 max-h-[50vh] overflow-y-auto">
-        {review.words.map((w) => (
-          <li key={w.wordId}>
-            <button
-              type="button"
-              onClick={() => isExplainer && onToggle(w.wordId)}
-              disabled={!isExplainer}
-              className="w-full text-left px-4 py-3 rounded-md flex items-center gap-3"
-              style={
-                w.guessed
-                  ? {
-                      background:
-                        "color-mix(in oklch, var(--accent) 10%, var(--bg-1))",
-                      border: "1px solid var(--accent-line)",
-                      color: "var(--accent)",
-                      cursor: isExplainer ? "pointer" : "default",
-                    }
-                  : {
-                      background:
-                        "color-mix(in oklch, var(--danger) 10%, var(--bg-1))",
-                      border:
-                        "1px solid color-mix(in oklch, var(--danger) 30%, transparent)",
-                      color: "var(--danger)",
-                      cursor: isExplainer ? "pointer" : "default",
-                    }
-              }
-            >
-              <span className="text-lg leading-none">{w.guessed ? "✓" : "×"}</span>
-              <span className="flex-1 font-medium">{w.text}</span>
-              <span className="font-mono text-xs opacity-80">
-                {w.guessed ? "+1" : penaltySkip ? "−1" : "0"}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <Card className="mb-4">
-        <div className="flex items-center justify-between text-sm">
-          <span style={{ color: "var(--fg-2)" }}>Угадано</span>
-          <span className="font-bold" style={{ color: "var(--accent)" }}>
-            +{guessedCount}
-          </span>
-        </div>
-        {skipped > 0 && (
-          <div className="flex items-center justify-between text-sm mt-1">
-            <span style={{ color: "var(--fg-2)" }}>Пропущено</span>
-            <span style={{ color: penaltySkip ? "var(--danger)" : "var(--fg-2)" }}>
-              {penaltySkip ? `−${skipped}` : `${skipped} (без штрафа)`}
-            </span>
-          </div>
-        )}
-        <div
-          className="flex items-center justify-between mt-3 pt-3 text-base font-bold"
-          style={{ borderTop: "1px solid var(--line)" }}
-        >
-          <span>Итого за раунд</span>
-          <span style={{ color: score >= 0 ? "var(--accent)" : "var(--danger)" }}>
-            {score > 0 ? "+" : ""}
-            {score}
-          </span>
-        </div>
-      </Card>
-
-      {isExplainer ? (
-        <Button block size="lg" onClick={onConfirm}>
-          Подтвердить и передать ход
-        </Button>
-      ) : (
-        <p className="text-center text-sm" style={{ color: "var(--fg-3)" }}>
-          Ждём, пока объясняющий подтвердит…
+    <div className="summary-wrap">
+      <div className="summary-left">
+        <span className="eyebrow">итог раунда · команда «{teamName}»</span>
+        <h1 className="h-display" style={{ margin: "12px 0" }}>
+          {score > 0 ? "Отличный раунд!" : "Раунд завершён"}
+        </h1>
+        <p className="h-sub">
+          {isExplainer
+            ? "Тапни слово, чтобы переключить «угадано / пропуск», если где-то ошиблись."
+            : `Команда подтверждает итоги (ты — ${role === "guesser" ? "в команде" : "наблюдатель"}).`}
         </p>
-      )}
-    </div>
-  );
-}
 
-// ─── Between rounds ──────────────────────────────────────────────────────
+        <div className="round-score">
+          <div className="rs-big">
+            <span
+              className={"rs-plus mono" + (score >= 0 ? " accent-text" : "")}
+              style={score < 0 ? { color: "var(--danger)" } : undefined}
+            >
+              {score > 0 ? "+" : ""}
+              {score}
+            </span>
+            <span className="rs-l">очков за раунд</span>
+          </div>
+          <div className="rs-split">
+            <div>
+              <b className="mono accent-text">{guessedCount}</b> угадано
+            </div>
+            <div>
+              <b className="mono">{skipped}</b> пропуск
+            </div>
+          </div>
+        </div>
 
-function BetweenRoundsView({
-  nextTeam,
-  nextExplainerName,
-}: {
-  nextTeam: RoomSnapshotTeam | undefined;
-  nextExplainerName: string;
-}) {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center text-center">
-      <div className="eyebrow mb-3">СЛЕДУЮЩИЙ ХОД</div>
-      <div className="h-display mb-2">
-        Команда «{nextTeam?.name ?? "—"}»
+        {isExplainer ? (
+          <button type="button" className="btn btn-primary btn-lg btn-block" onClick={onConfirm}>
+            Подтвердить · передать ход
+          </button>
+        ) : (
+          <p className="muted" style={{ fontSize: 13 }}>
+            Ждём, пока объясняющий подтвердит…
+          </p>
+        )}
       </div>
-      <p style={{ color: "var(--fg-2)" }}>
-        Объясняет <strong style={{ color: "var(--fg)" }}>{nextExplainerName}</strong>
-      </p>
-      <p className="mt-6 text-sm" style={{ color: "var(--fg-3)" }}>
-        Раунд начнётся через несколько секунд…
-      </p>
+
+      <div className="card summary-words">
+        <div className="row-between" style={{ marginBottom: 14 }}>
+          <h2 className="h-title">Слова раунда</h2>
+          <span className="pill pill-mono">{review.words.length} слов</span>
+        </div>
+        <div className="words-list">
+          {review.words.map((w) => (
+            <div
+              key={w.wordId}
+              className={"word-row " + (w.guessed ? "got" : "skip")}
+              onClick={() => isExplainer && onToggle(w.wordId)}
+              style={{ cursor: isExplainer ? "pointer" : "default" }}
+            >
+              <span className="wr-ic">{w.guessed ? <Check size={15} /> : <X size={15} />}</span>
+              {w.text}
+              <span className="wr-pts">{w.guessed ? "+1" : penaltySkip ? "−1" : "0"}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

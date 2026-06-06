@@ -1,9 +1,10 @@
 "use client";
 
-// Setup step 1: команды. См. DESIGN.md §5.2 TeamsScreen.
+// Локальная игра — шаг 1: команды. Дизайн — TeamsScreen из редизайна.
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, ArrowRight, Plus, Trash2, X } from "lucide-react";
 import {
   loadLocalSetup,
   saveLocalSetup,
@@ -18,12 +19,9 @@ import {
   DEFAULT_TEAM_NAMES,
   teamColorVar,
 } from "@/constants/game";
-import Header from "@/components/ui/Header";
+import AppShell from "@/components/ui/AppShell";
 import Stepper from "@/components/ui/Stepper";
-import Card from "@/components/ui/Card";
-import Pill from "@/components/ui/Pill";
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
+import Avatar from "@/components/ui/Avatar";
 
 export default function LocalNewPage() {
   const router = useRouter();
@@ -40,28 +38,20 @@ export default function LocalNewPage() {
     if (hydrated) saveLocalSetup(state);
   }, [state, hydrated]);
 
-  const updateTeamName = (idx: number, name: string) => {
-    setState((s) => ({
-      ...s,
-      teams: s.teams.map((t, i) => (i === idx ? { ...t, name } : t)),
-    }));
-  };
+  const updateTeamName = (idx: number, name: string) =>
+    setState((s) => ({ ...s, teams: s.teams.map((t, i) => (i === idx ? { ...t, name } : t)) }));
 
-  const updatePlayerName = (teamIdx: number, playerIdx: number, name: string) => {
+  const updatePlayerName = (teamIdx: number, playerIdx: number, name: string) =>
     setState((s) => ({
       ...s,
       teams: s.teams.map((t, i) =>
         i === teamIdx
-          ? {
-              ...t,
-              players: t.players.map((p, j) => (j === playerIdx ? { name } : p)),
-            }
+          ? { ...t, players: t.players.map((p, j) => (j === playerIdx ? { name } : p)) }
           : t,
       ),
     }));
-  };
 
-  const addPlayer = (teamIdx: number) => {
+  const addPlayer = (teamIdx: number) =>
     setState((s) => ({
       ...s,
       teams: s.teams.map((t, i) =>
@@ -70,9 +60,8 @@ export default function LocalNewPage() {
           : t,
       ),
     }));
-  };
 
-  const removePlayer = (teamIdx: number, playerIdx: number) => {
+  const removePlayer = (teamIdx: number, playerIdx: number) =>
     setState((s) => ({
       ...s,
       teams: s.teams.map((t, i) =>
@@ -81,188 +70,163 @@ export default function LocalNewPage() {
           : t,
       ),
     }));
-  };
 
-  const addTeam = () => {
+  const addTeam = () =>
     setState((s) => {
       if (s.teams.length >= MAX_TEAMS) return s;
       const name = DEFAULT_TEAM_NAMES[s.teams.length] ?? `Команда ${s.teams.length + 1}`;
-      return {
-        ...s,
-        teams: [...s.teams, { name, players: [{ name: "" }, { name: "" }] }],
-      };
+      return { ...s, teams: [...s.teams, { name, players: [{ name: "" }, { name: "" }] }] };
     });
-  };
 
-  const removeTeam = (idx: number) => {
+  const removeTeam = (idx: number) =>
     setState((s) => ({
       ...s,
       teams: s.teams.length > MIN_TEAMS ? s.teams.filter((_, i) => i !== idx) : s.teams,
     }));
-  };
+
+  const total = state.teams.reduce((sum, t) => sum + t.players.length, 0);
 
   const validate = (): string | null => {
     if (state.teams.length < MIN_TEAMS) return `Нужно минимум ${MIN_TEAMS} команды`;
     for (const team of state.teams) {
       if (!team.name.trim()) return "У всех команд должно быть название";
-      if (team.players.length < MIN_PLAYERS_PER_TEAM) {
+      if (team.players.length < MIN_PLAYERS_PER_TEAM)
         return `В каждой команде минимум ${MIN_PLAYERS_PER_TEAM} игрока`;
-      }
-      if (team.players.some((p) => !p.name.trim())) {
-        return "У всех игроков должно быть имя";
-      }
+      if (team.players.some((p) => !p.name.trim())) return "У всех игроков должно быть имя";
     }
     return null;
   };
 
   const onNext = () => {
     const err = validate();
-    if (err) {
-      setError(err);
-      return;
-    }
+    if (err) return setError(err);
     router.push("/local/settings");
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 mx-auto w-full max-w-4xl px-4 md:px-8 py-8 md:py-12">
-        <div className="mb-6">
-          <Stepper step={1} />
-        </div>
-        <h1 className="h-display mb-2">Команды</h1>
-        <p className="mb-8" style={{ color: "var(--fg-2)" }}>
-          От {MIN_TEAMS} до {MAX_TEAMS} команд по {MIN_PLAYERS_PER_TEAM}–{MAX_PLAYERS_PER_TEAM} игроков.
-        </p>
+    <AppShell className="screen-anim">
+      <button type="button" className="back-link" onClick={() => router.push("/")}>
+        <ArrowLeft /> На главную
+      </button>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {state.teams.map((team, teamIdx) => {
-            const colorVar = teamColorVar(teamIdx);
-            return (
-              <Card
-                key={teamIdx}
-                style={{
-                  background: `linear-gradient(180deg, color-mix(in oklch, var(${colorVar}) 12%, var(--bg-1)), var(--bg-1))`,
-                  borderColor: `color-mix(in oklch, var(${colorVar}) 30%, var(--line-strong))`,
-                }}
-              >
-                <div className="flex items-center justify-between mb-4">
+      <div className="setup-head">
+        <div>
+          <Stepper step={1} />
+          <h1 className="h-display" style={{ marginTop: 14 }}>
+            Соберите команды
+          </h1>
+          <p className="h-sub" style={{ marginTop: 8 }}>
+            От {MIN_TEAMS} до {MAX_TEAMS} команд по {MIN_PLAYERS_PER_TEAM}–{MAX_PLAYERS_PER_TEAM}{" "}
+            игроков. Имена можно менять в любой момент.
+          </p>
+        </div>
+        <div className="setup-counter">
+          <span className="sc-v mono">{total}</span>
+          <span className="sc-l">
+            игроков · {state.teams.length} команд{state.teams.length === 1 ? "а" : ""}
+          </span>
+        </div>
+      </div>
+
+      <div className="teams-grid">
+        {state.teams.map((team, teamIdx) => {
+          const colorVar = teamColorVar(teamIdx);
+          return (
+            <div
+              key={teamIdx}
+              className="team-card setup-team"
+              style={{ "--tc": `var(${colorVar})` } as React.CSSProperties}
+            >
+              <div className="row-between" style={{ marginBottom: 14 }}>
+                <div className="row" style={{ gap: 10 }}>
+                  <span className="st-swatch" />
                   <input
+                    className="st-name-input"
                     value={team.name}
-                    onChange={(e) => updateTeamName(teamIdx, e.target.value)}
+                    onChange={(e) => updateTeamName(teamIdx, e.target.value.slice(0, 30))}
                     placeholder="Название"
-                    className="bg-transparent outline-none font-extrabold text-lg tracking-tight"
-                    style={{ color: `var(${colorVar})` }}
                   />
-                  <div className="flex items-center gap-2">
-                    <Pill mono>
-                      {team.players.length}/{MAX_PLAYERS_PER_TEAM}
-                    </Pill>
-                    {state.teams.length > MIN_TEAMS && (
+                </div>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  style={{ width: 36 }}
+                  onClick={() => removeTeam(teamIdx)}
+                  disabled={state.teams.length <= MIN_TEAMS}
+                  aria-label="Удалить команду"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              <div className="stack" style={{ gap: 8 }}>
+                {team.players.map((player, playerIdx) => (
+                  <div className="slot" key={playerIdx}>
+                    <Avatar name={player.name} color={colorVar} size={30} />
+                    <input
+                      className="slot-name"
+                      style={{ background: "transparent", border: 0, outline: "none", color: "var(--fg)" }}
+                      value={player.name}
+                      onChange={(e) => updatePlayerName(teamIdx, playerIdx, e.target.value.slice(0, 50))}
+                      placeholder={`Игрок ${playerIdx + 1}`}
+                    />
+                    {team.players.length > MIN_PLAYERS_PER_TEAM && (
                       <button
                         type="button"
-                        onClick={() => removeTeam(teamIdx)}
-                        className="text-xs underline"
-                        style={{ color: "var(--fg-3)" }}
-                        aria-label="Удалить команду"
+                        className="slot-x"
+                        onClick={() => removePlayer(teamIdx, playerIdx)}
+                        aria-label="Удалить игрока"
                       >
-                        удалить
+                        <X size={15} />
                       </button>
                     )}
                   </div>
-                </div>
-
-                <ul className="flex flex-col gap-2">
-                  {team.players.map((player, playerIdx) => (
-                    <li key={playerIdx} className="flex items-center gap-2">
-                      <span
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                        style={{
-                          background: `color-mix(in oklch, var(${colorVar}) 25%, var(--bg-2))`,
-                          color: `var(${colorVar})`,
-                        }}
-                      >
-                        {(player.name || "?").charAt(0).toUpperCase()}
-                      </span>
-                      <Input
-                        value={player.name}
-                        onChange={(e) => updatePlayerName(teamIdx, playerIdx, e.target.value)}
-                        placeholder={`Игрок ${playerIdx + 1}`}
-                      />
-                      {team.players.length > MIN_PLAYERS_PER_TEAM && (
-                        <button
-                          type="button"
-                          onClick={() => removePlayer(teamIdx, playerIdx)}
-                          aria-label="Удалить игрока"
-                          className="w-9 h-9 rounded-md flex items-center justify-center shrink-0"
-                          style={{
-                            background: "var(--bg-2)",
-                            color: "var(--fg-3)",
-                            border: "1px solid var(--line)",
-                          }}
-                        >
-                          ×
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-
+                ))}
+                {team.players.length === 0 && <p className="st-empty">Пока пусто — добавь игрока</p>}
                 {team.players.length < MAX_PLAYERS_PER_TEAM && (
-                  <button
-                    type="button"
-                    onClick={() => addPlayer(teamIdx)}
-                    className="mt-3 w-full h-10 rounded-md text-sm font-semibold"
-                    style={{
-                      background: "transparent",
-                      color: "var(--fg-2)",
-                      border: "1px dashed var(--line-strong)",
-                    }}
-                  >
-                    + Добавить игрока
+                  <button type="button" className="lobby-add" onClick={() => addPlayer(teamIdx)}>
+                    <Plus size={16} /> Добавить игрока
                   </button>
                 )}
-              </Card>
-            );
-          })}
+              </div>
+            </div>
+          );
+        })}
 
-          {state.teams.length < MAX_TEAMS && (
-            <Card
-              flat
-              dashed
-              className="flex items-center justify-center min-h-[160px] cursor-pointer"
-              onClick={addTeam}
-            >
-              <span className="text-base font-semibold" style={{ color: "var(--fg-2)" }}>
-                + Добавить команду
-              </span>
-            </Card>
-          )}
-        </div>
-
-        {error && (
-          <div
-            className="mt-6 p-3 rounded-md text-sm"
-            style={{
-              background: "color-mix(in oklch, var(--danger) 12%, var(--bg-2))",
-              color: "var(--danger)",
-              border: "1px solid color-mix(in oklch, var(--danger) 30%, transparent)",
-            }}
-          >
-            {error}
-          </div>
+        {state.teams.length < MAX_TEAMS && (
+          <button type="button" className="team-add-card" onClick={addTeam}>
+            <span className="tac-ic">
+              <Plus size={26} />
+            </span>
+            Добавить команду
+          </button>
         )}
+      </div>
 
-        <div className="mt-8 flex flex-col-reverse md:flex-row gap-3 md:justify-between">
-          <Button variant="ghost" size="lg" onClick={() => router.push("/")}>
-            ← Назад
-          </Button>
-          <Button size="lg" block={false} onClick={onNext}>
-            Дальше: настройки →
-          </Button>
+      {error && (
+        <div
+          className="card"
+          style={{
+            marginTop: 16,
+            background: "color-mix(in oklch, var(--danger) 12%, var(--bg-2))",
+            border: "1px solid color-mix(in oklch, var(--danger) 30%, transparent)",
+            color: "var(--danger)",
+            boxShadow: "none",
+            padding: 14,
+          }}
+        >
+          {error}
         </div>
-      </main>
-    </div>
+      )}
+
+      <div className="setup-foot">
+        <span className="muted">
+          {total} игроков в {state.teams.length} командах
+        </span>
+        <button type="button" className="btn btn-primary btn-lg" onClick={onNext}>
+          Далее · настройки <ArrowRight />
+        </button>
+      </div>
+    </AppShell>
   );
 }

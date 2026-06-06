@@ -1,14 +1,11 @@
 "use client";
 
-// Карточка одной игры в истории на главной. См. DESIGN.md §5.1.
+// Карточка одной игры в истории. Дизайн — .hist-card из редизайна.
 
 import Link from "next/link";
-import { ArrowRight, Crown, Trash2 } from "lucide-react";
+import { Check, Crown, Play, Smartphone, Trash2, Trophy, Wifi } from "lucide-react";
 import type { GameFromAPI } from "@/types";
-import { teamColorVar } from "@/constants/game";
 import { formatDateRu } from "@/lib/utils";
-import Pill from "@/components/ui/Pill";
-import Card from "@/components/ui/Card";
 
 interface HistoryRowProps {
   game: GameFromAPI;
@@ -17,87 +14,78 @@ interface HistoryRowProps {
 }
 
 export function HistoryRow({ game, onDelete, deleting }: HistoryRowProps) {
-  const winner =
-    game.status === "FINISHED"
-      ? game.teams.reduce((best, t) => (t.score > best.score ? t : best), game.teams[0])
-      : null;
-
+  const live = game.status === "IN_PROGRESS";
   const isLocal = game.mode === "LOCAL";
-  const continueHref = isLocal ? `/local/${game.id}/turn` : `/room/${game.id}`;
+  const sorted = [...game.teams].sort((a, b) => b.score - a.score);
+  const winnerId = !live && sorted.length ? sorted[0].id : null;
+
+  const continueHref = isLocal ? `/local/${game.id}/turn` : `/room/${game.roomId ?? game.id}`;
+  const resultsHref = isLocal ? `/local/${game.id}/results` : `/results/${game.id}`;
 
   return (
-    <Card className="flex flex-col gap-3">
-      {/* Top row: status + date + actions */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          {game.status === "IN_PROGRESS" ? (
-            <Pill tone="live">LIVE</Pill>
+    <div className={"hist-card" + (live ? " live" : "")}>
+      <div className="hist-card-head">
+        <div className="hist-meta">
+          {live ? (
+            <span className="pill pill-live">
+              <span className="dot dot-pulse" /> LIVE
+            </span>
           ) : (
-            <Pill tone="success">DONE</Pill>
+            <span className="pill pill-mono">
+              <Check size={13} /> завершена
+            </span>
           )}
-          <span
-            className="font-mono text-[11px] px-2 py-0.5 rounded shrink-0"
-            style={{ background: "var(--bg-3)", color: "var(--fg-2)" }}
-          >
-            {formatDateRu(game.createdAt)}
+          <span className="pill pill-mono">
+            {isLocal ? <Smartphone size={13} /> : <Wifi size={13} />}
+            {isLocal ? "локально" : "онлайн"}
           </span>
-          {!isLocal && <Pill mono>ONLINE</Pill>}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {game.status === "IN_PROGRESS" && (
-            <Link
-              href={continueHref}
-              className="h-8 px-3 inline-flex items-center justify-center gap-1 text-xs font-bold rounded-md"
-              style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+        <span className="hist-date mono">{formatDateRu(game.createdAt)}</span>
+      </div>
+
+      <div className="hist-teams">
+        {sorted.map((t) => {
+          const isWin = winnerId === t.id;
+          return (
+            <div
+              key={t.id}
+              className={"hist-team" + (isWin ? " win" : "")}
+              style={{ "--tc": `var(${t.color})` } as React.CSSProperties}
             >
-              Продолжить <ArrowRight size={14} strokeWidth={2.5} />
+              <span className="ht-dot" />
+              <span className="ht-name">{t.name}</span>
+              {isWin && <Crown size={15} className="ht-crown" />}
+              <span className="ht-score mono">{t.score}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="hist-foot">
+        <span className="hist-round mono">{game.currentRoundNumber} раундов</span>
+        <div className="hist-actions">
+          {live ? (
+            <Link href={continueHref} className="btn btn-primary btn-sm">
+              <Play size={15} /> Продолжить
+            </Link>
+          ) : (
+            <Link href={resultsHref} className="btn btn-secondary btn-sm">
+              <Trophy size={15} /> Итоги
             </Link>
           )}
           <button
             type="button"
+            className="icon-btn"
             onClick={() => onDelete(game.id)}
             disabled={deleting}
             aria-label="Удалить игру"
-            className="w-8 h-8 inline-flex items-center justify-center rounded-md disabled:opacity-50"
-            style={{
-              background: "var(--bg-2)",
-              color: "var(--fg-3)",
-              border: "1px solid var(--line)",
-            }}
+            title="Удалить"
           >
-            <Trash2 size={14} />
+            <Trash2 size={16} />
           </button>
         </div>
       </div>
-
-      {/* Teams strip */}
-      <ul className="flex flex-wrap gap-x-4 gap-y-1.5">
-        {game.teams.map((team) => {
-          const isWinner = winner?.id === team.id;
-          return (
-            <li key={team.id} className="flex items-center gap-2 text-sm">
-              <span
-                className="w-2 h-2 rounded-sm shrink-0"
-                style={{ background: `var(${teamColorVar(team.order)})` }}
-              />
-              <span
-                className="font-medium truncate max-w-[120px]"
-                style={{ color: isWinner ? "var(--accent)" : "var(--fg-1)" }}
-              >
-                {team.name}
-              </span>
-              <span
-                className="font-mono text-xs tabular-nums"
-                style={{ color: isWinner ? "var(--accent)" : "var(--fg-2)" }}
-              >
-                {team.score}
-              </span>
-              {isWinner && <Crown size={14} style={{ color: "var(--warn)" }} />}
-            </li>
-          );
-        })}
-      </ul>
-    </Card>
+    </div>
   );
 }
 

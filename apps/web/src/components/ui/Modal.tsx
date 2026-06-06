@@ -1,9 +1,10 @@
 "use client";
 
-// Полупрозрачный fullscreen-overlay с диалогом. См. DESIGN.md §5.9 (PauseScreen).
+// Полупрозрачный fullscreen-overlay с диалогом.
 // Используется для pause / confirm-end-round / reconnect.
 
 import { useEffect } from "react";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ModalProps {
@@ -23,7 +24,7 @@ export function Modal({
   onClose,
   title,
   children,
-  maxWidth = 360,
+  maxWidth = 460,
   fullscreen = false,
   dismissOnBackdrop = false,
 }: ModalProps) {
@@ -41,45 +42,26 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{
-        background: "rgba(0,0,0,0.6)",
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
-      }}
+      className="pause-overlay"
       onClick={() => {
         if (dismissOnBackdrop && onClose) onClose();
       }}
     >
       <div
-        className={cn(
-          "rounded-[var(--r-lg)] p-6 w-full",
-          fullscreen && "max-w-2xl",
-        )}
+        className={cn("card-glass", "w-full")}
         style={{
-          background: "var(--bg-1)",
-          border: "1px solid var(--line)",
           boxShadow: "var(--shadow-pop)",
-          maxWidth: fullscreen ? undefined : maxWidth,
+          padding: "clamp(28px, 3vw, 44px)",
+          maxWidth: fullscreen ? "min(640px, 92vw)" : maxWidth,
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || onClose) && (
-          <div className="flex items-start justify-between mb-3 gap-3">
-            {title && <h2 className="text-xl font-extrabold tracking-tight">{title}</h2>}
+          <div className="flex items-start justify-between gap-3 mb-4">
+            {title && <h2 className="h-title">{title}</h2>}
             {onClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Закрыть"
-                className="w-8 h-8 rounded-md flex items-center justify-center text-sm shrink-0"
-                style={{
-                  background: "var(--bg-2)",
-                  color: "var(--fg-3)",
-                  border: "1px solid var(--line)",
-                }}
-              >
-                ✕
+              <button type="button" onClick={onClose} aria-label="Закрыть" className="icon-btn shrink-0">
+                <X />
               </button>
             )}
           </div>
