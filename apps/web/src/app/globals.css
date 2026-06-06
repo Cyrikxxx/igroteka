@@ -458,24 +458,26 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .avatar-stack > * { border: 2px solid var(--bg-1); }
 
   /* ============================================================
-     Room code
+     Room code — ячейки сжимаются под контейнер (не вылезают на 2560)
      ============================================================ */
-  .code-chunk { display: inline-flex; gap: clamp(6px, 0.6vw, 12px); font-family: var(--font-mono); font-weight: 700; }
+  .code-chunk { display: inline-flex; gap: clamp(5px, 0.5vw, 10px); font-family: var(--font-mono); font-weight: 700; max-width: 100%; }
   .code-chunk span {
+    flex: 0 1 auto;
+    min-width: 0;
     display: inline-grid;
     place-items: center;
-    width: clamp(38px, 3.2vw, 60px);
-    height: clamp(46px, 4vw, 76px);
+    width: clamp(36px, 2.6vw, 54px);
+    height: clamp(46px, 3.6vw, 70px);
     background: var(--bg-2);
     border: 1px solid var(--line-strong);
     border-radius: var(--r-sm);
     color: var(--accent);
-    font-size: clamp(22px, 2vw, 38px);
+    font-size: clamp(20px, 1.8vw, 32px);
   }
   .code-chunk.xl span {
-    width: clamp(52px, 4.6vw, 92px);
-    height: clamp(64px, 6vw, 116px);
-    font-size: clamp(30px, 3.4vw, 58px);
+    width: clamp(48px, 4vw, 80px);
+    height: clamp(60px, 5.4vw, 104px);
+    font-size: clamp(28px, 3vw, 50px);
     border-radius: var(--r-md);
   }
 
@@ -750,7 +752,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .lobby-grid { display: grid; grid-template-columns: clamp(300px, 26vw, 400px) minmax(0, 1fr); gap: var(--gap); align-items: start; }
   .lobby-invite { display: flex; flex-direction: column; gap: var(--gap); position: sticky; top: clamp(8px, 2vh, 20px); }
   .invite-card { display: flex; flex-direction: column; }
-  .invite-code { margin: 16px 0 18px; }
+  .invite-code { margin: 16px 0 18px; text-align: center; }
   .invite-actions { display: flex; gap: 10px; }
   .invite-actions .btn { flex: 1; }
   .invite-qr { display: flex; gap: 16px; align-items: center; }
@@ -789,7 +791,9 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .teams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--gap); }
   .setup-team .st-swatch { width: 14px; height: 14px; border-radius: 5px; background: var(--tc); }
   .st-name-input { font-weight: 800; font-size: clamp(17px, 1.3vw, 22px); letter-spacing: -0.02em; color: var(--tc); width: 100%; }
-  .st-name-input:focus { outline: 1px solid var(--accent-line); outline-offset: 4px; border-radius: 4px; }
+  /* фокус-рамка и выделение текста — в оттенке команды (--tc), а не всегда зелёные */
+  .st-name-input:focus { outline: 1.5px solid var(--tc, var(--accent-line)); outline-offset: 4px; border-radius: 4px; }
+  .team-card ::selection { background: color-mix(in oklch, var(--tc) 30%, transparent); }
   .st-empty { color: var(--fg-3); font-size: 13px; text-align: center; padding: 14px; margin: 0; }
   .st-add { display: flex; gap: 10px; margin-top: 14px; }
   .st-add .input { height: clamp(44px, 3vw, 52px); }
@@ -971,9 +975,11 @@ html { scrollbar-color: var(--bg-4) transparent; }
      Mobile tightening (≤640 / ≤430)
      ============================================================ */
   @media (max-width: 640px) {
-    .app-header { padding-block: 14px; }
+    /* шапка переносит действия на 2-ю строку вместо обрезки за краем */
+    .app-header { padding-block: 14px; flex-wrap: wrap; gap: 10px; row-gap: 8px; }
+    .brand { min-width: 0; }
     .brand-name span { display: none; }
-    .header-actions { gap: 8px; }
+    .header-actions { gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
     .header-hist { padding: 0; width: clamp(40px, 11vw, 44px); }
     .header-hist .hist-label { display: none; }
     .header-hist svg { margin: 0; }

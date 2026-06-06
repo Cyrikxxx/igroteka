@@ -232,6 +232,43 @@ export function registerLobbyHandlers(
     await broadcastState(ns, roomCode, snap);
   });
 
+  // ─── room:settings ─── (host only, только в LOBBY) → правила партии
+  socket.on("room:settings", async (payload, ack) => {
+    if (!isHost(socket)) return ack?.({ error: "forbidden" });
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.phase !== "LOBBY") return ack?.({ error: "game_in_progress" });
+
+    const snap = await mutate(roomCode, (s) => {
+      if (
+        typeof payload?.roundTime === "number" &&
+        payload.roundTime >= 10 &&
+        payload.roundTime <= 300
+      ) {
+        s.settings.roundTime = Math.round(payload.roundTime);
+      }
+      if (
+        typeof payload?.winScore === "number" &&
+        payload.winScore >= 0 &&
+        payload.winScore <= 1000
+      ) {
+        s.settings.winScore = Math.round(payload.winScore);
+      }
+      if (typeof payload?.penaltySkip === "boolean") {
+        s.settings.penaltySkip = payload.penaltySkip;
+      }
+      if (Array.isArray(payload?.categoryIds)) {
+        const ids = payload.categoryIds
+          .map((x) => Number(x))
+          .filter((n) => Number.isInteger(n) && n > 0);
+        if (ids.length > 0) s.settings.categoryIds = ids;
+      }
+    });
+    if (!snap) return ack?.({ error: "room_not_found" });
+    ack?.({ ok: true });
+    await broadcastState(ns, roomCode, snap);
+  });
+
   // ─── room:leave ─── (любой)
   socket.on("room:leave", async (_payload, ack) => {
     const snap = await mutate(roomCode, (s) => {

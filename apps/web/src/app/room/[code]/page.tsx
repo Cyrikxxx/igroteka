@@ -11,13 +11,12 @@ import {
   Check,
   Clock,
   Copy,
-  LogOut,
-  Pencil,
   Play,
   Plus,
   RefreshCw,
+  Settings,
   Share2,
-  X,
+  Trash2,
 } from "lucide-react";
 import {
   MAX_TEAMS,
@@ -32,6 +31,7 @@ import Avatar from "@/components/ui/Avatar";
 import RoomCode from "@/components/ui/RoomCode";
 import QrCode from "@/components/ui/QrCode";
 import Modal from "@/components/ui/Modal";
+import RoomSettingsModal from "@/components/room/RoomSettingsModal";
 
 interface Creds {
   code: string;
@@ -48,6 +48,7 @@ export default function LobbyPage() {
   const [creds, setCreds] = useState<Creds | null>(null);
   const [mounted, setMounted] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     const stored = loadRoomCreds(rawCode);
@@ -113,20 +114,10 @@ export default function LobbyPage() {
     clearRoomCreds(creds.code);
     router.push("/");
   };
-  const handleCloseRoom = async () => {
-    if (!confirm("Закрыть комнату для всех?")) return;
-    await fetch(`/api/rooms/${creds.code}`, { method: "DELETE" }).catch(() => {});
-    clearRoomCreds(creds.code);
-    router.push("/");
-  };
-
   const createTeam = () => socket?.emit("team:create", {}, () => {});
   const renameTeam = (teamId: number, name: string) =>
     socket?.emit("team:rename", { teamId, name }, () => {});
-  const removeTeam = (teamId: number) => {
-    if (!confirm("Удалить команду? Игроки уедут в зрители.")) return;
-    socket?.emit("team:remove", { teamId }, () => {});
-  };
+  const removeTeam = (teamId: number) => socket?.emit("team:remove", { teamId }, () => {});
   const joinTeam = (teamId: number | null) => socket?.emit("team:join", { teamId }, () => {});
 
   const myTeam = snapshot?.teams.find((t) => t.players.some((p) => p.userId === creds.userId));
@@ -142,15 +133,7 @@ export default function LobbyPage() {
   const s = snapshot?.settings;
 
   return (
-    <AppShell
-      className="screen-anim"
-      right={
-        <div className="row" style={{ gap: 8 }}>
-          <span className="pill pill-mono">{creds.code}</span>
-          <ConnIndicator status={status} />
-        </div>
-      }
-    >
+    <AppShell className="screen-anim" right={<ConnIndicator status={status} />}>
       <button type="button" className="back-link" onClick={handleLeave}>
         <ArrowLeft /> Выйти из комнаты
       </button>
@@ -308,8 +291,8 @@ export default function LobbyPage() {
                 : `Нужно ≥${MIN_TEAMS} команды, в каждой ≥${MIN_PLAYERS_PER_TEAM} игрока онлайн`}
             </span>
             <div className="row" style={{ gap: 10 }}>
-              <button type="button" className="btn btn-ghost" onClick={handleCloseRoom}>
-                <LogOut /> Закрыть комнату
+              <button type="button" className="btn btn-ghost" onClick={() => setSettingsOpen(true)}>
+                <Settings /> Настройки
               </button>
               <button
                 type="button"
@@ -345,6 +328,19 @@ export default function LobbyPage() {
           </>
         )}
       </div>
+
+      {/* Настройки комнаты (host) */}
+      {snapshot && (
+        <RoomSettingsModal
+          open={settingsOpen}
+          settings={snapshot.settings}
+          onClose={() => setSettingsOpen(false)}
+          onSave={(next) => {
+            socket?.emit("room:settings", next, () => {});
+            setSettingsOpen(false);
+          }}
+        />
+      )}
 
       {/* Reconnect overlay */}
       <Modal isOpen={status === "reconnecting" || (status === "error" && !!error)} fullscreen>
@@ -394,62 +390,58 @@ function TeamCard({
   onRemove: () => void;
   onJoin: () => void;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(team.name);
   const meIsHere = team.players.some((p) => p.userId === currentUserId);
   const canJoin = !meIsHere && team.players.length < MAX_PLAYERS_PER_TEAM;
 
-  const commit = () => {
-    const next = draft.trim();
-    setEditing(false);
-    if (next && next !== team.name) onRename(next);
-    else setDraft(team.name);
-  };
-
   return (
     <div className="team-card lobby-team" style={{ "--tc": `var(${team.color})` } as React.CSSProperties}>
-      <div className="row-between" style={{ marginBottom: 14 }}>
-        <div className="lt-title">
-          {editing ? (
+      <div style={{ marginBottom: 14 }}>
+        {/* Имя и корзина — на одной строке; счётчик игроков под ними. */}
+        <div className="row" style={{ gap: 10 }}>
+          {isHost ? (
+            // Имя редактируется по тапу (как в офлайне); коммит на blur/Enter → socket rename.
+            // key={team.name} ресинкает поле, когда имя меняется на сервере.
             <input
+              key={team.name}
               className="st-name-input"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value.slice(0, 30))}
-              onBlur={commit}
+              style={{ flex: 1, minWidth: 0 }}
+              defaultValue={team.name}
+              maxLength={30}
+              placeholder="Название"
+              onBlur={(e) => {
+                const next = e.target.value.trim();
+                if (next && next !== team.name) onRename(next);
+                else e.target.value = team.name;
+              }}
               onKeyDown={(e) => {
-                if (e.key === "Enter") commit();
+                if (e.key === "Enter") e.currentTarget.blur();
                 if (e.key === "Escape") {
-                  setDraft(team.name);
-                  setEditing(false);
+                  e.currentTarget.value = team.name;
+                  e.currentTarget.blur();
                 }
               }}
-              autoFocus
             />
           ) : (
-            <span className="lt-name">{team.name}</span>
+            <span className="lt-name" style={{ flex: 1, minWidth: 0 }}>
+              {team.name}
+            </span>
           )}
-          <span className="lt-count mono">
-            {team.players.length}/{MAX_PLAYERS_PER_TEAM} игроков
-          </span>
-        </div>
-        {isHost && (
-          <div className="row" style={{ gap: 6 }}>
-            {!editing && (
-              <button
-                type="button"
-                className="icon-btn"
-                style={{ width: 36 }}
-                onClick={() => setEditing(true)}
-                aria-label="Переименовать"
-              >
-                <Pencil size={15} />
-              </button>
-            )}
-            <button type="button" className="slot-x" onClick={onRemove} aria-label="Удалить команду" title="Удалить">
-              <X size={16} />
+          {isHost && (
+            <button
+              type="button"
+              className="icon-btn"
+              style={{ width: 36, flex: "none" }}
+              onClick={onRemove}
+              aria-label="Удалить команду"
+              title="Удалить команду"
+            >
+              <Trash2 size={16} />
             </button>
-          </div>
-        )}
+          )}
+        </div>
+        <span className="lt-count mono" style={{ display: "block", marginTop: 6 }}>
+          {team.players.length}/{MAX_PLAYERS_PER_TEAM} игроков
+        </span>
       </div>
 
       <div className="stack" style={{ gap: 8 }}>

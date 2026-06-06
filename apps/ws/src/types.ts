@@ -41,6 +41,15 @@ export interface ClientToServerEvents {
     payload: { title: string },
     ack?: Ack<OkErr>,
   ) => void;
+  "room:settings": (
+    payload: {
+      roundTime?: number;
+      winScore?: number;
+      penaltySkip?: boolean;
+      categoryIds?: number[];
+    },
+    ack?: Ack<OkErr>,
+  ) => void;
   "room:leave": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
 
   // ─── Round (game cycle) ────────────────────────────────────────────
