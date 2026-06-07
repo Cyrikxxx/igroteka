@@ -16,18 +16,20 @@ import {
   PENALTY_SKIP_DEFAULT,
 } from "@/constants/game";
 
-// GET /api/games — история локальных игр устройства (по cookie aid).
+// GET /api/games — история игр устройства (по cookie aid): локальные +
+// онлайн-партии, которые пользователь хостил (Game.ownerKey = hostId).
 export async function GET() {
   try {
     const userId = await requireUserId();
     const games = await prisma.game.findMany({
-      where: { ownerKey: userId, mode: "LOCAL" },
+      where: { ownerKey: userId },
       include: {
         teams: {
           include: { players: { orderBy: { order: "asc" } } },
           orderBy: { order: "asc" },
         },
         gameCategories: { include: { category: true } },
+        room: { select: { code: true } },
       },
       orderBy: { createdAt: "desc" },
       take: 30,

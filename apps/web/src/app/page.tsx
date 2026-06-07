@@ -49,7 +49,7 @@ const FEATS = [
 
 export default function Home() {
   return (
-    <AppShell className="screen-anim">
+    <AppShell nav className="screen-anim">
       <div className="home-grid">
         {/* Левая колонка — текст + CTA */}
         <div className="home-copy">

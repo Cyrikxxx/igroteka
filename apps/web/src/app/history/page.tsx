@@ -47,7 +47,7 @@ export default function HistoryPage() {
   const list = games ?? [];
 
   return (
-    <AppShell className="screen-anim" hideHistory>
+    <AppShell className="screen-anim" nav>
       <Link href="/" className="back-link">
         <ArrowLeft /> На главную
       </Link>

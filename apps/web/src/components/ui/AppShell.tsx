@@ -8,8 +8,8 @@ import Header from "./Header";
 interface AppShellProps {
   /** Контент справа в шапке (пилюли статуса, код комнаты и т.п.). */
   right?: React.ReactNode;
-  /** Скрыть кнопку «История» в шапке. */
-  hideHistory?: boolean;
+  /** Показать навигацию в шапке (О нас / Правила / История / Поддержка) — публичные страницы. */
+  nav?: boolean;
   /** Без шапки вообще (иммерсивный игровой экран со своим .game-top). */
   noHeader?: boolean;
   /** Центрировать контент по вертикали (короткие экраны: hero, лобби, pass, финал). */
@@ -24,10 +24,10 @@ interface AppShellProps {
   children: React.ReactNode;
 }
 
-export function AppShell({ right, hideHistory, noHeader, centered, bare, className, children }: AppShellProps) {
+export function AppShell({ right, nav, noHeader, centered, bare, className, children }: AppShellProps) {
   return (
     <div className="app">
-      {!noHeader && <Header right={right} hideHistory={hideHistory} />}
+      {!noHeader && <Header right={right} nav={nav} />}
       <div className="app-scroll">
         {bare ? (
           children

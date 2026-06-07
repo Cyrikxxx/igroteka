@@ -1,37 +1,29 @@
 // Шапка приложения (новый дизайн). Самодостаточна: включает .app-header-wrap
 // + .shell, поэтому корректно рендерится и внутри AppShell, и отдельно.
 
-import Link from "next/link";
-import { History } from "lucide-react";
 import Brand from "./Brand";
+import { NavLinks, NavMenu } from "./Nav";
 import ThemeToggle from "./ThemeToggle";
 
 interface HeaderProps {
-  /** Контент справа от лого, слева от переключателя темы. */
+  /** Контент справа от лого, слева от навигации/темы. */
   right?: React.ReactNode;
-  /** Скрыть кнопку «История» (напр. на самом экране истории). */
-  hideHistory?: boolean;
+  /** Показать навигацию (О нас / Правила / История / Поддержка) — на публичных страницах. */
+  nav?: boolean;
 }
 
-export function Header({ right, hideHistory }: HeaderProps) {
+export function Header({ right, nav }: HeaderProps) {
   return (
     <header className="app-header-wrap">
       <div className="shell">
         <div className="app-header">
-          <Brand />
+          <div className="brand-group">
+            <Brand />
+            {nav && <NavLinks />}
+          </div>
           <div className="header-actions">
             {right}
-            {!hideHistory && (
-              <Link
-                href="/history"
-                className="btn btn-secondary btn-sm header-hist"
-                aria-label="История игр"
-                title="История игр"
-              >
-                <History size={16} />
-                <span className="hist-label">История</span>
-              </Link>
-            )}
+            {nav && <NavMenu />}
             <ThemeToggle />
           </div>
         </div>

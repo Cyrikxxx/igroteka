@@ -234,6 +234,8 @@ html { scrollbar-color: var(--bg-4) transparent; }
     gap: 16px;
     padding-block: clamp(16px, 2.4vh, 30px);
   }
+  /* слева: логотип + навигация; справа: header-actions (тема и т.п.) */
+  .brand-group { display: inline-flex; align-items: center; gap: clamp(14px, 2vw, 40px); min-width: 0; }
   .brand { display: inline-flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
   .brand-mark {
     width: clamp(36px, 2.6vw, 46px);
@@ -263,6 +265,62 @@ html { scrollbar-color: var(--bg-4) transparent; }
     margin-top: 2px;
   }
   .header-actions { display: inline-flex; align-items: center; gap: 10px; }
+
+  /* ---------- Public nav (О нас / Правила / История / Поддержка) ---------- */
+  .nav { position: relative; display: inline-flex; align-items: center; }
+  .main-nav { display: inline-flex; align-items: center; gap: clamp(2px, 0.5vw, 10px); }
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    height: clamp(34px, 2.4vw, 40px);
+    padding: 0 clamp(10px, 0.9vw, 14px);
+    border-radius: var(--r-sm);
+    color: var(--fg-1);
+    font-size: clamp(13px, 0.9vw, 15px);
+    font-weight: 600;
+    white-space: nowrap;
+    transition: color .15s, background .15s;
+  }
+  .nav-link:hover { color: var(--fg); background: var(--bg-2); }
+  .nav-burger {
+    display: none; /* виден только на мобиле (см. медиа ≤640px) */
+    width: clamp(40px, 2.8vw, 48px);
+    aspect-ratio: 1;
+    place-items: center;
+    border-radius: var(--r-sm);
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    color: var(--fg-1);
+    cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .nav-burger:hover { color: var(--fg); border-color: var(--line-strong); }
+  .nav-burger svg { width: 20px; height: 20px; }
+  .nav-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 50;
+    min-width: 190px;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-pop);
+    animation: screenIn .18s ease both;
+  }
+  .nav-menu-link {
+    display: block;
+    padding: 11px 12px;
+    border-radius: var(--r-sm);
+    color: var(--fg-1);
+    font-size: 15px;
+    font-weight: 600;
+    transition: color .15s, background .15s;
+  }
+  .nav-menu-link:hover { color: var(--fg); background: var(--bg-2); }
 
   /* ============================================================
      Buttons
@@ -646,6 +704,35 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .feat .fi { width: 22px; height: 22px; border-radius: 7px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; flex: none; }
   .feat .fi svg { width: 14px; height: 14px; }
 
+  /* ---------- Info pages (about / rules) ---------- */
+  .info-page { max-width: 760px; }
+  .prose { color: var(--fg-1); font-size: clamp(15px, 1.05vw, 18px); line-height: 1.7; }
+  .prose h2 { font-size: clamp(20px, 1.7vw, 28px); font-weight: 800; letter-spacing: -0.02em; color: var(--fg); margin: clamp(24px, 3vh, 38px) 0 12px; }
+  .prose p { margin: 0 0 14px; }
+  .prose strong { color: var(--fg); font-weight: 700; }
+  .prose a { color: var(--accent); }
+  .prose ul, .prose ol { margin: 0 0 16px; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .prose ul li { position: relative; padding-left: 28px; }
+  .prose ul li::before { content: "✓"; position: absolute; left: 0; top: 0; color: var(--accent); font-weight: 800; }
+  .prose ol { counter-reset: step; }
+  .prose ol li { position: relative; padding-left: 40px; min-height: 28px; counter-increment: step; }
+  .prose ol li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 13px;
+  }
+
   /* ============================================================
      Shared bits (screens)
      ============================================================ */
@@ -752,7 +839,11 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .lobby-grid { display: grid; grid-template-columns: clamp(300px, 26vw, 400px) minmax(0, 1fr); gap: var(--gap); align-items: start; }
   .lobby-invite { display: flex; flex-direction: column; gap: var(--gap); position: sticky; top: clamp(8px, 2vh, 20px); }
   .invite-card { display: flex; flex-direction: column; }
-  .invite-code { margin: 16px 0 18px; text-align: center; }
+  .invite-code { margin: 16px 0 18px; }
+  /* В лобби ячейки кода тянутся на всю ширину карточки — вровень с кнопками
+     «Код»/«Ссылка» на любом размере экрана. */
+  .invite-code .code-chunk { display: flex; width: 100%; }
+  .invite-code .code-chunk span { flex: 1 1 0; }
   .invite-actions { display: flex; gap: 10px; }
   .invite-actions .btn { flex: 1; }
   .invite-qr { display: flex; gap: 16px; align-items: center; }
@@ -980,6 +1071,9 @@ html { scrollbar-color: var(--bg-4) transparent; }
     .brand { min-width: 0; }
     .brand-name span { display: none; }
     .header-actions { gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    /* на мобиле навигация прячется в бургер */
+    .main-nav { display: none; }
+    .nav-burger { display: grid; }
     .header-hist { padding: 0; width: clamp(40px, 11vw, 44px); }
     .header-hist .hist-label { display: none; }
     .header-hist svg { margin: 0; }
