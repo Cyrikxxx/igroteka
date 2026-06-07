@@ -251,6 +251,8 @@ export interface GameFromAPI {
     categoryId: number;
     category?: { name: string; emoji: string | null };
   }[];
+  /** Для онлайн-игр — связанная комната (код нужен для «Продолжить»). */
+  room?: { code: string } | null;
 }
 
 export interface CategoryFromAPI {

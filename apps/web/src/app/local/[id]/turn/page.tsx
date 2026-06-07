@@ -1,15 +1,14 @@
 "use client";
 
-// Передача устройства перед раундом. См. DESIGN.md §5.5 PassDeviceScreen.
+// Передача устройства перед раундом. Дизайн — PassScreen из редизайна.
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { Crown, EyeOff, Play } from "lucide-react";
 import type { GameFromAPI } from "@/types";
 import { teamColorVar } from "@/constants/game";
-import Header from "@/components/ui/Header";
-import Pill from "@/components/ui/Pill";
-import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
+import AppShell from "@/components/ui/AppShell";
+import Avatar from "@/components/ui/Avatar";
 
 export default function LocalTurnPage() {
   const params = useParams();
@@ -36,83 +35,77 @@ export default function LocalTurnPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center p-4">
-          <p style={{ color: "var(--danger)" }}>{error}</p>
-        </main>
-      </div>
+      <AppShell centered>
+        <p style={{ color: "var(--danger)", textAlign: "center" }}>{error}</p>
+      </AppShell>
     );
   }
   if (!game) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center p-4">
-          <p style={{ color: "var(--fg-2)" }}>Загрузка…</p>
-        </main>
-      </div>
+      <AppShell centered>
+        <p className="muted" style={{ textAlign: "center" }}>
+          Загрузка…
+        </p>
+      </AppShell>
     );
   }
 
   const team = game.teams.find((t) => t.order === game.currentTeamIndex)!;
   const player = team.players[team.currentPlayerIndex];
   const colorVar = teamColorVar(team.order);
+  const sorted = [...game.teams].sort((a, b) => b.score - a.score);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 mx-auto w-full max-w-2xl px-4 md:px-8 py-8 md:py-16">
-        <div className="eyebrow mb-4">
-          РАУНД {game.currentRoundNumber} · КОМАНДА «{team.name}»
+    <AppShell centered className="screen-anim">
+      <div className="pass-wrap" style={{ "--tc": `var(${colorVar})` } as React.CSSProperties}>
+        <div className="pass-hero">
+          <span className="eyebrow">передай устройство · раунд {game.currentRoundNumber}</span>
+          <div className="pass-avatar">
+            <Avatar name={player.name} color={colorVar} size={92} />
+          </div>
+          <h1 className="pass-name">{player.name}</h1>
+          <p className="pass-team">объясняет за команду «{team.name}»</p>
+          <div className="pass-players">
+            {team.players.map((p) => (
+              <span className="pass-chip mono" key={p.id}>
+                {p.name}
+              </span>
+            ))}
+          </div>
         </div>
-        <h1 className="h-display mb-8">
-          Передайте<br />устройство
-        </h1>
 
-        <Card
-          className="text-center mb-6"
-          style={{
-            background: `linear-gradient(180deg, color-mix(in oklch, var(${colorVar}) 18%, var(--bg-1)), var(--bg-1))`,
-            borderColor: `color-mix(in oklch, var(${colorVar}) 35%, var(--line-strong))`,
-          }}
-        >
-          <div
-            className="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl font-extrabold mb-4"
-            style={{
-              background: `color-mix(in oklch, var(${colorVar}) 30%, var(--bg-2))`,
-              color: `var(${colorVar})`,
-            }}
+        <div className="pass-side">
+          <div className="card pass-score">
+            <span className="eyebrow">текущий счёт</span>
+            <div className="pass-score-list">
+              {sorted.map((t, i) => (
+                <div
+                  className={"pass-score-row" + (i === 0 ? " lead" : "")}
+                  key={t.id}
+                  style={{ "--tc": `var(${teamColorVar(t.order)})` } as React.CSSProperties}
+                >
+                  <span className="psr-rank mono">{i + 1}</span>
+                  <span className="psr-dot" />
+                  <span className="psr-name">{t.name}</span>
+                  {i === 0 && <Crown size={15} className="psr-crown" />}
+                  <span className="psr-score mono">{t.score}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-primary btn-lg btn-block"
+            onClick={() => router.push(`/local/${gameId}/round`)}
           >
-            {player.name.charAt(0).toUpperCase()}
-          </div>
-          <div className="text-2xl font-extrabold tracking-tight">
-            {player.name} объясняет
-          </div>
-          <div className="text-sm mt-2" style={{ color: "var(--fg-2)" }}>
-            Угадывают остальные «{team.name}»
-          </div>
-        </Card>
-
-        <div className="flex flex-wrap gap-2 justify-center mb-8">
-          {game.teams.map((t) => (
-            <Pill
-              key={t.id}
-              mono
-              style={{
-                background: `color-mix(in oklch, var(${teamColorVar(t.order)}) 18%, var(--bg-2))`,
-                color: `var(${teamColorVar(t.order)})`,
-              }}
-            >
-              {t.name} · {t.score}
-            </Pill>
-          ))}
+            <Play /> Я готов · начать раунд
+          </button>
+          <p className="pass-note mono">
+            <EyeOff size={14} /> Слово увидишь только ты
+          </p>
         </div>
-
-        <Button block size="lg" onClick={() => router.push(`/local/${gameId}/round`)}>
-          Старт раунда
-        </Button>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

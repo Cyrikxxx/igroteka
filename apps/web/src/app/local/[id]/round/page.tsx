@@ -1,21 +1,21 @@
 "use client";
 
-// Локальная игра — раунд: таймер, WordCard, угадал/пропустил, RoundSummary.
-// См. DESIGN.md §5.6 (game) и §5.7 (round summary), CURRENT_CODE.md §3.1.
+// Локальная игра — раунд. Дизайн — GameScreen (объясняющий) + RoundSummary
+// из редизайна. Логика сохранена: useTimer, угадал/пропустил, сохранение раунда.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Check, Pause, X } from "lucide-react";
+import { ArrowRight, Check, EyeOff, LogOut, Pause, Play, SkipForward, X } from "lucide-react";
 import type { GameFromAPI, WordInRound } from "@/types";
 import { useTimer } from "@/hooks/useTimer";
 import { teamColorVar } from "@/constants/game";
 import { formatTime } from "@/lib/utils";
-import Header from "@/components/ui/Header";
-import Pill from "@/components/ui/Pill";
-import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
+import AppShell from "@/components/ui/AppShell";
+import Avatar from "@/components/ui/Avatar";
+import TimerRing from "@/components/game/TimerRing";
+import Countdown from "@/components/game/Countdown";
 
-type Phase = "loading" | "active" | "summary" | "saving";
+type Phase = "loading" | "countdown" | "active" | "summary" | "saving";
 
 export default function LocalRoundPage() {
   const router = useRouter();
@@ -28,6 +28,7 @@ export default function LocalRoundPage() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [error, setError] = useState<string | null>(null);
   const [pauseOpen, setPauseOpen] = useState(false);
+  const [flash, setFlash] = useState<"got" | "skip" | null>(null);
 
   const wordsRef = useRef(words);
   wordsRef.current = words;
@@ -36,7 +37,6 @@ export default function LocalRoundPage() {
   const fetchedRef = useRef(false);
 
   const handleTimeUp = useCallback(() => {
-    // Если в момент истечения таймера слово ещё открыто — фиксируем как пропуск.
     setWords((prev) => {
       const idx = currentIndexRef.current;
       if (idx >= prev.length || prev[idx].guessed !== null) return prev;
@@ -46,6 +46,8 @@ export default function LocalRoundPage() {
     });
     setPhase("summary");
   }, []);
+
+  const onCountdownDone = useCallback(() => setPhase("active"), []);
 
   const { timeLeft, start, pause, isRunning } = useTimer({
     initialTime: game?.roundTime ?? 60,
@@ -76,17 +78,15 @@ export default function LocalRoundPage() {
           return;
         }
         setGame(g);
-        setWords(
-          ws.map((w, i) => ({ wordId: w.id, text: w.text, guessed: null, order: i })),
-        );
-        setPhase("active");
+        setWords(ws.map((w, i) => ({ wordId: w.id, text: w.text, guessed: null, order: i })));
+        setPhase("countdown");
       } catch (e) {
         setError((e as Error).message);
       }
     })();
   }, [gameId, router]);
 
-  // Стартуем таймер, как только всё загружено
+  // Стартуем таймер, когда отсчёт завершён и всё загружено
   useEffect(() => {
     if (phase === "active" && game && !isRunning && timeLeft === game.roundTime) {
       start();
@@ -94,6 +94,8 @@ export default function LocalRoundPage() {
   }, [phase, game, isRunning, timeLeft, start]);
 
   const guess = (guessed: boolean) => {
+    setFlash(guessed ? "got" : "skip");
+    setTimeout(() => setFlash(null), 280);
     setWords((prev) => {
       const next = [...prev];
       const idx = currentIndexRef.current;
@@ -103,7 +105,6 @@ export default function LocalRoundPage() {
     });
     setCurrentIndex((i) => {
       const nextIdx = i + 1;
-      // Если слова закончились — досрочно завершаем раунд.
       if (nextIdx >= wordsRef.current.length) {
         setPhase("summary");
         pause();
@@ -112,11 +113,8 @@ export default function LocalRoundPage() {
     });
   };
 
-  const toggleSummaryWord = (wordId: number) => {
-    setWords((prev) =>
-      prev.map((w) => (w.wordId === wordId ? { ...w, guessed: !w.guessed } : w)),
-    );
-  };
+  const toggleSummaryWord = (wordId: number) =>
+    setWords((prev) => prev.map((w) => (w.wordId === wordId ? { ...w, guessed: !w.guessed } : w)));
 
   const confirm = async () => {
     if (!game) return;
@@ -131,54 +129,46 @@ export default function LocalRoundPage() {
         body: JSON.stringify({
           teamId: team.id,
           playerName: player.name,
-          words: answered.map((w) => ({
-            wordId: w.wordId,
-            guessed: w.guessed,
-            order: w.order,
-          })),
+          words: answered.map((w) => ({ wordId: w.wordId, guessed: w.guessed, order: w.order })),
         }),
       });
       if (!res.ok) throw new Error("Не удалось сохранить раунд");
       const result = (await res.json()) as { gameFinished: boolean };
-      if (result.gameFinished) {
-        router.replace(`/local/${gameId}/results`);
-      } else {
-        router.replace(`/local/${gameId}/turn`);
-      }
+      router.replace(result.gameFinished ? `/local/${gameId}/results` : `/local/${gameId}/turn`);
     } catch (e) {
       setError((e as Error).message);
       setPhase("summary");
     }
   };
 
-  if (error) {
+  // ─── error / loading ───
+  if (error && phase !== "summary" && phase !== "saving") {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center p-4">
-          <Card className="max-w-md text-center">
-            <p style={{ color: "var(--danger)" }} className="mb-4">{error}</p>
-            <Button onClick={() => router.replace(`/local/${gameId}/turn`)}>Назад</Button>
-          </Card>
-        </main>
-      </div>
+      <AppShell centered>
+        <div className="card" style={{ textAlign: "center", maxWidth: 460, marginInline: "auto" }}>
+          <p style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</p>
+          <button type="button" className="btn btn-secondary" onClick={() => router.replace(`/local/${gameId}/turn`)}>
+            Назад
+          </button>
+        </div>
+      </AppShell>
     );
   }
-
   if (phase === "loading" || !game) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <p style={{ color: "var(--fg-2)" }}>Загрузка раунда…</p>
-        </main>
-      </div>
+      <AppShell centered>
+        <p className="muted" style={{ textAlign: "center" }}>
+          Загрузка раунда…
+        </p>
+      </AppShell>
     );
   }
 
   const team = game.teams.find((t) => t.order === game.currentTeamIndex)!;
   const colorVar = teamColorVar(team.order);
   const currentWord = words[currentIndex];
+  const gotCount = words.filter((w) => w.guessed === true).length;
+  const skipCount = words.filter((w) => w.guessed === false).length;
 
   // ─── Round summary ───
   if (phase === "summary" || phase === "saving") {
@@ -186,222 +176,182 @@ export default function LocalRoundPage() {
     const guessedCount = answered.filter((w) => w.guessed).length;
     const skipped = answered.filter((w) => !w.guessed).length;
     const score = guessedCount - (game.penaltySkip ? skipped : 0);
+
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 mx-auto w-full max-w-2xl px-4 md:px-8 py-8 md:py-12">
-          <div className="eyebrow mb-2">ИТОГИ РАУНДА</div>
-          <h1 className="h-title mb-2">Команда «{team.name}»</h1>
-          <p className="text-sm mb-6" style={{ color: "var(--fg-2)" }}>
-            Нажмите на слово, чтобы изменить статус.
-          </p>
+      <AppShell centered className="screen-anim">
+        <div className="summary-wrap">
+          <div className="summary-left">
+            <span className="eyebrow">итог раунда · команда «{team.name}»</span>
+            <h1 className="h-display" style={{ margin: "12px 0" }}>
+              {score > 0 ? "Отличный раунд!" : "Раунд завершён"}
+            </h1>
+            <p className="h-sub">
+              Проверь слова — тапни, чтобы переключить «угадано / пропуск», если где-то ошиблись.
+            </p>
 
-          <ul className="flex flex-col gap-2 mb-6 max-h-[55vh] overflow-y-auto">
-            {answered.map((w) => (
-              <li key={w.wordId}>
-                <button
-                  type="button"
-                  onClick={() => toggleSummaryWord(w.wordId)}
-                  className="w-full text-left px-4 py-3 rounded-md flex items-center gap-3 transition-colors"
-                  style={
-                    w.guessed
-                      ? {
-                          background:
-                            "color-mix(in oklch, var(--accent) 10%, var(--bg-1))",
-                          border: "1px solid var(--accent-line)",
-                          color: "var(--accent)",
-                        }
-                      : {
-                          background:
-                            "color-mix(in oklch, var(--danger) 10%, var(--bg-1))",
-                          border:
-                            "1px solid color-mix(in oklch, var(--danger) 30%, transparent)",
-                          color: "var(--danger)",
-                        }
-                  }
+            <div className="round-score">
+              <div className="rs-big">
+                <span
+                  className={"rs-plus mono" + (score >= 0 ? " accent-text" : "")}
+                  style={score < 0 ? { color: "var(--danger)" } : undefined}
                 >
-                  <span className="inline-flex items-center justify-center w-5 h-5">
-                    {w.guessed ? <Check size={16} strokeWidth={3} /> : <X size={16} strokeWidth={3} />}
-                  </span>
-                  <span className="flex-1 font-medium">{w.text}</span>
-                  <span className="font-mono text-xs opacity-80">
-                    {w.guessed ? "+1" : game.penaltySkip ? "−1" : "0"}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-
-          <Card>
-            <div className="flex items-center justify-between text-sm">
-              <span style={{ color: "var(--fg-2)" }}>Угадано</span>
-              <span className="font-bold" style={{ color: "var(--accent)" }}>
-                +{guessedCount}
-              </span>
-            </div>
-            {skipped > 0 && (
-              <div className="flex items-center justify-between text-sm mt-1">
-                <span style={{ color: "var(--fg-2)" }}>Пропущено</span>
-                <span style={{ color: game.penaltySkip ? "var(--danger)" : "var(--fg-2)" }}>
-                  {game.penaltySkip ? `−${skipped}` : `${skipped} (без штрафа)`}
+                  {score > 0 ? "+" : ""}
+                  {score}
                 </span>
+                <span className="rs-l">очков за раунд</span>
               </div>
-            )}
-            <div
-              className="flex items-center justify-between mt-3 pt-3 text-base font-bold"
-              style={{ borderTop: "1px solid var(--line)" }}
-            >
-              <span>Итого за раунд</span>
-              <span style={{ color: score >= 0 ? "var(--accent)" : "var(--danger)" }}>
-                {score > 0 ? "+" : ""}
-                {score}
-              </span>
+              <div className="rs-split">
+                <div>
+                  <b className="mono accent-text">{guessedCount}</b> угадано
+                </div>
+                <div>
+                  <b className="mono">{skipped}</b> пропуск
+                </div>
+                <div>
+                  <b className="mono">{team.score + score}</b> общий счёт
+                </div>
+              </div>
             </div>
-          </Card>
 
-          <Button
-            block
-            size="lg"
-            disabled={phase === "saving"}
-            onClick={confirm}
-            className="mt-6"
-          >
-            {phase === "saving" ? "Сохраняем…" : "Подтвердить и передать ход"}
-          </Button>
-        </main>
-      </div>
+            {error && (
+              <p style={{ color: "var(--danger)", fontSize: 13, marginBottom: 12 }}>{error}</p>
+            )}
+            <button
+              type="button"
+              className="btn btn-primary btn-lg btn-block"
+              disabled={phase === "saving"}
+              onClick={confirm}
+            >
+              {phase === "saving" ? (
+                "Сохраняем…"
+              ) : (
+                <>
+                  Подтвердить · передать ход <ArrowRight />
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="card summary-words">
+            <div className="row-between" style={{ marginBottom: 14 }}>
+              <h2 className="h-title">Слова раунда</h2>
+              <span className="pill pill-mono">{answered.length} слов</span>
+            </div>
+            <div className="words-list">
+              {answered.map((w) => (
+                <div
+                  key={w.wordId}
+                  className={"word-row " + (w.guessed ? "got" : "skip")}
+                  onClick={() => toggleSummaryWord(w.wordId)}
+                >
+                  <span className="wr-ic">{w.guessed ? <Check size={15} /> : <X size={15} />}</span>
+                  {w.text}
+                  <span className="wr-pts">{w.guessed ? "+1" : game.penaltySkip ? "−1" : "0"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </AppShell>
     );
   }
 
-  // ─── Active round ───
+  // ─── Active round (+ countdown) ───
+  const player = team.players[team.currentPlayerIndex];
+  const danger = phase === "active" && timeLeft <= 10;
+
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
-      <header
-        className="flex items-center justify-between px-4 md:px-8 py-3"
-        style={{ borderBottom: "1px solid var(--line)" }}
-      >
-        <Pill
-          mono
-          style={{
-            background: `color-mix(in oklch, var(${colorVar}) 18%, var(--bg-2))`,
-            color: `var(${colorVar})`,
-          }}
-        >
-          {team.name} · {team.score}
-        </Pill>
-        <div className="eyebrow">РАУНД {game.currentRoundNumber}</div>
-        <button
-          type="button"
-          onClick={() => {
-            pause();
-            setPauseOpen(true);
-          }}
-          aria-label="Пауза"
-          className="w-9 h-9 flex items-center justify-center rounded-md"
-          style={{ background: "var(--bg-2)", border: "1px solid var(--line)" }}
-        >
-          <Pause size={14} fill="currentColor" strokeWidth={0} />
-        </button>
-      </header>
-
-      <main className="flex-1 flex flex-col items-center justify-between p-4 md:p-8">
-        {/* Timer */}
-        <div className="text-center my-4">
-          <div
-            className="font-mono font-extrabold tabular-nums"
-            style={{
-              fontSize: "clamp(64px, 14vw, 96px)",
-              color: timeLeft <= 5 ? "var(--danger)" : "var(--fg)",
-              letterSpacing: "-0.04em",
-            }}
-          >
-            {formatTime(timeLeft)}
-          </div>
-          <div
-            className="mx-auto mt-2 h-1 rounded-full overflow-hidden"
-            style={{
-              width: 240,
-              background: "var(--bg-3)",
-            }}
-          >
-            <div
-              className="h-full transition-[width] duration-300"
-              style={{
-                width: `${(timeLeft / game.roundTime) * 100}%`,
-                background: timeLeft <= 5 ? "var(--danger)" : "var(--accent)",
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Word card */}
-        <div className="flex-1 w-full max-w-xl flex items-center justify-center">
-          {currentWord ? (
-            <div
-              key={currentWord.wordId}
-              className="w-full rounded-2xl px-8 py-16 text-center relative"
-              style={{
-                background: "var(--bg-1)",
-                border: "2px solid var(--accent-line)",
-                boxShadow:
-                  "0 0 0 1px var(--accent-soft), 0 24px 60px rgba(0,0,0,0.35)",
+    <AppShell noHeader bare>
+      <div className={"game-screen screen-anim" + (danger ? " danger" : "")}>
+        <div className="game-bg" />
+        <div className="shell game-shell">
+          <div className="game-top">
+            <button
+              type="button"
+              className="back-link"
+              onClick={() => {
+                pause();
+                router.push("/");
               }}
             >
-              <div className="eyebrow mb-3">СЛОВО</div>
-              <div
-                className="font-extrabold leading-none"
-                style={{
-                  fontSize: "clamp(36px, 8vw, 56px)",
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {currentWord.text}
+              <LogOut /> Выйти
+            </button>
+            <div className="game-turn">
+              <Avatar name={player.name} color={colorVar} size={34} />
+              <div>
+                <span className="gt-name">Твой ход</span>
+                <span className="gt-team mono">
+                  Команда «{team.name}» · раунд {game.currentRoundNumber}
+                </span>
               </div>
             </div>
-          ) : (
-            <p style={{ color: "var(--fg-2)" }}>Слова закончились.</p>
-          )}
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={() => {
+                pause();
+                setPauseOpen(true);
+              }}
+              aria-label="Пауза"
+            >
+              <Pause />
+            </button>
+          </div>
+
+          <div className="game-center">
+            <TimerRing value={timeLeft} total={game.roundTime} danger={danger} />
+
+            {currentWord ? (
+              <div className={"word-card-big" + (flash ? " flash-" + flash : "")} key={currentWord.wordId}>
+                <span className="word-eyebrow">
+                  <EyeOff size={13} /> видишь только ты
+                </span>
+                <strong className="word-main">{currentWord.text}</strong>
+                <span className="word-index mono">слово {currentIndex + 1}</span>
+              </div>
+            ) : (
+              <p className="muted">Слова закончились.</p>
+            )}
+
+            <div className="game-counts">
+              <div className="gc gc-got">
+                <Check /> {gotCount} <span>угадано</span>
+              </div>
+              <div className="gc gc-skip">
+                <SkipForward /> {skipCount} <span>пропуск</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="game-actions">
+            <button type="button" className="game-btn skip" onClick={() => guess(false)} disabled={!currentWord}>
+              <SkipForward size={24} /> Пропустил
+            </button>
+            <button type="button" className="game-btn got" onClick={() => guess(true)} disabled={!currentWord}>
+              <Check size={26} /> Угадал
+            </button>
+          </div>
         </div>
 
-        {/* Action bar */}
-        <div className="grid grid-cols-2 gap-3 w-full max-w-xl">
-          <button
-            type="button"
-            onClick={() => guess(false)}
-            disabled={!currentWord}
-            className="h-[72px] rounded-xl font-extrabold text-base inline-flex items-center justify-center gap-2 transition-transform active:translate-y-px disabled:opacity-50"
-            style={{ background: "oklch(0.55 0.20 25)", color: "#fff" }}
-          >
-            <X size={20} strokeWidth={3} /> Пропуск
-          </button>
-          <button
-            type="button"
-            onClick={() => guess(true)}
-            disabled={!currentWord}
-            className="h-[72px] rounded-xl font-extrabold text-base inline-flex items-center justify-center gap-2 transition-transform active:translate-y-px disabled:opacity-50"
-            style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-          >
-            <Check size={20} strokeWidth={3} /> Угадал
-          </button>
-        </div>
-      </main>
+        {phase === "countdown" && <Countdown onDone={onCountdownDone} />}
 
-      {pauseOpen && (
-        <PauseOverlay
-          guessedCount={words.filter((w) => w.guessed === true).length}
-          answeredCount={words.filter((w) => w.guessed !== null).length}
-          timeLeft={timeLeft}
-          onResume={() => {
-            setPauseOpen(false);
-            start();
-          }}
-          onEndRound={() => {
-            setPauseOpen(false);
-            handleTimeUp();
-          }}
-        />
-      )}
-    </div>
+        {pauseOpen && (
+          <PauseOverlay
+            guessedCount={gotCount}
+            answeredCount={gotCount + skipCount}
+            timeLeft={timeLeft}
+            onResume={() => {
+              setPauseOpen(false);
+              start();
+            }}
+            onEndRound={() => {
+              setPauseOpen(false);
+              handleTimeUp();
+            }}
+          />
+        )}
+      </div>
+    </AppShell>
   );
 }
 
@@ -419,50 +369,21 @@ function PauseOverlay({
   onEndRound: () => void;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{
-        background: "rgba(0,0,0,0.6)",
-        backdropFilter: "blur(6px)",
-      }}
-    >
-      <div
-        className="w-full max-w-sm rounded-2xl p-6"
-        style={{
-          background: "var(--bg-1)",
-          border: "1px solid var(--line-strong)",
-          boxShadow: "var(--shadow-pop)",
-        }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xl font-extrabold tracking-tight">Пауза</h3>
-        </div>
-        <p className="text-sm mb-5" style={{ color: "var(--fg-2)" }}>
-          Раунд приостановлен. Продолжить или закончить досрочно?
+    <div className="pause-overlay">
+      <div className="pause-card card screen-anim">
+        <Pause size={40} className="accent-text" />
+        <h2 className="h-display">Пауза</h2>
+        <p className="h-sub">
+          Таймер заморожен на <b className="mono">{formatTime(timeLeft)}</b>. {guessedCount}/
+          {answeredCount} угадано. Можно продолжить или завершить раунд.
         </p>
-
-        <div className="flex flex-wrap gap-2 mb-6">
-          <span
-            className="font-mono text-[11px] px-2 py-1 rounded"
-            style={{ background: "var(--bg-3)", color: "var(--fg-1)" }}
-          >
-            {guessedCount}/{answeredCount} угадано
-          </span>
-          <span
-            className="font-mono text-[11px] px-2 py-1 rounded"
-            style={{ background: "var(--bg-3)", color: "var(--fg-1)" }}
-          >
-            {formatTime(timeLeft)} осталось
-          </span>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Button block size="lg" onClick={onResume}>
-            Продолжить
-          </Button>
-          <Button block size="lg" variant="danger" onClick={onEndRound}>
-            Завершить раунд
-          </Button>
+        <div className="pause-actions">
+          <button type="button" className="btn btn-secondary" onClick={onEndRound}>
+            <LogOut /> Завершить
+          </button>
+          <button type="button" className="btn btn-primary btn-lg" onClick={onResume}>
+            <Play /> Продолжить
+          </button>
         </div>
       </div>
     </div>

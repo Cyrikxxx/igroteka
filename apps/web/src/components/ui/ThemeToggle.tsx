@@ -1,7 +1,8 @@
 "use client";
 
-// Переключатель темы. Тема хранится в localStorage и применяется до
-// гидратации через inline-script в layout.tsx (no-flash).
+// Переключатель темы — сегментированный контрол (.seg) из прототипа.
+// Тема хранится в localStorage и применяется до гидратации через
+// inline-script в layout.tsx (no-flash).
 
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
@@ -22,8 +23,7 @@ export function ThemeToggle() {
     setTheme(readInitial());
   }, []);
 
-  const toggle = () => {
-    const next: Theme = theme === "dark" ? "light" : "dark";
+  const apply = (next: Theme) => {
     setTheme(next);
     document.documentElement.setAttribute("data-theme", next);
     try {
@@ -34,19 +34,26 @@ export function ThemeToggle() {
   };
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={theme === "dark" ? "Включить светлую тему" : "Включить тёмную тему"}
-      className="w-9 h-9 inline-flex items-center justify-center rounded-md transition-colors"
-      style={{
-        background: "var(--bg-2)",
-        color: "var(--fg-1)",
-        border: "1px solid var(--line)",
-      }}
-    >
-      {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-    </button>
+    <div className="seg" role="group" aria-label="Тема">
+      <button
+        type="button"
+        className={theme === "dark" ? "on" : ""}
+        onClick={() => apply("dark")}
+        aria-pressed={theme === "dark"}
+        title="Тёмная"
+      >
+        <Moon />
+      </button>
+      <button
+        type="button"
+        className={theme === "light" ? "on" : ""}
+        onClick={() => apply("light")}
+        aria-pressed={theme === "light"}
+        title="Светлая"
+      >
+        <Sun />
+      </button>
+    </div>
   );
 }
 

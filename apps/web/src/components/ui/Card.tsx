@@ -2,18 +2,19 @@ import { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  /** Без тени. */
   flat?: boolean;
+  /** Пунктирная граница. */
   dashed?: boolean;
 }
 
 export function Card({ flat, dashed, className, style, ...rest }: CardProps) {
   return (
     <div
-      className={cn("rounded-[var(--card-r)] p-[var(--density-pad)]", className)}
+      className={cn("card", className)}
       style={{
-        background: "var(--bg-1)",
-        border: dashed ? "1px dashed var(--line-strong)" : "1px solid var(--line)",
-        boxShadow: flat ? "none" : "var(--shadow-card)",
+        ...(flat ? { boxShadow: "none" } : null),
+        ...(dashed ? { border: "1px dashed var(--line-strong)" } : null),
         ...style,
       }}
       {...rest}
