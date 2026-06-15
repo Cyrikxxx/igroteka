@@ -41,7 +41,6 @@ import {
 } from "../services/game";
 import type { AppSocket, AppNamespace } from "../io-types";
 
-const PRE_ROUND_SECONDS = 3;
 const BETWEEN_ROUNDS_MS = 4000;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -150,33 +149,11 @@ async function startGame(
   });
   if (!updated) return { error: "snapshot_lost" };
 
-  broadcastState(ns, code, updated);
-  broadcastPhase(ns, code, updated);
-
-  // PRE_ROUND countdown: 3, 2, 1 → ROUND_ACTIVE
-  scheduleCountdown(ns, code, PRE_ROUND_SECONDS);
+  // Без отсчёта 3-2-1: сразу запускаем раунд. Фаза уже PRE_ROUND в snapshot —
+  // enterRoundActive переведёт в ROUND_ACTIVE и разошлёт состояние, по которому
+  // лобби редиректит игроков на /play.
+  await enterRoundActive(ns, code);
   return { ok: true };
-}
-
-function scheduleCountdown(
-  ns: AppNamespace,
-  code: string,
-  seconds: number,
-): void {
-  // Эмитим первое значение сразу, потом каждую секунду до 0.
-  let remaining = seconds;
-  ns.to(`room:${code}`).emit("round:countdown", { secondsLeft: remaining });
-  const id = setInterval(async () => {
-    remaining -= 1;
-    if (remaining > 0) {
-      ns.to(`room:${code}`).emit("round:countdown", {
-        secondsLeft: remaining,
-      });
-      return;
-    }
-    clearInterval(id);
-    await enterRoundActive(ns, code);
-  }, 1000);
 }
 
 // ─── PRE_ROUND → ROUND_ACTIVE ─────────────────────────────────────────────
@@ -599,7 +576,7 @@ async function handleReviewConfirm(
     return { ok: true };
   }
 
-  // BETWEEN_ROUNDS → PRE_ROUND через 4 секунды
+  // BETWEEN_ROUNDS → сразу ROUND_ACTIVE через 4 секунды (без отсчёта 3-2-1)
   setTimeout(() => {
     void (async () => {
       const fresh = await load(code);
@@ -608,9 +585,7 @@ async function handleReviewConfirm(
         s.phase = "PRE_ROUND";
       });
       if (!next) return;
-      broadcastState(ns, code, next);
-      broadcastPhase(ns, code, next);
-      scheduleCountdown(ns, code, PRE_ROUND_SECONDS);
+      await enterRoundActive(ns, code);
     })();
   }, BETWEEN_ROUNDS_MS);
 

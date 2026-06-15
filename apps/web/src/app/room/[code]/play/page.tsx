@@ -43,7 +43,7 @@ export default function PlayPage() {
     () => (creds ? { wsUrl: creds.wsUrl, token: creds.wsToken, code: creds.code } : null),
     [creds],
   );
-  const { socket, snapshot, countdown, tick, currentWord, wordCount, review, error, status } =
+  const { socket, snapshot, tick, currentWord, wordCount, review, error, status } =
     useRoom(opts);
 
   // Редирект назад в лобби, если игра ещё не началась
@@ -311,16 +311,6 @@ export default function PlayPage() {
                 </div>
               ) : null}
             </div>
-
-            {!active && (
-              <div className="countdown-overlay">
-                <span className="eyebrow">раунд начинается</span>
-                <div className="cd-num mono" key={countdown ?? "go"}>
-                  {countdown && countdown > 0 ? countdown : "GO"}
-                </div>
-                <p className="muted">{countdown && countdown > 0 ? "Приготовься…" : "Поехали!"}</p>
-              </div>
-            )}
           </div>
         </AppShell>
         {modals}

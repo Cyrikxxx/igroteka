@@ -149,6 +149,13 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
     sock.io.on("reconnect_attempt", onReconnectAttempt);
     sock.on("room:closed", onClosed);
 
+    // Сокет мог быть уже подключён к моменту монтирования (навигация
+    // лобби→play без реконнекта) — тогда событие 'connect' не сработает.
+    // Синхронизируемся вручную: room:hello вернёт snapshot и (для explainer'а)
+    // повторно пришлёт текущее слово. Иначе при мгновенном старте раунда
+    // слово могло бы потеряться в момент перехода.
+    if (sock.connected) onConnect();
+
     return () => {
       sock.off("connect", onConnect);
       sock.off("room:state", onState);

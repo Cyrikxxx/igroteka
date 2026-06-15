@@ -13,9 +13,8 @@ import { formatTime } from "@/lib/utils";
 import AppShell from "@/components/ui/AppShell";
 import Avatar from "@/components/ui/Avatar";
 import TimerRing from "@/components/game/TimerRing";
-import Countdown from "@/components/game/Countdown";
 
-type Phase = "loading" | "countdown" | "active" | "summary" | "saving";
+type Phase = "loading" | "active" | "summary" | "saving";
 
 export default function LocalRoundPage() {
   const router = useRouter();
@@ -47,8 +46,6 @@ export default function LocalRoundPage() {
     setPhase("summary");
   }, []);
 
-  const onCountdownDone = useCallback(() => setPhase("active"), []);
-
   const { timeLeft, start, pause, isRunning } = useTimer({
     initialTime: game?.roundTime ?? 60,
     onTimeUp: handleTimeUp,
@@ -79,14 +76,14 @@ export default function LocalRoundPage() {
         }
         setGame(g);
         setWords(ws.map((w, i) => ({ wordId: w.id, text: w.text, guessed: null, order: i })));
-        setPhase("countdown");
+        setPhase("active");
       } catch (e) {
         setError((e as Error).message);
       }
     })();
   }, [gameId, router]);
 
-  // Стартуем таймер, когда отсчёт завершён и всё загружено
+  // Стартуем таймер, как только игра загружена
   useEffect(() => {
     if (phase === "active" && game && !isRunning && timeLeft === game.roundTime) {
       start();
@@ -332,8 +329,6 @@ export default function LocalRoundPage() {
             </button>
           </div>
         </div>
-
-        {phase === "countdown" && <Countdown onDone={onCountdownDone} />}
 
         {pauseOpen && (
           <PauseOverlay
