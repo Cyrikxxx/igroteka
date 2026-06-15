@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Мафия — все экраны</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="mafia/tokens.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.552.0/dist/umd/lucide.min.js" crossorigin="anonymous"></script>
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Manrope", system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="mafia/shared.jsx"></script>
+<script type="text/babel" src="mafia/ui.jsx"></script>
+<script type="text/babel" src="mafia/screen-hub.jsx"></script>
+<script type="text/babel" src="mafia/screen-landing.jsx"></script>
+<script type="text/babel" src="mafia/screen-create.jsx"></script>
+<script type="text/babel" src="mafia/screen-lobby.jsx"></script>
+<script type="text/babel" src="mafia/screen-lobby2.jsx"></script>
+<script type="text/babel" src="mafia/screen-role.jsx"></script>
+<script type="text/babel" src="mafia/screen-night.jsx"></script>
+<script type="text/babel" src="mafia/screen-night2.jsx"></script>
+<script type="text/babel" src="mafia/screen-vote.jsx"></script>
+<script type="text/babel" src="mafia/screen-day.jsx"></script>
+<script type="text/babel" src="mafia/screen-final.jsx"></script>
+<script type="text/babel" src="mafia/screen-service.jsx"></script>
+<script type="text/babel" src="mafia/tokens-board.jsx"></script>
+
+<script type="text/babel">
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="hub" title="Хаб платформы" subtitle="Чернильный нейтральный фон, обе игры на равных">
+        <DCArtboard id="hub-mobile" label="Хаб · 390" width={390} height={844}>
+          <HubMobile />
+        </DCArtboard>
+        <DCArtboard id="hub-desktop" label="Хаб · 1180" width={1180} height={740}>
+          <HubDesktop />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="onboarding" title="Онбординг" subtitle="Лендинг → создание комнаты → выдача роли">
+        <DCArtboard id="landing-mobile" label="Лендинг · 390" width={390} height={1560}>
+          <MafiaLanding />
+        </DCArtboard>
+        <DCArtboard id="landing-desktop" label="Лендинг · 1180" width={1180} height={1300}>
+          <MafiaLanding desktop={true} />
+        </DCArtboard>
+        <DCArtboard id="create1-mobile" label="Создание · ник · 390" width={390} height={844}>
+          <CreateStep1 />
+        </DCArtboard>
+        <DCArtboard id="create1-desktop" label="Создание · ник · 1180" width={1180} height={740}>
+          <DesktopWrap label="Создание — ник (десктоп)"><CreateStep1 /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="create2-mobile" label="Создание · настройки · 390" width={390} height={1280}>
+          <CreateStep2 />
+        </DCArtboard>
+        <DCArtboard id="create2-desktop" label="Создание · настройки · 1180" width={1180} height={1280}>
+          <DesktopWrap vignette={false} label="Создание — настройки (десктоп)"><CreateStep2 /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="join-code" label="Вход по коду · 390" width={390} height={844}>
+          <JoinByCode />
+        </DCArtboard>
+        <DCArtboard id="role-mafia" label="Роль · прижми и держи · 390" width={390} height={844}>
+          <RoleReveal role="mafia" partners={['Кира', 'Стас']} label="Выдача роли — мафия" />
+        </DCArtboard>
+        <DCArtboard id="role-mafia-open" label="Роль · мафия (открыта) · 390" width={390} height={844}>
+          <RoleReveal role="mafia" partners={['Кира', 'Стас']} alwaysOpen={true} label="Выдача роли — мафия (открыта)" />
+        </DCArtboard>
+        <DCArtboard id="role-sheriff" label="Роль · Шериф (открыта) · 390" width={390} height={844}>
+          <RoleReveal role="sheriff" alwaysOpen={true} label="Выдача роли — шериф" />
+        </DCArtboard>
+        <DCArtboard id="role-desktop" label="Роль · 1180" width={1180} height={844}>
+          <DesktopWrap label="Выдача роли (десктоп)"><RoleReveal role="mafia" partners={['Кира', 'Стас']} label="Выдача роли — мафия" /></DesktopWrap>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="lobby" title="Лобби и настройки" subtitle="Вид хоста и игрока, настройки в bottom sheet">
+        <DCArtboard id="lobby-host" label="Лобби · хост · 390" width={390} height={844}>
+          <MafiaLobby />
+        </DCArtboard>
+        <DCArtboard id="lobby-desktop" label="Лобби · хост · 1180" width={1180} height={844}>
+          <MafiaLobbyDesktop />
+        </DCArtboard>
+        <DCArtboard id="lobby-player" label="Лобби · игрок · 390" width={390} height={844}>
+          <MafiaLobbyPlayer />
+        </DCArtboard>
+        <DCArtboard id="lobby-player-desktop" label="Лобби · игрок · 1180" width={1180} height={844}>
+          <DesktopWrap vignette={false} label="Лобби — игрок (десктоп)"><MafiaLobbyPlayer /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="lobby-few" label="Лобби · мало игроков · 390" width={390} height={844}>
+          <MafiaLobby few={true} />
+        </DCArtboard>
+        <DCArtboard id="lobby-sheet" label="Настройки хоста · sheet · 390" width={390} height={844}>
+          <LobbySettingsSheet />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="night" title="Ночь" subtitle="Глубокая тьма, красная виньетка; роли действуют">
+        <DCArtboard id="night-civ" label="Мирный · 390" width={390} height={844}>
+          <NightCivilian />
+        </DCArtboard>
+        <DCArtboard id="night-civ-desktop" label="Мирный · 1180" width={1180} height={740}>
+          <DesktopWrap label="Ночь — мирный (десктоп)"><NightCivilian /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="night-mafia" label="Мафия · 390" width={390} height={844}>
+          <NightMafia />
+        </DCArtboard>
+        <DCArtboard id="night-mafia-desktop" label="Мафия · 1180" width={1180} height={844}>
+          <DesktopWrap label="Ночь — мафия (десктоп)"><NightMafia /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="night-doc" label="Доктор · 390" width={390} height={844}>
+          <NightDoctor />
+        </DCArtboard>
+        <DCArtboard id="night-doc-desktop" label="Доктор · 1180" width={1180} height={844}>
+          <DesktopWrap label="Ночь — доктор (десктоп)"><NightDoctor /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="night-sheriff" label="Шериф · выбор · 390" width={390} height={844}>
+          <NightSheriff />
+        </DCArtboard>
+        <DCArtboard id="night-sheriff-desktop" label="Шериф · выбор · 1180" width={1180} height={844}>
+          <DesktopWrap label="Ночь — шериф (десктоп)"><NightSheriff /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="verdict-mafia" label="Вердикт · мафия · 390" width={390} height={844}>
+          <SheriffVerdict mafia={true} />
+        </DCArtboard>
+        <DCArtboard id="verdict-clean" label="Вердикт · не мафия · 390" width={390} height={844}>
+          <SheriffVerdict mafia={false} />
+        </DCArtboard>
+        <DCArtboard id="verdict-desktop" label="Вердикт · 1180" width={1180} height={740}>
+          <DesktopWrap label="Вердикт шерифа (десктоп)"><SheriffVerdict mafia={true} /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="night-maniac" label="Маньяк · 390" width={390} height={844}>
+          <NightManiac />
+        </DCArtboard>
+        <DCArtboard id="night-maniac-desktop" label="Маньяк · 1180" width={1180} height={844}>
+          <DesktopWrap label="Ночь — маньяк (десктоп)"><NightManiac /></DesktopWrap>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="day" title="День" subtitle="Утро → обсуждение → голосование → последнее слово">
+        <DCArtboard id="morning-death" label="Утро · погиб игрок · 390" width={390} height={844}>
+          <MorningDeath />
+        </DCArtboard>
+        <DCArtboard id="morning-death-desktop" label="Утро · 1180" width={1180} height={740}>
+          <DesktopWrap label="Утро (десктоп)"><MorningDeath /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="morning-alive" label="Утро · все выжили · 390" width={390} height={844}>
+          <MorningAllAlive />
+        </DCArtboard>
+        <DCArtboard id="you-dead" label="Ты убит · 390" width={390} height={844}>
+          <YouDead />
+        </DCArtboard>
+        <DCArtboard id="you-exiled" label="Город изгнал тебя · 390" width={390} height={844}>
+          <YouDead exiled={true} />
+        </DCArtboard>
+        <DCArtboard id="discussion" label="Обсуждение · хост · 390" width={390} height={844}>
+          <Discussion />
+        </DCArtboard>
+        <DCArtboard id="discussion-player" label="Обсуждение · игрок · 390" width={390} height={844}>
+          <Discussion host={false} />
+        </DCArtboard>
+        <DCArtboard id="discussion-desktop" label="Обсуждение · 1180" width={1180} height={844}>
+          <DesktopWrap vignette={false} label="Обсуждение (десктоп)"><Discussion /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="vote" label="Голосование · 390" width={390} height={844}>
+          <VoteDay />
+        </DCArtboard>
+        <DCArtboard id="vote-desktop" label="Голосование · 1180" width={1180} height={844}>
+          <DesktopWrap vignette={false} label="Голосование (десктоп)"><VoteDay /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="vote-result" label="Результат · изгнание · 390" width={390} height={844}>
+          <VoteResult />
+        </DCArtboard>
+        <DCArtboard id="vote-tie" label="Результат · ничья · 390" width={390} height={844}>
+          <VoteResult tie={true} />
+        </DCArtboard>
+        <DCArtboard id="vote-result-desktop" label="Результат · 1180" width={1180} height={740}>
+          <DesktopWrap label="Результат голосования (десктоп)"><VoteResult /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="revote" label="Переголосование · 390" width={390} height={844}>
+          <Revote />
+        </DCArtboard>
+        <DCArtboard id="revote-desktop" label="Переголосование · 1180" width={1180} height={740}>
+          <DesktopWrap vignette={false} label="Переголосование (десктоп)"><Revote /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="lastword" label="Последнее слово · 390" width={390} height={844}>
+          <LastWord />
+        </DCArtboard>
+        <DCArtboard id="lastword-desktop" label="Последнее слово · 1180" width={1180} height={740}>
+          <DesktopWrap label="Последнее слово (десктоп)"><LastWord /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="lastword-self" label="Последнее слово · сам · 390" width={390} height={844}>
+          <LastWord self={true} />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="final" title="Финал" subtitle="Итоги партии и режим зрителя">
+        <DCArtboard id="gameover-city" label="Итоги · победа города · 390" width={390} height={1500}>
+          <GameOver winner="city" />
+        </DCArtboard>
+        <DCArtboard id="gameover-desktop" label="Итоги · 1180" width={1180} height={1100}>
+          <GameOverDesktop />
+        </DCArtboard>
+        <DCArtboard id="gameover-mafia" label="Итоги · мафия · 390" width={390} height={844}>
+          <GameOver winner="mafia" headerOnly={true} />
+        </DCArtboard>
+        <DCArtboard id="gameover-maniac" label="Итоги · маньяк · 390" width={390} height={844}>
+          <GameOver winner="maniac" headerOnly={true} />
+        </DCArtboard>
+        <DCArtboard id="spectator" label="Зритель · 390" width={390} height={1050}>
+          <Spectator />
+        </DCArtboard>
+        <DCArtboard id="spectator-desktop" label="Зритель · 1180" width={1180} height={1050}>
+          <DesktopWrap label="Зритель (десктоп)"><Spectator /></DesktopWrap>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="service" title="Сервисные" subtitle="Пауза, реконнект, передача хоста">
+        <DCArtboard id="pause" label="Пауза · хост · 390" width={390} height={844}>
+          <PauseOverlay />
+        </DCArtboard>
+        <DCArtboard id="pause-player" label="Пауза · игрок · 390" width={390} height={844}>
+          <PauseOverlay host={false} />
+        </DCArtboard>
+        <DCArtboard id="reconnect" label="Реконнект · 390" width={390} height={844}>
+          <Reconnect />
+        </DCArtboard>
+        <DCArtboard id="reconnect-desktop" label="Реконнект · 1180" width={1180} height={740}>
+          <DesktopWrap label="Реконнект (десктоп)"><Reconnect /></DesktopWrap>
+        </DCArtboard>
+        <DCArtboard id="host-toast" label="Передача хоста · тост · 390" width={390} height={844}>
+          <HostToast />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="tokens" title="Токены зоны Мафии" subtitle="Финальные значения для переноса в Tailwind">
+        <DCArtboard id="tokens-board" label="Токены" width={1080} height={680}>
+          <TokensBoard />
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
