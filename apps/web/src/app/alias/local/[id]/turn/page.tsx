@@ -25,7 +25,7 @@ export default function LocalTurnPage() {
       })
       .then((g: GameFromAPI) => {
         if (g.status === "FINISHED") {
-          router.replace(`/local/${gameId}/results`);
+          router.replace(`/alias/local/${gameId}/results`);
           return;
         }
         setGame(g);
@@ -97,7 +97,7 @@ export default function LocalTurnPage() {
           <button
             type="button"
             className="btn btn-primary btn-lg btn-block"
-            onClick={() => router.push(`/local/${gameId}/round`)}
+            onClick={() => router.push(`/alias/local/${gameId}/round`)}
           >
             <Play /> Я готов · начать раунд
           </button>

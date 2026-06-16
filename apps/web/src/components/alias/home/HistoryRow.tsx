@@ -19,11 +19,11 @@ export function HistoryRow({ game, onDelete, deleting }: HistoryRowProps) {
   const sorted = [...game.teams].sort((a, b) => b.score - a.score);
   const winnerId = !live && sorted.length ? sorted[0].id : null;
 
-  const resultsHref = isLocal ? `/local/${game.id}/results` : `/results/${game.id}`;
+  const resultsHref = isLocal ? `/alias/local/${game.id}/results` : `/alias/results/${game.id}`;
   const continueHref = isLocal
-    ? `/local/${game.id}/turn`
+    ? `/alias/local/${game.id}/turn`
     : game.room?.code
-      ? `/room/${game.room.code}`
+      ? `/alias/room/${game.room.code}`
       : resultsHref;
 
   return (

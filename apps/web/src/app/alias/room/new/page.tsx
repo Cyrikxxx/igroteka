@@ -82,7 +82,7 @@ export default function RoomNewPage() {
         userId: data.user.id,
         displayName: data.user.displayName,
       });
-      router.replace(`/room/${data.room.code}`);
+      router.replace(`/alias/room/${data.room.code}`);
     } catch {
       setError("Сеть/сервер недоступен");
       setSubmitting(false);

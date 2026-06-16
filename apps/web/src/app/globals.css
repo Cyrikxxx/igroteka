@@ -1286,3 +1286,38 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .mf-preset { font-family: var(--font-mono); font-size: 13px; font-weight: 700; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--mf-border); background: transparent; color: var(--mf-text-dim); cursor: pointer; transition: all 0.12s; }
   .mf-preset.on { background: var(--mf-crimson); border-color: var(--mf-crimson); color: #fff; }
 }
+
+/* ============================================================
+   ХАБ ИГРОТЕКИ — нейтральная чернильная платформа (/).
+   Обе игры на равных. Перенос из mafia-design/mafia/screen-hub.
+   ============================================================ */
+@layer components {
+  .hub { min-height: 100vh; min-height: 100dvh; background: var(--ink-bg); color: var(--mf-text); font-family: var(--font-main); display: flex; flex-direction: column; align-items: center; padding: clamp(20px, 4vw, 44px) clamp(18px, 3.5vw, 64px); }
+  .hub-inner { width: 100%; max-width: 940px; margin: 0 auto; flex: 1; display: flex; flex-direction: column; gap: clamp(16px, 2.4vw, 26px); }
+  @media (min-width: 1600px) { .hub-inner { max-width: 1080px; } }
+  .hub-brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: clamp(15px, 1.3vw, 16px); letter-spacing: 0.04em; }
+  .hub-dot { width: 11px; height: 11px; border-radius: 3px; }
+  .hub-title { margin: 6px 0 2px; font-weight: 800; font-size: clamp(30px, 5vw, 52px); letter-spacing: -0.025em; line-height: 1.1; text-wrap: pretty; }
+  @media (min-width: 720px) { .hub-title { text-align: center; margin: 14px 0 0; } }
+  .hub-cards { display: grid; grid-template-columns: 1fr; gap: 14px; flex: 1; }
+  @media (min-width: 720px) { .hub-cards { grid-template-columns: 1fr 1fr; gap: 22px; max-width: 880px; width: 100%; margin: 0 auto; align-items: stretch; } }
+  .hub-card { background: var(--ink-surface); border: 1.5px solid var(--ink-border); border-radius: var(--r-card); padding: 24px 22px 22px; display: flex; flex-direction: column; gap: 12px; position: relative; overflow: hidden; text-decoration: none; color: inherit; transition: border-color 0.15s, transform 0.1s; }
+  .hub-card:hover { border-color: rgba(255, 255, 255, 0.2); }
+  .hub-card:active { transform: scale(0.995); }
+  .hub-card-glow { position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; border-radius: 50%; opacity: 0.12; filter: blur(40px); pointer-events: none; }
+  .hub-card-title { font-weight: 800; font-size: clamp(30px, 4vw, 38px); letter-spacing: -0.02em; line-height: 1; }
+  .hub-card-tag { color: var(--mf-text-dim); font-size: 15.5px; font-weight: 600; line-height: 1.45; text-wrap: pretty; min-height: 44px; }
+  .hub-card-meta { display: flex; align-items: center; gap: 8px; color: var(--mf-text-faint); font-size: 13.5px; font-weight: 700; }
+  .hub-card-cta { margin-top: auto; display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 52px; border-radius: var(--r-btn); font-weight: 800; font-size: 16px; }
+  .hub-code { display: flex; flex-direction: column; gap: 10px; }
+  @media (min-width: 720px) { .hub-code { align-items: center; } }
+  .hub-code-label { color: var(--mf-text-faint); font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+  .hub-code-row { display: flex; gap: 10px; width: 100%; }
+  @media (min-width: 720px) { .hub-code-row { width: 460px; } }
+  .hub-code-input { flex: 1; min-width: 0; background: var(--ink-surface); border: 1.5px solid var(--ink-border); border-radius: var(--r-btn); padding: 14px 18px; font-family: var(--font-mono); font-size: 20px; font-weight: 700; letter-spacing: 0.3em; color: var(--mf-text); text-transform: uppercase; }
+  .hub-code-input::placeholder { color: var(--mf-text-faint); letter-spacing: 0.3em; }
+  .hub-code-input:focus { outline: none; border-color: var(--mf-text-faint); }
+  .hub-footer { display: flex; gap: 22px; justify-content: center; color: var(--mf-text-faint); font-size: 13.5px; font-weight: 700; padding: 16px 0 4px; }
+  .hub-footer a { color: inherit; text-decoration: none; }
+  .hub-footer a:hover { color: var(--mf-text-dim); }
+}

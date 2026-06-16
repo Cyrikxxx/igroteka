@@ -66,7 +66,7 @@ export default function LocalRoundPage() {
         const g = (await gameRes.json()) as GameFromAPI;
         const ws = (await wordsRes.json()) as { id: number; text: string }[];
         if (g.status === "FINISHED") {
-          router.replace(`/local/${gameId}/results`);
+          router.replace(`/alias/local/${gameId}/results`);
           return;
         }
         if (ws.length === 0) {
@@ -131,7 +131,7 @@ export default function LocalRoundPage() {
       });
       if (!res.ok) throw new Error("Не удалось сохранить раунд");
       const result = (await res.json()) as { gameFinished: boolean };
-      router.replace(result.gameFinished ? `/local/${gameId}/results` : `/local/${gameId}/turn`);
+      router.replace(result.gameFinished ? `/alias/local/${gameId}/results` : `/alias/local/${gameId}/turn`);
     } catch (e) {
       setError((e as Error).message);
       setPhase("summary");
@@ -144,7 +144,7 @@ export default function LocalRoundPage() {
       <AppShell centered>
         <div className="card" style={{ textAlign: "center", maxWidth: 460, marginInline: "auto" }}>
           <p style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</p>
-          <button type="button" className="btn btn-secondary" onClick={() => router.replace(`/local/${gameId}/turn`)}>
+          <button type="button" className="btn btn-secondary" onClick={() => router.replace(`/alias/local/${gameId}/turn`)}>
             Назад
           </button>
         </div>

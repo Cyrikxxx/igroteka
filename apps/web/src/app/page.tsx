@@ -1,154 +1,127 @@
+"use client";
+
+// Хаб игротеки (/). Нейтральная чернильная платформа: обе игры на равных.
+// Дизайн — HubMobile/HubDesktop из project-context/mafia-design/mafia/screen-hub.
+// Логика: карточки ведут в зоны игр, ввод кода — в join (детект игры — Phase 2).
+
+import { useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Check,
-  Hash,
-  SkipForward,
-  Smartphone,
-  Sparkles,
-  Users,
-  Wifi,
-  Zap,
-} from "lucide-react";
-import AppShell from "@/components/common/AppShell";
-import RoomCode from "@/components/common/RoomCode";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Users } from "lucide-react";
 
-// CTA главного экрана. href — реальные маршруты приложения.
-const CTAS = [
-  {
-    href: "/room/new",
-    icon: Wifi,
-    title: "Создать онлайн-комнату",
-    sub: "/room/new",
-    desc: "Каждый со своего телефона, в реальном времени",
-    primary: true,
-  },
-  {
-    href: "/local/new",
-    icon: Smartphone,
-    title: "На одном устройстве",
-    sub: "/local/new",
-    desc: "Одна компания, один телефон по кругу",
-    primary: false,
-  },
-  {
-    href: "/join",
-    icon: Hash,
-    title: "Войти по коду",
-    sub: "/join",
-    desc: "Есть код комнаты от друга? Заходи",
-    primary: false,
-  },
-];
+interface GameCardProps {
+  href: string;
+  accent: string;
+  accentText: string;
+  ctaDark?: boolean;
+  title: string;
+  tagline: string;
+  badges: string[];
+  meta: string;
+}
 
-const FEATS = [
-  { icon: Zap, t: "Без регистрации" },
-  { icon: Sparkles, t: "10 категорий · 629 слов" },
-  { icon: Smartphone, t: "Работает на любом телефоне" },
-];
+const ALIAS: GameCardProps = {
+  href: "/alias",
+  accent: "var(--alias-green)",
+  accentText: "var(--alias-green)",
+  ctaDark: true,
+  title: "Алиас",
+  tagline: "Объясняй слова на время",
+  badges: ["Онлайн", "Локально"],
+  meta: "2–6 команд",
+};
 
-export default function Home() {
+const MAFIA: GameCardProps = {
+  href: "/mafia/new",
+  accent: "var(--mf-crimson)",
+  accentText: "var(--mf-crimson)",
+  title: "Мафия",
+  tagline: "Найди мафию раньше, чем она найдёт тебя",
+  badges: ["Онлайн"],
+  meta: "5–16 игроков",
+};
+
+function GameCard({ card }: { card: GameCardProps }) {
   return (
-    <AppShell nav className="screen-anim">
-      <div className="home-grid">
-        {/* Левая колонка — текст + CTA */}
-        <div className="home-copy">
-          <div className="home-badges">
-            <span className="pill pill-mono pill-accent">
-              <Sparkles /> v2 · online party
-            </span>
-            <span className="pill pill-mono">
-              <Users /> 5–32 игрока
-            </span>
-          </div>
+    <Link href={card.href} className="hub-card">
+      <div className="hub-card-glow" style={{ background: card.accent }} />
+      <div style={{ display: "flex", gap: 8 }}>
+        {card.badges.map((b) => (
+          <span key={b} className="mf-chip" style={{ background: "rgba(255,255,255,0.06)" }}>
+            {b}
+          </span>
+        ))}
+      </div>
+      <div className="hub-card-title" style={{ color: card.accent }}>
+        {card.title}
+      </div>
+      <div className="hub-card-tag">{card.tagline}</div>
+      <div className="hub-card-meta">
+        <Users size={16} /> {card.meta}
+      </div>
+      <span
+        className="hub-card-cta"
+        style={{ background: card.accent, color: card.ctaDark ? "#06130a" : "#fff" }}
+      >
+        Играть <ArrowRight size={19} />
+      </span>
+    </Link>
+  );
+}
 
-          <h1 className="h-mega home-title">
-            <span className="outline-text">АЛИАС</span>
-            <br />
-            <span>В РЕАЛЬНОМ</span>
-            <br />
-            <span className="accent-text">ВРЕМЕНИ</span>
-          </h1>
+export default function HubPage() {
+  const router = useRouter();
+  const [code, setCode] = useState("");
 
-          <p className="h-sub home-lead">
-            Объясняй слово, не называя его. Собери друзей в одну комнату — каждый
-            играет со своего телефона, счёт обновляется на лету.
-          </p>
+  const go = (e: React.FormEvent) => {
+    e.preventDefault();
+    const c = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+    if (!c) return;
+    // TODO (Phase 2): определять игру по коду и вести в нужный join.
+    router.push(`/alias/join?code=${c}`);
+  };
 
-          <div className="home-ctas">
-            {CTAS.map((c) => (
-              <Link
-                key={c.href}
-                href={c.href}
-                className={"home-cta" + (c.primary ? " home-cta--primary" : "")}
-              >
-                <span className="home-cta-ic">
-                  <c.icon size={24} />
-                </span>
-                <span className="home-cta-body">
-                  <span className="home-cta-title">{c.title}</span>
-                  <span className="home-cta-desc">{c.desc}</span>
-                </span>
-                <span className="home-cta-sub mono">{c.sub}</span>
-                <span className="home-cta-arrow">
-                  <ArrowRight size={20} />
-                </span>
-              </Link>
-            ))}
-          </div>
-
-          <div className="home-feats">
-            {FEATS.map((f) => (
-              <span className="feat" key={f.t}>
-                <span className="fi">
-                  <f.icon />
-                </span>
-                {f.t}
-              </span>
-            ))}
-          </div>
+  return (
+    <div className="hub">
+      <div className="hub-inner">
+        <div className="hub-brand">
+          <span className="hub-dot" style={{ background: "var(--alias-green)" }} />
+          <span className="hub-dot" style={{ background: "var(--mf-crimson)" }} />
+          <span>ИГРОТЕКА</span>
         </div>
 
-        {/* Правая колонка — декоративная сцена (скрыта ≤980px) */}
-        <div className="home-stage" aria-hidden="true">
-          <div className="hs-glow" />
+        <h1 className="hub-title">Во что играем сегодня?</h1>
 
-          <div className="hs-card hs-card--word">
-            <span className="eyebrow">слово · кино</span>
-            <strong>Титаник</strong>
-            <div className="hs-timer">
-              <span className="mono">0:42</span>
-              <div className="hs-track">
-                <span style={{ width: "62%" }} />
-              </div>
-            </div>
-          </div>
+        <div className="hub-cards">
+          <GameCard card={ALIAS} />
+          <GameCard card={MAFIA} />
+        </div>
 
-          <div className="hs-card hs-card--mini hs-card--got">
-            <Check size={18} /> угадано <b>+1</b>
+        <form className="hub-code" onSubmit={go}>
+          <span className="hub-code-label">Есть код комнаты?</span>
+          <div className="hub-code-row">
+            <input
+              className="hub-code-input"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))}
+              placeholder="K7F2QD"
+              inputMode="text"
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Код комнаты"
+            />
+            <button type="submit" className="mf-btn mf-btn-surface" style={{ minWidth: 100 }}>
+              Войти
+            </button>
           </div>
-          <div className="hs-card hs-card--mini hs-card--skip">
-            <SkipForward size={18} /> пропуск
-          </div>
+        </form>
 
-          <div className="hs-card hs-card--score">
-            <div className="hs-team" style={{ "--tc": "var(--team-1)" } as React.CSSProperties}>
-              <span className="hs-dot" /> Мятные <b className="mono">14</b>
-            </div>
-            <div className="hs-team" style={{ "--tc": "var(--team-3)" } as React.CSSProperties}>
-              <span className="hs-dot" /> Лиловые <b className="mono">11</b>
-            </div>
-            <div className="hs-team" style={{ "--tc": "var(--team-2)" } as React.CSSProperties}>
-              <span className="hs-dot" /> Янтарные <b className="mono">9</b>
-            </div>
-          </div>
-
-          <div className="hs-card hs-card--code">
-            <span className="eyebrow">код комнаты</span>
-            <RoomCode code="VPYZQQ" />
-          </div>
+        <div className="hub-footer">
+          <Link href="/about">О нас</Link>
+          <Link href="/rules">Правила</Link>
+          <Link href="/history">История</Link>
         </div>
       </div>
-    </AppShell>
+    </div>
   );
 }

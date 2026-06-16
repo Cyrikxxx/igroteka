@@ -1,7 +1,6 @@
 "use client";
 
-// Общий экран финального счёта — и для LOCAL, и для ONLINE (по Game.mode).
-// Дизайн — Victory из редизайна (см. VictoryView).
+// Финальный экран локальной игры. Дизайн — Victory (см. VictoryView).
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -9,10 +8,10 @@ import type { GameFromAPI } from "@/types";
 import AppShell from "@/components/common/AppShell";
 import VictoryView from "@/components/alias/game/VictoryView";
 
-export default function ResultsPage() {
+export default function LocalResultsPage() {
   const params = useParams();
   const router = useRouter();
-  const gameId = params.gameId as string;
+  const gameId = params.id as string;
   const [game, setGame] = useState<GameFromAPI | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,14 +42,13 @@ export default function ResultsPage() {
     );
   }
 
-  const isLocal = game.mode === "LOCAL";
   return (
     <AppShell centered className="screen-anim">
       <VictoryView
         game={game}
         onHome={() => router.push("/")}
-        onRematch={() => router.push(isLocal ? "/local/new" : "/room/new")}
-        rematchLabel={isLocal ? "Новая игра" : "Новая комната"}
+        onRematch={() => router.push("/alias/local/new")}
+        rematchLabel="Новая игра"
       />
     </AppShell>
   );

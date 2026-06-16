@@ -100,7 +100,7 @@ export default function LocalNewPage() {
   const onNext = () => {
     const err = validate();
     if (err) return setError(err);
-    router.push("/local/settings");
+    router.push("/alias/local/settings");
   };
 
   return (

@@ -88,7 +88,7 @@ export default function LocalSettingsPage() {
       }
       const game: GameFromAPI = await res.json();
       clearLocalSetup();
-      router.replace(`/local/${game.id}/turn`);
+      router.replace(`/alias/local/${game.id}/turn`);
     } catch (e) {
       console.error(e);
       setError("Сеть/сервер недоступен. Попробуйте ещё раз.");
@@ -98,7 +98,7 @@ export default function LocalSettingsPage() {
 
   return (
     <AppShell className="screen-anim">
-      <button type="button" className="back-link" onClick={() => router.push("/local/new")}>
+      <button type="button" className="back-link" onClick={() => router.push("/alias/local/new")}>
         <ArrowLeft /> Назад к командам
       </button>
 

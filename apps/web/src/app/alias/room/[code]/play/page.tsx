@@ -50,9 +50,9 @@ export default function PlayPage() {
   useEffect(() => {
     if (!snapshot || !creds) return;
     if (snapshot.phase === "LOBBY") {
-      router.replace(`/room/${creds.code}`);
+      router.replace(`/alias/room/${creds.code}`);
     } else if (snapshot.phase === "FINISHED" && snapshot.gameId) {
-      router.replace(`/results/${snapshot.gameId}`);
+      router.replace(`/alias/results/${snapshot.gameId}`);
     }
   }, [snapshot?.phase, snapshot?.gameId, creds, router]);
 

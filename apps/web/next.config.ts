@@ -34,6 +34,16 @@ try {
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  // Маршруты Алиаса переехали под /alias/* (игротека: Алиас + Мафия).
+  // Редиректим старые прод-ссылки и «продолжить игру» из истории.
+  async redirects() {
+    return [
+      { source: "/room/:path*", destination: "/alias/room/:path*", permanent: false },
+      { source: "/local/:path*", destination: "/alias/local/:path*", permanent: false },
+      { source: "/results/:path*", destination: "/alias/results/:path*", permanent: false },
+      { source: "/join", destination: "/alias/join", permanent: false },
+    ];
+  },
   // packages/shared — TypeScript-исходники, Next/Turbopack должен
   // транспилировать их при импорте.
   transpilePackages: ["@alias/shared"],

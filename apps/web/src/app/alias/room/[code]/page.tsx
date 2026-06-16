@@ -75,9 +75,9 @@ export default function LobbyPage() {
       snapshot.phase === "ROUND_REVIEW" ||
       snapshot.phase === "BETWEEN_ROUNDS"
     ) {
-      router.replace(`/room/${creds.code}/play`);
+      router.replace(`/alias/room/${creds.code}/play`);
     } else if (snapshot.phase === "FINISHED" && snapshot.gameId) {
-      router.replace(`/results/${snapshot.gameId}`);
+      router.replace(`/alias/results/${snapshot.gameId}`);
     }
   }, [snapshot?.phase, snapshot?.gameId, creds, router]);
 
