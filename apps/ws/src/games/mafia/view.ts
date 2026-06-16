@@ -77,12 +77,11 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
   };
 
   if (myRole === "mafia" || myRole === "don") {
-    you.partners = snap.players
-      .filter(
-        (p) =>
-          p.userId !== userId && (p.role === "mafia" || p.role === "don"),
-      )
-      .map((p) => p.displayName);
+    const mates = snap.players.filter(
+      (p) => p.userId !== userId && (p.role === "mafia" || p.role === "don"),
+    );
+    you.partners = mates.map((p) => p.displayName);
+    you.partnerIds = mates.map((p) => p.userId);
     you.mafiaVotes = snap.night.mafiaVotes;
     you.nightTarget = snap.night.mafiaVotes[userId];
   } else if (myRole === "doctor") {

@@ -20,6 +20,19 @@ export interface RoleMeta {
   task: string;
 }
 
+export function RoleChip({ role }: { role: MafiaRole }) {
+  const m = ROLE_META[role];
+  const Icon = m.Icon;
+  return (
+    <span
+      className="mf-chip"
+      style={{ background: "rgba(255,255,255,0.06)", color: m.color, fontSize: 11.5, padding: "3px 9px" }}
+    >
+      <Icon size={12} /> {m.label}
+    </span>
+  );
+}
+
 export const ROLE_META: Record<MafiaRole, RoleMeta> = {
   mafia: {
     label: "Мафия",

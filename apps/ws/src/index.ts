@@ -9,6 +9,7 @@ import { authMiddleware } from "./auth";
 import { registerLobbyHandlers } from "./handlers/lobby";
 import { registerRoundHandlers } from "./handlers/round";
 import { registerMafiaLobbyHandlers } from "./games/mafia/handlers/lobby";
+import { registerMafiaGameHandlers } from "./games/mafia/handlers/game";
 import { mafiaRoom } from "./games/mafia/broadcast";
 import type {
   ClientToServerEvents,
@@ -114,6 +115,7 @@ mafiaNs.on("connection", (socket) => {
   );
   void socket.join(mafiaRoom(roomCode));
   registerMafiaLobbyHandlers(mafiaNs, socket);
+  registerMafiaGameHandlers(mafiaNs, socket);
 
   socket.on("disconnect", (reason) => {
     console.log(

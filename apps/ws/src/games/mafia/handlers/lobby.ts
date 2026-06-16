@@ -9,7 +9,7 @@ import {
 } from "@alias/shared/mafia";
 import { mutate, load } from "../snapshot";
 import { assignRoles } from "../roles";
-import { enterNight } from "../services/cycle";
+import { enterNight } from "../engine";
 import { buildView } from "../view";
 import {
   scheduleStateBroadcast,
@@ -185,21 +185,23 @@ export function registerMafiaLobbyHandlers(
 
   // ─── mafia:ready ─── игрок подтвердил, что запомнил роль
   socket.on("mafia:ready", async (_payload, ack) => {
+    let allReady = false;
     const snap = await mutate(roomCode, (s) => {
       const me = s.players.find((p) => p.userId === userId);
       if (me) me.ready = true;
-      // Все живые игроки готовы → первая ночь.
       if (
         s.phase === "ROLE_REVEAL" &&
         s.players.length > 0 &&
         s.players.every((p) => p.ready)
       ) {
-        enterNight(s);
+        allReady = true;
       }
     });
     if (!snap) return ack?.({ error: "room_not_found" });
     ack?.({ ok: true });
-    await broadcastStateNow(ns, roomCode);
+    // Все готовы → первая ночь (engine ставит таймер).
+    if (allReady) await enterNight(ns, roomCode);
+    else await broadcastStateNow(ns, roomCode);
   });
 
   // ─── disconnect ─── пометить offline, если других сокетов нет

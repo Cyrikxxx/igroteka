@@ -1,13 +1,16 @@
 "use client";
 
 // Игровой экран Мафии. Рендерит по фазе из персонального MafiaView.
-// Фаза 2: ROLE_REVEAL. Ночь/день/финал — заглушки (фазы 3–5).
+// Ночь — NightScreen; мёртвые/зрители — SpectatorScreen. День/финал — фаза 4–5.
 
 import { useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Moon } from "lucide-react";
 import MafiaShell from "@/components/mafia/MafiaShell";
 import RoleReveal from "@/components/mafia/RoleReveal";
+import NightScreen from "@/components/mafia/NightScreen";
+import SpectatorScreen from "@/components/mafia/SpectatorScreen";
+import PhaseHead from "@/components/mafia/PhaseHead";
+import { Moon } from "lucide-react";
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
 import { loadRoomCreds } from "@/lib/room-session";
 
@@ -30,7 +33,6 @@ export default function MafiaPlayPage() {
     if (code && !creds) router.replace(`/mafia/join?code=${code}`);
   }, [code, creds, router]);
 
-  // Вернулись в лобби (партия не началась / сброшена).
   useEffect(() => {
     if (view && view.phase === "LOBBY") router.replace(`/mafia/room/${code}`);
   }, [view, code, router]);
@@ -44,6 +46,10 @@ export default function MafiaPlayPage() {
       </MafiaShell>
     );
   }
+
+  const me = view.players.find((p) => p.userId === view.you.userId);
+  const dead = !view.you.alive && !view.you.isSpectator;
+  const exiled = me?.eliminatedBy === "vote";
 
   // ─── ROLE_REVEAL ───
   if (view.phase === "ROLE_REVEAL") {
@@ -68,50 +74,36 @@ export default function MafiaPlayPage() {
     );
   }
 
-  // ─── Заглушки для фаз 3–5 (ночь/день/финал) ───
+  // ─── Мёртвые / зрители ───
+  if (dead || view.you.isSpectator) {
+    return (
+      <MafiaShell vignette vignetteLevel={view.phase === "NIGHT" ? 0.16 : 0.05}>
+        <SpectatorScreen view={view} exiled={exiled} />
+      </MafiaShell>
+    );
+  }
+
+  // ─── NIGHT ───
+  if (view.phase === "NIGHT") {
+    return (
+      <MafiaShell vignette vignetteLevel={view.you.role === "maniac" ? 0.1 : 0.16}>
+        <NightScreen
+          view={view}
+          onAction={(action, targetId) =>
+            socket?.emit("mafia:night_action", { action, targetId }, () => {})
+          }
+        />
+      </MafiaShell>
+    );
+  }
+
+  // ─── День/финал (фазы 4–5) — временная заглушка ───
   return (
-    <MafiaShell vignette vignetteLevel={0.16}>
-      <div className="mf-phase-head">
-        <div className="mf-phase-title">
-          <Moon size={22} color="var(--mf-crimson)" />
-          <span>{phaseTitle(view.phase, view.day)}</span>
-        </div>
-        {view.timer ? (
-          <div className="mf-timer" style={{ fontSize: 22 }}>{fmt(view.timer.msLeft)}</div>
-        ) : null}
-      </div>
-      <Centered
-        title={view.phase === "NIGHT" ? "Город спит" : view.phase}
-        sub="Этот экран появится в следующих обновлениях"
-      />
+    <MafiaShell vignette vignetteLevel={0.05}>
+      <PhaseHead icon={Moon} title={`${view.phase} · день ${view.day}`} timerMs={view.timer?.msLeft ?? null} />
+      <Centered title={view.phase} sub="Этот экран появится в следующем обновлении" />
     </MafiaShell>
   );
-}
-
-function phaseTitle(phase: string, day: number): string {
-  switch (phase) {
-    case "NIGHT":
-      return `Ночь ${day}`;
-    case "MORNING":
-      return `Утро ${day}`;
-    case "DISCUSSION":
-      return `День ${day} — обсуждение`;
-    case "VOTE":
-      return `День ${day} — голосование`;
-    case "VOTE_RESULT":
-      return "Итог голосования";
-    case "LAST_WORD":
-      return "Последнее слово";
-    case "FINISHED":
-      return "Финал";
-    default:
-      return phase;
-  }
-}
-
-function fmt(ms: number): string {
-  const s = Math.max(0, Math.ceil(ms / 1000));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
 function Centered({ title, sub }: { title: string; sub?: string }) {

@@ -266,6 +266,8 @@ export interface MafiaYouView {
   isSpectator: boolean;
   /** Имена напарников (для мафии/дона). */
   partners?: string[];
+  /** userId напарников (для подсветки в ночной сетке). */
+  partnerIds?: string[];
   /** Твой выбор цели этой ночью. */
   nightTarget?: string;
   /** Видно мафии: голоса напарников voterId->targetId. */
