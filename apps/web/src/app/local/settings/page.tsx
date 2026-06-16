@@ -15,10 +15,10 @@ import {
 } from "@/lib/local-setup";
 import { ROUND_TIME_OPTIONS, WIN_SCORE_OPTIONS } from "@/constants/game";
 import { CategoryFromAPI, GameFromAPI } from "@/types";
-import AppShell from "@/components/ui/AppShell";
-import Stepper from "@/components/ui/Stepper";
-import Chip from "@/components/ui/Chip";
-import Toggle from "@/components/ui/Toggle";
+import AppShell from "@/components/common/AppShell";
+import Stepper from "@/components/common/Stepper";
+import Chip from "@/components/common/Chip";
+import Toggle from "@/components/common/Toggle";
 
 export default function LocalSettingsPage() {
   const router = useRouter();

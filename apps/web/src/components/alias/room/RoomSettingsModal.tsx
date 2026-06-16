@@ -7,9 +7,9 @@ import { useEffect, useState } from "react";
 import { Check, Clock, Minus, Target } from "lucide-react";
 import { ROUND_TIME_OPTIONS, WIN_SCORE_OPTIONS } from "@/constants/game";
 import type { CategoryFromAPI } from "@/types";
-import Modal from "@/components/ui/Modal";
-import Chip from "@/components/ui/Chip";
-import Toggle from "@/components/ui/Toggle";
+import Modal from "@/components/common/Modal";
+import Chip from "@/components/common/Chip";
+import Toggle from "@/components/common/Toggle";
 
 export interface RoomSettings {
   roundTime: number;

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Mail } from "lucide-react";
-import AppShell from "@/components/ui/AppShell";
+import AppShell from "@/components/common/AppShell";
 import { supportMailto } from "@/constants/site";
 
 export const metadata: Metadata = {

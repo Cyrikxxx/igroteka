@@ -7,8 +7,8 @@ import { useRouter, useParams } from "next/navigation";
 import { Crown, EyeOff, Play } from "lucide-react";
 import type { GameFromAPI } from "@/types";
 import { teamColorVar } from "@/constants/game";
-import AppShell from "@/components/ui/AppShell";
-import Avatar from "@/components/ui/Avatar";
+import AppShell from "@/components/common/AppShell";
+import Avatar from "@/components/common/Avatar";
 
 export default function LocalTurnPage() {
   const params = useParams();

@@ -9,10 +9,10 @@ import { useParams, useRouter } from "next/navigation";
 import { Check, Clock, EyeOff, LogOut, Pause, SkipForward, Users, X } from "lucide-react";
 import { loadRoomCreds } from "@/lib/room-session";
 import { useRoom } from "@/hooks/useRoom";
-import AppShell from "@/components/ui/AppShell";
-import Avatar from "@/components/ui/Avatar";
-import Modal from "@/components/ui/Modal";
-import TimerRing from "@/components/game/TimerRing";
+import AppShell from "@/components/common/AppShell";
+import Avatar from "@/components/common/Avatar";
+import Modal from "@/components/common/Modal";
+import TimerRing from "@/components/alias/game/TimerRing";
 
 interface Creds {
   code: string;

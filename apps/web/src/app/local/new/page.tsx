@@ -19,9 +19,9 @@ import {
   DEFAULT_TEAM_NAMES,
   teamColorVar,
 } from "@/constants/game";
-import AppShell from "@/components/ui/AppShell";
-import Stepper from "@/components/ui/Stepper";
-import Avatar from "@/components/ui/Avatar";
+import AppShell from "@/components/common/AppShell";
+import Stepper from "@/components/common/Stepper";
+import Avatar from "@/components/common/Avatar";
 
 export default function LocalNewPage() {
   const router = useRouter();

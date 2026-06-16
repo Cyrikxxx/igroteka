@@ -6,7 +6,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Hash, X } from "lucide-react";
-import AppShell from "@/components/ui/AppShell";
+import AppShell from "@/components/common/AppShell";
 import { saveRoomCreds, saveDisplayName, loadDisplayName } from "@/lib/room-session";
 import type { JoinRoomResponse } from "@/types";
 

@@ -8,8 +8,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Dice5, Play } from "lucide-react";
 import type { GameFromAPI } from "@/types";
-import AppShell from "@/components/ui/AppShell";
-import HistoryRow from "@/components/home/HistoryRow";
+import AppShell from "@/components/common/AppShell";
+import HistoryRow from "@/components/alias/home/HistoryRow";
 
 interface Stats {
   games: number;

@@ -6,9 +6,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Clock, Minus, Sparkles, Target, Wifi } from "lucide-react";
-import AppShell from "@/components/ui/AppShell";
-import Chip from "@/components/ui/Chip";
-import Toggle from "@/components/ui/Toggle";
+import AppShell from "@/components/common/AppShell";
+import Chip from "@/components/common/Chip";
+import Toggle from "@/components/common/Toggle";
 import {
   ROUND_TIME_OPTIONS,
   WIN_SCORE_OPTIONS,

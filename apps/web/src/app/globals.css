@@ -105,6 +105,56 @@
 @media (min-width: 1920px) { :root { --shell-w: 1680px; } }
 @media (min-width: 2560px) { :root { --shell-w: 2080px; } }
 
+/* ============================================================
+   Мафия — токены зоны (кримсон-нуар).
+   Перенос из project-context/mafia-design/mafia/tokens.css.
+   Самостоятельная тёмная палитра: не зависит от Alias-токенов
+   и переключателя темы (зона Мафии всегда «ночная»).
+   ============================================================ */
+:root {
+  /* Платформа (чернильный хаб) */
+  --ink-bg: #0e1014;
+  --ink-surface: #161922;
+  --ink-border: rgba(255, 255, 255, 0.08);
+  --alias-green: #22c55e;
+  --alias-green-hover: #4ade80;
+
+  /* Мафия — фоны */
+  --mf-bg: #0a0a0f;
+  --mf-surface: #14141d;
+  --mf-surface-2: #1b1b27;
+  --mf-border: rgba(255, 255, 255, 0.09);
+
+  /* Мафия — акценты */
+  --mf-crimson: #e11d48;
+  --mf-crimson-hover: #f43f5e;
+  --mf-gold: #f59e0b;
+
+  /* Мафия — текст */
+  --mf-text: #f5f4f6;
+  --mf-text-dim: #a0a1ad;
+  --mf-text-faint: #62636e;
+
+  /* Роли */
+  --role-mafia: #e11d48;
+  --role-don: #e11d48; /* + золотая окантовка */
+  --role-sheriff: #f59e0b;
+  --role-doctor: #38bdf8;
+  --role-maniac: #a855f7;
+  --role-civilian: #94a3b8;
+
+  /* Радиусы/тени зоны Мафии */
+  --r-card: 20px;
+  --r-btn: 14px;
+  --r-chip: 999px;
+  --sh-card: 0 8px 28px rgba(0, 0, 0, 0.45);
+  --sh-glow-crimson: 0 0 36px rgba(225, 29, 72, 0.35);
+  --sh-glow-gold: 0 0 36px rgba(245, 158, 11, 0.3);
+
+  /* Мафия использует тот же Manrope; --font-mono уже определён выше */
+  --font-main: var(--font-sans);
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-bg-1: var(--bg-1);
@@ -1118,4 +1168,121 @@ html { scrollbar-color: var(--bg-4) transparent; }
   @media (min-width: 1920px) { .hero-outline { -webkit-text-stroke-width: 3px; } }
   @media (min-width: 2560px) { .hero-outline { -webkit-text-stroke-width: 4px; } }
   .pulse { animation: pulse-dot 1.6s ease-in-out infinite; }
+}
+
+/* ============================================================
+   МАФИЯ — компонентный слой (порт из mafia-design/mafia/tokens.css).
+   Используется экранами зоны /mafia. Классы с префиксом .mf-*.
+   ============================================================ */
+@layer components {
+  /* Базовая поверхность экрана Мафии */
+  .mf-screen {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--mf-bg);
+    color: var(--mf-text);
+    font-family: var(--font-main);
+    position: relative;
+  }
+  .mf-screen * { box-sizing: border-box; }
+
+  /* Ночная виньетка — красное свечение по краям */
+  .mf-vignette::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(120% 60% at 50% -20%, rgba(225, 29, 72, var(--vignette, 0.16)) 0%, transparent 60%),
+      radial-gradient(140% 50% at 50% 115%, rgba(225, 29, 72, calc(var(--vignette, 0.16) * 0.6)) 0%, transparent 60%);
+    z-index: 0;
+  }
+  .mf-vignette > * { position: relative; z-index: 1; }
+
+  /* Кнопки */
+  .mf-btn {
+    font-family: var(--font-main);
+    font-weight: 800;
+    font-size: 17px;
+    border: none;
+    border-radius: var(--r-btn);
+    padding: 16px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: background 0.15s, transform 0.1s;
+    min-height: 54px;
+  }
+  .mf-btn:active { transform: scale(0.98); }
+  .mf-btn:disabled { cursor: not-allowed; }
+  .mf-btn-crimson { background: var(--mf-crimson); color: #fff; }
+  .mf-btn-crimson:hover:not(:disabled) { background: var(--mf-crimson-hover); }
+  .mf-btn-green { background: var(--alias-green); color: #06130a; }
+  .mf-btn-green:hover:not(:disabled) { background: var(--alias-green-hover); }
+  .mf-btn-ghost { background: transparent; color: var(--mf-text-dim); border: 1px solid var(--mf-border); }
+  .mf-btn-ghost:hover:not(:disabled) { color: var(--mf-text); border-color: rgba(255, 255, 255, 0.2); }
+  .mf-btn-surface { background: var(--mf-surface-2); color: var(--mf-text); }
+  .mf-btn-surface:hover:not(:disabled) { background: #232331; }
+  .mf-btn-gold { background: var(--mf-gold); color: #1a1102; }
+
+  /* Чипы и бейджи */
+  .mf-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: var(--r-chip);
+    padding: 5px 12px;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--mf-text-dim);
+  }
+
+  /* Моно-элементы */
+  .mf-mono { font-family: var(--font-mono); }
+  .mf-timer { font-family: var(--font-mono); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* Шапка фазы */
+  .mf-phase-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 0; }
+  .mf-phase-title { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; letter-spacing: -0.01em; }
+
+  /* Сетка игроков */
+  .mf-player-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 20px; }
+  .mf-player-card {
+    position: relative;
+    background: var(--mf-surface);
+    border: 1.5px solid var(--mf-border);
+    border-radius: var(--r-card);
+    padding: 14px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    min-height: 104px;
+    justify-content: center;
+  }
+  .mf-player-card:hover { border-color: rgba(255, 255, 255, 0.2); }
+  .mf-player-card.picked { border-color: var(--mf-crimson); box-shadow: var(--sh-glow-crimson); background: rgba(225, 29, 72, 0.08); }
+  .mf-player-card.picked-gold { border-color: var(--mf-gold); box-shadow: var(--sh-glow-gold); background: rgba(245, 158, 11, 0.08); }
+  .mf-player-card.disabled { opacity: 0.45; cursor: not-allowed; }
+  .mf-player-name { font-weight: 700; font-size: 15px; }
+  .mf-player-grid.cols3 { grid-template-columns: repeat(3, 1fr); }
+  .mf-player-grid.cols4 { grid-template-columns: repeat(4, 1fr); }
+
+  /* Строка настройки */
+  .mf-setting-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--mf-border); }
+  .mf-setting-label { font-weight: 700; font-size: 15px; }
+  .mf-setting-sub { font-weight: 600; font-size: 12.5px; color: var(--mf-text-faint); margin-top: 2px; }
+
+  /* Пресет-чипы (моно) */
+  .mf-preset { font-family: var(--font-mono); font-size: 13px; font-weight: 700; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--mf-border); background: transparent; color: var(--mf-text-dim); cursor: pointer; transition: all 0.12s; }
+  .mf-preset.on { background: var(--mf-crimson); border-color: var(--mf-crimson); color: #fff; }
 }

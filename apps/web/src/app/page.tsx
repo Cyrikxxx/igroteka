@@ -10,8 +10,8 @@ import {
   Wifi,
   Zap,
 } from "lucide-react";
-import AppShell from "@/components/ui/AppShell";
-import RoomCode from "@/components/ui/RoomCode";
+import AppShell from "@/components/common/AppShell";
+import RoomCode from "@/components/common/RoomCode";
 
 // CTA главного экрана. href — реальные маршруты приложения.
 const CTAS = [

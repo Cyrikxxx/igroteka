@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import AppShell from "@/components/ui/AppShell";
+import AppShell from "@/components/common/AppShell";
 
 export const metadata: Metadata = {
   title: "Правила · Alias",

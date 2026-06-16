@@ -10,9 +10,9 @@ import type { GameFromAPI, WordInRound } from "@/types";
 import { useTimer } from "@/hooks/useTimer";
 import { teamColorVar } from "@/constants/game";
 import { formatTime } from "@/lib/utils";
-import AppShell from "@/components/ui/AppShell";
-import Avatar from "@/components/ui/Avatar";
-import TimerRing from "@/components/game/TimerRing";
+import AppShell from "@/components/common/AppShell";
+import Avatar from "@/components/common/Avatar";
+import TimerRing from "@/components/alias/game/TimerRing";
 
 type Phase = "loading" | "active" | "summary" | "saving";
 

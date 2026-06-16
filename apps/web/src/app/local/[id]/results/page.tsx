@@ -5,8 +5,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { GameFromAPI } from "@/types";
-import AppShell from "@/components/ui/AppShell";
-import VictoryView from "@/components/game/VictoryView";
+import AppShell from "@/components/common/AppShell";
+import VictoryView from "@/components/alias/game/VictoryView";
 
 export default function LocalResultsPage() {
   const params = useParams();

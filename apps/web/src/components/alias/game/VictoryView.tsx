@@ -4,7 +4,7 @@
 import { ArrowLeft, Crown, RefreshCw, Trophy } from "lucide-react";
 import type { GameFromAPI } from "@/types";
 import { teamColorVar } from "@/constants/game";
-import Avatar from "@/components/ui/Avatar";
+import Avatar from "@/components/common/Avatar";
 
 interface VictoryViewProps {
   game: GameFromAPI;

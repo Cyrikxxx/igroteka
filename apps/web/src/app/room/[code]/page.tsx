@@ -26,12 +26,12 @@ import {
 } from "@/constants/game";
 import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
 import { useRoom } from "@/hooks/useRoom";
-import AppShell from "@/components/ui/AppShell";
-import Avatar from "@/components/ui/Avatar";
-import RoomCode from "@/components/ui/RoomCode";
-import QrCode from "@/components/ui/QrCode";
-import Modal from "@/components/ui/Modal";
-import RoomSettingsModal from "@/components/room/RoomSettingsModal";
+import AppShell from "@/components/common/AppShell";
+import Avatar from "@/components/common/Avatar";
+import RoomCode from "@/components/common/RoomCode";
+import QrCode from "@/components/common/QrCode";
+import Modal from "@/components/common/Modal";
+import RoomSettingsModal from "@/components/alias/room/RoomSettingsModal";
 
 interface Creds {
   code: string;
