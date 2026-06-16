@@ -12,10 +12,6 @@ import {
 } from "../engine";
 import type { MafiaSocket, MafiaNamespace } from "../io-types";
 
-function isHost(socket: MafiaSocket): boolean {
-  return socket.data.role === "host";
-}
-
 export function registerMafiaGameHandlers(
   ns: MafiaNamespace,
   socket: MafiaSocket,
@@ -116,9 +112,9 @@ export function registerMafiaGameHandlers(
 
   // ─── Хост завершает обсуждение досрочно ───
   socket.on("mafia:end_discussion", async (_p, ack) => {
-    if (!isHost(socket)) return ack?.({ error: "forbidden" });
     const snap = await load(code);
     if (!snap) return ack?.({ error: "room_not_found" });
+    if (snap.hostId !== userId) return ack?.({ error: "forbidden" });
     if (snap.phase !== "DISCUSSION") return ack?.({ error: "not_discussion" });
     ack?.({ ok: true });
     clearTimer(code);
@@ -130,7 +126,7 @@ export function registerMafiaGameHandlers(
     const snap = await load(code);
     if (!snap) return ack?.({ error: "room_not_found" });
     if (snap.phase !== "LAST_WORD") return ack?.({ error: "not_lastword" });
-    if (!isHost(socket) && snap.pendingElim !== userId)
+    if (snap.hostId !== userId && snap.pendingElim !== userId)
       return ack?.({ error: "forbidden" });
     ack?.({ ok: true });
     clearTimer(code);

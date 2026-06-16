@@ -18,10 +18,6 @@ import {
 } from "../broadcast";
 import type { MafiaSocket, MafiaNamespace } from "../io-types";
 
-function isHost(socket: MafiaSocket): boolean {
-  return socket.data.role === "host";
-}
-
 /** Валидация частичных настроек от хоста (с клампами). */
 function applySettings(s: MafiaSettings, p: unknown): void {
   if (!p || typeof p !== "object") return;
@@ -106,9 +102,9 @@ export function registerMafiaLobbyHandlers(
 
   // ─── mafia:settings ─── host, только LOBBY
   socket.on("mafia:settings", async (payload, ack) => {
-    if (!isHost(socket)) return ack?.({ error: "forbidden" });
     const current = await load(roomCode);
     if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
     if (current.phase !== "LOBBY") return ack?.({ error: "game_in_progress" });
     const snap = await mutate(roomCode, (s) => applySettings(s.settings, payload));
     if (!snap) return ack?.({ error: "room_not_found" });
@@ -118,7 +114,9 @@ export function registerMafiaLobbyHandlers(
 
   // ─── mafia:rename ─── host
   socket.on("mafia:rename", async (payload, ack) => {
-    if (!isHost(socket)) return ack?.({ error: "forbidden" });
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
     if (typeof payload?.title !== "string") return ack?.({ error: "invalid_payload" });
     const title = payload.title.trim().slice(0, 80) || null;
     const snap = await mutate(roomCode, (s) => {
@@ -131,12 +129,13 @@ export function registerMafiaLobbyHandlers(
 
   // ─── mafia:kick ─── host, только LOBBY
   socket.on("mafia:kick", async (payload, ack) => {
-    if (!isHost(socket)) return ack?.({ error: "forbidden" });
     if (typeof payload?.userId !== "string") return ack?.({ error: "invalid_payload" });
     const target = payload.userId;
     if (target === userId) return ack?.({ error: "cant_kick_self" });
     const current = await load(roomCode);
-    if (current && current.phase !== "LOBBY") return ack?.({ error: "game_in_progress" });
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
+    if (current.phase !== "LOBBY") return ack?.({ error: "game_in_progress" });
     const snap = await mutate(roomCode, (s) => {
       s.players = s.players.filter((p) => p.userId !== target);
       s.spectators = s.spectators.filter((p) => p.userId !== target);
@@ -169,9 +168,9 @@ export function registerMafiaLobbyHandlers(
 
   // ─── mafia:start ─── host, LOBBY, ≥5 игроков
   socket.on("mafia:start", async (_payload, ack) => {
-    if (!isHost(socket)) return ack?.({ error: "forbidden" });
     const current = await load(roomCode);
     if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
     if (current.phase !== "LOBBY") return ack?.({ error: "already_started" });
     if (current.players.length < MIN_MAFIA_PLAYERS)
       return ack?.({ error: "not_enough_players" });
@@ -216,6 +215,14 @@ export function registerMafiaLobbyHandlers(
         s.players.find((x) => x.userId === userId) ??
         s.spectators.find((x) => x.userId === userId);
       if (p) p.online = false;
+      // Хост ушёл — передаём хоста первому онлайн-игроку.
+      if (s.hostId === userId) {
+        const heir = s.players.find((x) => x.online && x.userId !== userId);
+        if (heir) {
+          s.hostId = heir.userId;
+          s.players.forEach((pl) => (pl.isHost = pl.userId === heir.userId));
+        }
+      }
     });
     if (snap) scheduleStateBroadcast(ns, roomCode);
   });

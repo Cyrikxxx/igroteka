@@ -16,8 +16,9 @@ import {
   VoteResultScreen,
   LastWordScreen,
 } from "@/components/mafia/DayScreens";
+import FinaleScreen from "@/components/mafia/FinaleScreen";
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
-import { loadRoomCreds } from "@/lib/room-session";
+import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
 
 export default function MafiaPlayPage() {
   const router = useRouter();
@@ -158,13 +159,28 @@ export default function MafiaPlayPage() {
     );
   }
 
-  // ─── FINISHED (фаза 5) — временная заглушка ───
+  // ─── FINISHED — итоги ───
+  if (view.phase === "FINISHED") {
+    return (
+      <MafiaShell wide vignette vignetteLevel={0.06}>
+        <FinaleScreen
+          view={view}
+          onHome={() => {
+            clearRoomCreds(code);
+            router.push("/");
+          }}
+          onAgain={() => {
+            clearRoomCreds(code);
+            router.push("/mafia/new");
+          }}
+        />
+      </MafiaShell>
+    );
+  }
+
   return (
-    <MafiaShell vignette vignetteLevel={0.05}>
-      <Centered
-        title={view.winner === "city" ? "Победа города" : view.winner === "mafia" ? "Победа мафии" : view.winner === "maniac" ? "Победа маньяка" : "Партия окончена"}
-        sub="Итоговый экран появится в следующем обновлении"
-      />
+    <MafiaShell>
+      <Centered title="Загрузка…" />
     </MafiaShell>
   );
 }

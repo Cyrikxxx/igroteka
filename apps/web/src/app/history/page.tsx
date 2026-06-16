@@ -10,6 +10,7 @@ import { ArrowLeft, Dice5, Play } from "lucide-react";
 import type { GameFromAPI } from "@/types";
 import AppShell from "@/components/common/AppShell";
 import HistoryRow from "@/components/alias/home/HistoryRow";
+import MafiaHistoryRow, { type MafiaHistoryGame } from "@/components/mafia/MafiaHistoryRow";
 
 interface Stats {
   games: number;
@@ -19,6 +20,7 @@ interface Stats {
 
 export default function HistoryPage() {
   const [games, setGames] = useState<GameFromAPI[] | null>(null);
+  const [mafiaGames, setMafiaGames] = useState<MafiaHistoryGame[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -27,6 +29,10 @@ export default function HistoryPage() {
       .then((r) => (r.ok ? r.json() : []))
       .then((data: GameFromAPI[]) => setGames(data))
       .catch(() => setGames([]));
+    fetch("/api/mafia/history")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: MafiaHistoryGame[]) => setMafiaGames(data))
+      .catch(() => setMafiaGames([]));
     fetch("/api/stats")
       .then((r) => (r.ok ? r.json() : null))
       .then((data: Stats | null) => setStats(data))
@@ -107,6 +113,20 @@ export default function HistoryPage() {
           </Link>
         </div>
       )}
+
+      {mafiaGames.length > 0 ? (
+        <div style={{ marginTop: 32 }}>
+          <span className="eyebrow">мафия · твои партии</span>
+          <h2 className="h-title" style={{ marginTop: 8, marginBottom: 14 }}>
+            Партии Мафии
+          </h2>
+          <div className="hist-list">
+            {mafiaGames.map((g) => (
+              <MafiaHistoryRow key={g.id} game={g} />
+            ))}
+          </div>
+        </div>
+      ) : null}
     </AppShell>
   );
 }
