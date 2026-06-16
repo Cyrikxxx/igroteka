@@ -9,8 +9,13 @@ import MafiaShell from "@/components/mafia/MafiaShell";
 import RoleReveal from "@/components/mafia/RoleReveal";
 import NightScreen from "@/components/mafia/NightScreen";
 import SpectatorScreen from "@/components/mafia/SpectatorScreen";
-import PhaseHead from "@/components/mafia/PhaseHead";
-import { Moon } from "lucide-react";
+import {
+  MorningScreen,
+  DiscussionScreen,
+  VoteScreen,
+  VoteResultScreen,
+  LastWordScreen,
+} from "@/components/mafia/DayScreens";
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
 import { loadRoomCreds } from "@/lib/room-session";
 
@@ -97,11 +102,69 @@ export default function MafiaPlayPage() {
     );
   }
 
-  // ─── День/финал (фазы 4–5) — временная заглушка ───
+  // ─── MORNING ───
+  if (view.phase === "MORNING") {
+    return (
+      <MafiaShell vignette vignetteLevel={view.spotlight ? 0.12 : 0.04}>
+        <MorningScreen view={view} />
+      </MafiaShell>
+    );
+  }
+
+  // ─── DISCUSSION ───
+  if (view.phase === "DISCUSSION") {
+    return (
+      <MafiaShell>
+        <DiscussionScreen
+          view={view}
+          isHost={view.you.isHost}
+          onEnd={() => socket?.emit("mafia:end_discussion", {}, () => {})}
+        />
+      </MafiaShell>
+    );
+  }
+
+  // ─── VOTE ───
+  if (view.phase === "VOTE") {
+    return (
+      <MafiaShell>
+        <VoteScreen
+          view={view}
+          onVote={(targetId) => socket?.emit("mafia:vote", { targetId }, () => {})}
+        />
+      </MafiaShell>
+    );
+  }
+
+  // ─── VOTE_RESULT ───
+  if (view.phase === "VOTE_RESULT") {
+    return (
+      <MafiaShell vignette vignetteLevel={0.1}>
+        <VoteResultScreen view={view} />
+      </MafiaShell>
+    );
+  }
+
+  // ─── LAST_WORD ───
+  if (view.phase === "LAST_WORD") {
+    return (
+      <MafiaShell vignette vignetteLevel={0.08}>
+        <LastWordScreen
+          view={view}
+          isHost={view.you.isHost}
+          onDone={() => socket?.emit("mafia:last_word_done", {}, () => {})}
+        />
+      </MafiaShell>
+    );
+  }
+
+  // ─── FINISHED (фаза 5) — временная заглушка ───
   return (
     <MafiaShell vignette vignetteLevel={0.05}>
-      <PhaseHead icon={Moon} title={`${view.phase} · день ${view.day}`} timerMs={view.timer?.msLeft ?? null} />
-      <Centered title={view.phase} sub="Этот экран появится в следующем обновлении" />
+      <Centered
+        title={view.winner === "city" ? "Победа города" : view.winner === "mafia" ? "Победа мафии" : view.winner === "maniac" ? "Победа маньяка" : "Партия окончена"}
+        sub="Итоговый экран появится в следующем обновлении"
+      />
     </MafiaShell>
   );
 }
