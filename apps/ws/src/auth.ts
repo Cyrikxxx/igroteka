@@ -32,5 +32,6 @@ export function authMiddleware(
   socket.data.userId = payload.userId;
   socket.data.roomCode = payload.roomCode;
   socket.data.role = payload.role;
+  socket.data.game = payload.game;
   next();
 }

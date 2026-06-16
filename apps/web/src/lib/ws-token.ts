@@ -3,7 +3,12 @@
 //
 // Секрет — из `process.env.WS_TOKEN_SECRET`, общий с apps/ws.
 
-import { signWsToken, type WsRole, WS_TOKEN_TTL_MS } from "@alias/shared/token";
+import {
+  signWsToken,
+  type WsRole,
+  type WsGame,
+  WS_TOKEN_TTL_MS,
+} from "@alias/shared/token";
 import type { NextRequest } from "next/server";
 
 function getSecret(): string {
@@ -20,10 +25,16 @@ export function issueWsToken(args: {
   userId: string;
   roomCode: string;
   role: WsRole;
+  game?: WsGame;
   ttlMs?: number;
 }): string {
   return signWsToken(
-    { userId: args.userId, roomCode: args.roomCode, role: args.role },
+    {
+      userId: args.userId,
+      roomCode: args.roomCode,
+      role: args.role,
+      game: args.game ?? "alias",
+    },
     getSecret(),
     args.ttlMs ?? WS_TOKEN_TTL_MS,
   );

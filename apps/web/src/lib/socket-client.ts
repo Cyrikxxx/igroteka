@@ -13,17 +13,22 @@ export interface ConnectOpts {
   wsUrl: string;
   token: string;
   code: string;
+  /** Неймспейс WS — "/room" (Алиас, по умолчанию) или "/mafia". */
+  namespace?: string;
+  /** Отображаемое имя — для Мафии нужно при первом подключении. */
+  name?: string;
 }
 
 export function connectToRoom(opts: ConnectOpts): Socket {
-  const key = `${opts.wsUrl}|${opts.code}|${opts.token}`;
+  const ns = opts.namespace ?? "/room";
+  const key = `${opts.wsUrl}|${ns}|${opts.code}|${opts.token}`;
   if (current && currentKey === key) return current;
   if (current) {
     current.disconnect();
     current = null;
   }
-  current = io(`${opts.wsUrl}/room`, {
-    auth: { token: opts.token, code: opts.code },
+  current = io(`${opts.wsUrl}${ns}`, {
+    auth: { token: opts.token, code: opts.code, name: opts.name },
     transports: ["websocket"],
     reconnection: true,
     reconnectionAttempts: 8,

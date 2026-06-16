@@ -10,7 +10,7 @@ import type {
   RoundReviewPayload,
   RoundCommittedPayload,
 } from "@alias/shared/domain";
-import type { WsRole } from "@alias/shared/token";
+import type { WsRole, WsGame } from "@alias/shared/token";
 
 type Ack<T> = (resp: T) => void;
 type OkErr = { ok: true } | { error: string };
@@ -104,4 +104,5 @@ export interface SocketData {
   userId: string;
   roomCode: string;
   role: WsRole;
+  game: WsGame;
 }

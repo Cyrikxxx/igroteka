@@ -8,6 +8,8 @@ import { redis } from "./redis";
 import { authMiddleware } from "./auth";
 import { registerLobbyHandlers } from "./handlers/lobby";
 import { registerRoundHandlers } from "./handlers/round";
+import { registerMafiaLobbyHandlers } from "./games/mafia/handlers/lobby";
+import { mafiaRoom } from "./games/mafia/broadcast";
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -15,6 +17,7 @@ import type {
   SocketData,
 } from "./types";
 import type { AppNamespace } from "./io-types";
+import type { MafiaNamespace, MafiaSocket } from "./games/mafia/io-types";
 
 // Railway передаёт порт через стандартную `PORT`. Локально используем
 // `WS_PORT=3001`, чтобы не конфликтовать с Next.js на 3000.
@@ -71,7 +74,10 @@ const roomNs: AppNamespace = io.of("/room");
 roomNs.use(authMiddleware);
 
 roomNs.on("connection", (socket) => {
-  const { userId, roomCode, role } = socket.data;
+  const { userId, roomCode, role, game } = socket.data;
+  // Токен Алиаса не пускаем в /room? — /room это и есть Алиас. Игру не проверяем
+  // здесь ради бэкомпата со старыми токенами (game отсутствует = alias).
+  void game;
   console.log(
     `[ws] connect userId=${userId.slice(0, 8)} room=${roomCode} role=${role} sid=${socket.id}`,
   );
@@ -83,6 +89,35 @@ roomNs.on("connection", (socket) => {
   socket.on("disconnect", (reason) => {
     console.log(
       `[ws] disconnect userId=${userId.slice(0, 8)} room=${roomCode} reason=${reason}`,
+    );
+  });
+});
+
+// ─── Неймспейс Мафии ───
+// Сервер типизирован под события Алиаса; у Мафии свой набор — кастуем.
+const mafiaNs = io.of("/mafia") as unknown as MafiaNamespace;
+const mafiaAuth = authMiddleware as unknown as (
+  socket: MafiaSocket,
+  next: (err?: Error) => void,
+) => void;
+mafiaNs.use(mafiaAuth);
+
+mafiaNs.on("connection", (socket) => {
+  const { userId, roomCode, role, game } = socket.data;
+  if (game !== "mafia") {
+    // Токен не для Мафии — закрываем.
+    socket.disconnect(true);
+    return;
+  }
+  console.log(
+    `[ws][mafia] connect userId=${userId.slice(0, 8)} room=${roomCode} role=${role} sid=${socket.id}`,
+  );
+  void socket.join(mafiaRoom(roomCode));
+  registerMafiaLobbyHandlers(mafiaNs, socket);
+
+  socket.on("disconnect", (reason) => {
+    console.log(
+      `[ws][mafia] disconnect userId=${userId.slice(0, 8)} room=${roomCode} reason=${reason}`,
     );
   });
 });

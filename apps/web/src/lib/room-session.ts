@@ -11,6 +11,8 @@ export interface RoomCredentials {
   wsToken: string;
   userId: string;
   displayName: string;
+  /** Какая игра — "alias" (по умолчанию) или "mafia". */
+  game?: "alias" | "mafia";
 }
 
 const key = (code: string) => `${KEY_PREFIX}${code.toUpperCase()}`;
