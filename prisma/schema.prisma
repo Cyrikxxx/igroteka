@@ -70,11 +70,12 @@ model User {
 // ─────────── Комнаты (ОНЛАЙН) ───────────
 
 model Room {
-  id     String     @id @default(cuid())
-  code   String     @unique
-  status RoomStatus @default(LOBBY)
-  hostId String
-  host   User       @relation("RoomHost", fields: [hostId], references: [id])
+  id       String       @id @default(cuid())
+  code     String       @unique
+  status   RoomStatus   @default(LOBBY)
+  platform GamePlatform @default(ALIAS)
+  hostId   String
+  host     User         @relation("RoomHost", fields: [hostId], references: [id])
 
   roundTime   Int     @default(60)
   winScore    Int     @default(50)
@@ -88,6 +89,7 @@ model Room {
   endedAt   DateTime?
 
   game         Game?
+  mafiaGame    MafiaGame?
   participants Participant[]
   categories   RoomCategory[]
 
@@ -99,6 +101,12 @@ enum RoomStatus {
   LOBBY
   IN_GAME
   FINISHED
+}
+
+// Дискриминатор игры на комнате. Алиас — по умолчанию (бэкомпат).
+enum GamePlatform {
+  ALIAS
+  MAFIA
 }
 
 model RoomCategory {
@@ -244,4 +252,58 @@ model RoundWord {
 
   @@index([roundId])
   @@index([wordId])
+}
+
+// ─────────── Мафия (история партий) ───────────
+// Live-состояние партии живёт в Redis. В Postgres сохраняем итог
+// завершённой партии для экрана истории и статистики.
+
+model MafiaGame {
+  id     String          @id @default(cuid())
+  roomId String?         @unique
+  room   Room?           @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  hostId String
+  status MafiaGameStatus @default(IN_PROGRESS)
+  winner MafiaWinnerDb?
+
+  /**
+   * Снимок настроек партии (MafiaSettings).
+   */
+  settings Json
+  dayCount Int  @default(0)
+
+  createdAt DateTime  @default(now())
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  players MafiaPlayerRecord[]
+
+  @@index([hostId])
+  @@index([status])
+}
+
+enum MafiaGameStatus {
+  IN_PROGRESS
+  FINISHED
+}
+
+enum MafiaWinnerDb {
+  CITY
+  MAFIA
+  MANIAC
+}
+
+model MafiaPlayerRecord {
+  id           Int       @id @default(autoincrement())
+  gameId       String
+  game         MafiaGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  userId       String?
+  name         String
+  role         String
+  alive        Boolean   @default(true)
+  eliminatedBy String?
+  deathDay     Int?
+  order        Int       @default(0)
+
+  @@index([gameId])
 }

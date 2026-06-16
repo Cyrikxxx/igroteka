@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./constants": "./src/constants.ts",
     "./domain": "./src/domain.ts",
+    "./mafia": "./src/mafia.ts",
     "./token": "./src/token.ts",
     "./redis-keys": "./src/redis-keys.ts",
     "./snapshot-builders": "./src/snapshot-builders.ts"

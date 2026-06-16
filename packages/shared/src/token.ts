@@ -9,11 +9,14 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export type WsRole = "host" | "player";
+export type WsGame = "alias" | "mafia";
 
 export interface WsTokenPayload {
   userId: string;
   roomCode: string;
   role: WsRole;
+  /** Какая игра — определяет неймспейс WS. Отсутствие = "alias" (бэкомпат). */
+  game: WsGame;
   /** Unix-ms expiration. */
   exp: number;
 }
@@ -29,7 +32,7 @@ function fromB64url(input: string): Buffer {
 }
 
 export function signWsToken(
-  payload: Omit<WsTokenPayload, "exp"> & { exp?: number },
+  payload: Omit<WsTokenPayload, "exp" | "game"> & { exp?: number; game?: WsGame },
   secret: string,
   ttlMs: number = WS_TOKEN_TTL_MS,
 ): string {
@@ -38,6 +41,7 @@ export function signWsToken(
     userId: payload.userId,
     roomCode: payload.roomCode,
     role: payload.role,
+    game: payload.game ?? "alias",
     exp: payload.exp ?? Date.now() + ttlMs,
   };
   const body = b64url(JSON.stringify(full));
@@ -76,11 +80,14 @@ export function verifyWsToken(token: unknown, secret: string): WsTokenPayload | 
   ) {
     return null;
   }
+  // Старые токены без поля game считаем "alias" (бэкомпат).
+  const game: WsGame = p.game === "mafia" ? "mafia" : "alias";
   if (Date.now() > p.exp) return null;
   return {
     userId: p.userId,
     roomCode: p.roomCode,
     role: p.role,
+    game,
     exp: p.exp,
   };
 }

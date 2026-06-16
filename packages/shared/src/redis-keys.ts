@@ -7,3 +7,8 @@ export const roomWordsKey = (code: string) => `room:${code}:words`;
 export const roomTimerKey = (code: string) => `room:${code}:timer`;
 export const codeReverseKey = (code: string) => `code:${code}`;
 export const userRoomsKey = (userId: string) => `user:${userId}:rooms`;
+
+// ─────────── Мафия (отдельное пространство ключей) ───────────
+export const mafiaRoomKey = (code: string) => `mafia:room:${code}`;
+export const mafiaLockKey = (code: string) => `mafia:room:${code}:lock`;
+export const mafiaTimerKey = (code: string) => `mafia:room:${code}:timer`;
