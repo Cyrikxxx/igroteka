@@ -9,9 +9,16 @@
     ".": "./src/index.ts",
     "./constants": "./src/constants.ts",
     "./domain": "./src/domain.ts",
+    "./load-env": "./src/load-env.ts",
     "./mafia": "./src/mafia.ts",
     "./token": "./src/token.ts",
     "./redis-keys": "./src/redis-keys.ts",
-    "./snapshot-builders": "./src/snapshot-builders.ts"
+    "./snapshot-builders": "./src/snapshot-builders.ts",
+    "./server/prisma": "./src/server/prisma.ts",
+    "./server/redis": "./src/server/redis.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "ioredis": "^5.7.0"
   }
 }

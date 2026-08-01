@@ -5,32 +5,11 @@
 // своего CWD, поэтому ставим переменные в process.env здесь.
 
 import type { NextConfig } from "next";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { loadEnvFile } from "@alias/shared/load-env";
 
-const rootEnvPath = resolve(__dirname, "../../.env");
-try {
-  const raw = readFileSync(rootEnvPath, "utf8");
-  for (const line of raw.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq <= 0) continue;
-    const key = trimmed.slice(0, eq).trim();
-    if (process.env[key]) continue;
-    let value = trimmed.slice(eq + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    process.env[key] = value;
-  }
-} catch (err) {
-  // В контейнере .env-файла нет — значения приходят из окружения напрямую.
-  if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-}
+// Файла может не быть — в контейнере значения приходят из окружения напрямую.
+loadEnvFile(resolve(__dirname, "../../.env"));
 
 const nextConfig: NextConfig = {
   reactCompiler: true,

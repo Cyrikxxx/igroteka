@@ -1,16 +1,4 @@
-// Singleton Prisma client для web. В dev кладётся в globalThis, чтобы
-// hot reload не открывал новый пул соединений на каждую перезагрузку.
+// Реэкспорт общего клиента (packages/shared/src/server/prisma.ts),
+// чтобы web и ws работали с одними настройками Prisma.
 
-import { PrismaClient } from "@prisma/client";
-
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
-
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
-  });
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-
-export default prisma;
+export { prisma, default } from "@alias/shared/server/prisma";
