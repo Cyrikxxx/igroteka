@@ -1,5 +1,4 @@
-// /api/games — ЛОКАЛЬНЫЕ игры. См. PROMPT.md §2.3.2.
-// Online-комнаты живут в /api/rooms (будет добавлено позже).
+// /api/games — ЛОКАЛЬНЫЕ игры Алиаса. Онлайн-комнаты — в /api/rooms.
 // Идентификация — только cookie `aid` (см. lib/identity.ts).
 
 import { NextRequest, NextResponse } from "next/server";

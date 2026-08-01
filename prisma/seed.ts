@@ -1,9 +1,5 @@
 // Seed: категории + слова. Запуск: `npm run db:seed` или `npx prisma db seed`.
-// Источник слов — старый проект alias-game/prisma/seed.ts. В v2 добавлены emoji
-// и difficulty=1 (см. PROMPT.md §2.2.1).
-//
-// Импорт идёт из сгенерированного клиента (Prisma 6, новый генератор):
-//   prisma/schema.prisma → generator client { output = "../src/generated/prisma" }
+// Идемпотентен — можно гонять повторно на существующей базе.
 
 import { PrismaClient } from "@prisma/client";
 

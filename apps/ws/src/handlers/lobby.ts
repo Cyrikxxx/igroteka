@@ -1,4 +1,4 @@
-// События лобби. См. PROMPT.md §2.4.3 (room:*, team:*).
+// События лобби Алиаса: room:* и team:*.
 //
 // Только host имеет право: team:create, team:rename, team:remove, room:rename.
 // Любой участник: team:join (включая null = в зрители).

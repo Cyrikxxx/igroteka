@@ -42,7 +42,7 @@ function buildGrid(value: string, cells: number): number[][] {
   return m;
 }
 
-export function QrCode({ value = "alias.online", cells = 21, className }: QrCodeProps) {
+export function QrCode({ value = "", cells = 21, className }: QrCodeProps) {
   const grid = buildGrid(value, cells);
   const s = 100 / cells;
   return (

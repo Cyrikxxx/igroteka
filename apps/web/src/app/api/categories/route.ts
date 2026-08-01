@@ -1,5 +1,4 @@
 // GET /api/categories — список публичных категорий с количеством слов.
-// См. PROMPT.md §2.3.1.
 
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";

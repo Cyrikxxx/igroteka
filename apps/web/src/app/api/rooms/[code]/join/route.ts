@@ -1,5 +1,4 @@
-// POST /api/rooms/[code]/join — войти в существующую комнату.
-// См. PROMPT.md §2.3.3.
+// POST /api/rooms/[code]/join — войти в существующую комнату Алиаса.
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";

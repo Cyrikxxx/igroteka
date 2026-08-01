@@ -3,8 +3,6 @@
 // WS-сервер (apps/ws) верифицирует ту же подпись тем же секретом.
 // Формат: `<base64url(payload)>.<base64url(hmacSha256)>` (без header — мы не
 // меняем алгоритм, поэтому JWT-обвязка не нужна).
-//
-// См. PROMPT.md §2.6.4.
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 

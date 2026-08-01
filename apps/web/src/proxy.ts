@@ -1,9 +1,7 @@
-// Next.js 16: middleware → proxy. Запускается на edge перед каждым запросом.
-// Задача — гарантировать httpOnly-cookie `aid` (anonymous device id). Без БД,
-// без Prisma: proxy не должен иметь shared modules / global state (см. docs).
-// Соответствие БД (запись в `User`) делается в REST-роутах при необходимости.
-//
-// См. PROMPT.md §2.6.4.
+// Next.js 16: middleware переименован в proxy. Запускается перед каждым
+// запросом и гарантирует httpOnly-cookie `aid` (анонимный id устройства).
+// Без БД и Prisma: здесь нельзя держать shared-модули и глобальное состояние.
+// Запись соответствующего `User` делается в REST-роутах при необходимости.
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -30,9 +28,9 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Прогоняем через прокси все маршруты, кроме статики и оптимизированных картинок.
-  // _next/data специально включён (см. proxy.md): защита API-роутов и SSR.
+  // Прогоняем через прокси все маршруты, кроме статики и оптимизированных
+  // картинок. `_next/data` специально не исключён — cookie нужна и на SSR.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|sounds|assets).*)",
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };

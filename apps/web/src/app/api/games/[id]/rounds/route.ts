@@ -1,6 +1,6 @@
-// POST /api/games/[id]/rounds — финализировать раунд локальной игры.
-// Алгоритм идентичен старому проекту (см. CURRENT_CODE.md §5) + новые поля
-// (Round.startedAt/endedAt, RoundWord.order, Game.finishedAt при FINISHED).
+// POST /api/games/[id]/rounds — финализировать раунд локальной игры:
+// транзакцией пишет Round + RoundWord[], обновляет счёт команды и
+// переводит ход. Тот же алгоритм у онлайна — apps/ws/src/services/game.ts.
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";

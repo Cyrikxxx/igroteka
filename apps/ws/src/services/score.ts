@@ -1,5 +1,4 @@
 // Pure: подсчёт очков за раунд и проверка победы.
-// См. PROMPT.md §2.6.3.
 
 export interface ScoreInput {
   guessed: number;

@@ -1,6 +1,6 @@
 // Контакт для связи с автором / поддержки.
-// TODO: заменить на реальную почту сайта, когда она будет создана.
-export const SUPPORT_EMAIL = "support@alias.online";
+// TODO: подставить реальный адрес, когда будет куплен домен и заведена почта.
+export const SUPPORT_EMAIL = "support@example.com";
 
 /** mailto-ссылка с предзаполненной темой и шаблоном тела письма. */
 export function supportMailto(): string {

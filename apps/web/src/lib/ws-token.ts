@@ -15,7 +15,8 @@ function getSecret(): string {
   const s = process.env.WS_TOKEN_SECRET;
   if (!s) {
     throw new Error(
-      "WS_TOKEN_SECRET is not set. Добавь его в .env (см. STATUS.md Сессия 5).",
+      "WS_TOKEN_SECRET is not set. Добавь его в .env в корне монорепо " +
+        "(см. .env.example). Значение должно совпадать у web и ws.",
     );
   }
   return s;

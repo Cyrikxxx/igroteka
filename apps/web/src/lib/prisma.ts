@@ -1,6 +1,5 @@
-// Singleton Prisma client. Используем сгенерированный клиент из shared-пакета
-// (`packages/shared/src/generated/prisma/`), чтобы и Next.js, и WS-сервер
-// импортировали одну и ту же модель. НЕ импортировать из `@prisma/client`.
+// Singleton Prisma client для web. В dev кладётся в globalThis, чтобы
+// hot reload не открывал новый пул соединений на каждую перезагрузку.
 
 import { PrismaClient } from "@prisma/client";
 

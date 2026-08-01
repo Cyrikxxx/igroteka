@@ -1,5 +1,4 @@
 // Pure: следующая команда и игрок.
-// См. PROMPT.md §2.6.3.
 
 export function nextTurn(args: {
   currentTeamIndex: number;

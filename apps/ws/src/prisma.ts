@@ -1,5 +1,5 @@
-// Singleton Prisma client для WS-сервера. Использует тот же сгенерированный
-// клиент, что и apps/web (`packages/shared/src/generated/prisma/`).
+// Singleton Prisma client для WS-сервера. Схема и клиент общие с apps/web —
+// оба генерируются из корневого prisma/schema.prisma.
 
 import { PrismaClient } from "@prisma/client";
 

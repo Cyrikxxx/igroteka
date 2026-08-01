@@ -50,7 +50,7 @@ export type TeamIdMap = Record<number, number>;
 /**
  * Снимок комнаты — то, что лежит в Redis ключом `room:<code>` и шлётся
  * клиентам событием `room:state`. Слово, видимое explainer'у, в снимок
- * НЕ входит — оно приватный emit. См. PROMPT.md §2.6.5.
+ * НЕ входит — оно уходит приватным emit'ом только его сокету.
  */
 export interface RoomSnapshot {
   code: string;

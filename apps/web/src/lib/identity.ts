@@ -1,6 +1,6 @@
-// Идентификация устройства через httpOnly-cookie `aid` (см. PROMPT.md §2.6.4).
-// Cookie ставится в proxy.ts (см. /src/proxy.ts). Здесь — серверные хелперы для
-// REST-роутов: достать userId из cookie и при необходимости создать запись User.
+// Идентификация устройства через httpOnly-cookie `aid`. Саму cookie ставит
+// proxy.ts; здесь — серверные хелперы для REST-роутов: достать userId из
+// cookie и при необходимости создать запись User.
 
 import { cookies } from "next/headers";
 import prisma from "./prisma";

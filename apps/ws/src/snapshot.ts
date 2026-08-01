@@ -26,9 +26,8 @@ export async function save(snapshot: RoomSnapshot): Promise<void> {
 }
 
 /**
- * Read-modify-write. На текущем этапе без блокировок — для лобби риск race
- * минимален (изменения редкие, делает в основном хост). Replace на redlock
- * понадобится в игровом цикле (PROMPT.md §2.2.3).
+ * Read-modify-write без блокировок: для лобби риск гонки минимален
+ * (изменения редкие и делает их в основном хост).
  */
 export async function mutate(
   code: string,

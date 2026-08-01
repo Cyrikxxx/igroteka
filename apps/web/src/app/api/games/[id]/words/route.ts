@@ -1,5 +1,4 @@
 // GET /api/games/[id]/words — пакет неиспользованных слов (BATCH=50).
-// См. PROMPT.md §2.3.2 и алгоритм в §2.6.3.
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";

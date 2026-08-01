@@ -1,6 +1,5 @@
-// GET /api/rooms/[code] — снимок комнаты (для SSR-страницы /room/[code]).
+// GET /api/rooms/[code] — снимок комнаты (для страницы /alias/room/[code]).
 // DELETE /api/rooms/[code] — закрыть комнату (только хост).
-// См. PROMPT.md §2.3.3.
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";

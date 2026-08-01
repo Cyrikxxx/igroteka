@@ -1,5 +1,5 @@
 // Аутентификация Socket.io: middleware проверяет HMAC-токен,
-// выданный REST-эндпоинтом (apps/web). См. PROMPT.md §2.4.1, §2.6.4.
+// выданный REST-эндпоинтом (apps/web).
 
 import { verifyWsToken } from "@alias/shared/token";
 import type { AppSocket } from "./io-types";

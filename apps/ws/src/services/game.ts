@@ -1,5 +1,5 @@
 // Postgres-мутации игрового цикла: создание Game/Team/Player при старте,
-// фиксация раунда при review_confirm. См. PROMPT.md §2.6.1.
+// фиксация раунда при review_confirm.
 
 import { prisma } from "../prisma";
 import type { RoomSnapshot } from "@alias/shared/domain";
@@ -72,7 +72,7 @@ export async function createGameFromSnapshot(
 /**
  * При переходе ROUND_REVIEW → BETWEEN_ROUNDS: транзакция
  * Round + RoundWord[] + Team.score + Game.{currentTeamIndex,...}.
- * См. CURRENT_CODE.md §5 — алгоритм идентичен локальной игре.
+ * Алгоритм тот же, что у локальной игры в POST /api/games/[id]/rounds.
  */
 export async function finalizeRound(args: {
   gameId: string;
