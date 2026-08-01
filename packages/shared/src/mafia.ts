@@ -39,8 +39,8 @@ export type MafiaPhase =
 
 export type MafiaWinner = "city" | "mafia" | "maniac";
 
-/** Кто/что вывело игрока из игры. */
-export type MafiaDeathCause = "mafia" | "maniac" | "vote";
+/** Кто/что вывело игрока из игры. `left` — вышел сам или отвалился навсегда. */
+export type MafiaDeathCause = "mafia" | "maniac" | "vote" | "left";
 
 /** Ночные действия, которые шлёт клиент. */
 export type MafiaNightAction = "mafia" | "doctor" | "sheriff" | "maniac";
@@ -205,6 +205,19 @@ export interface MafiaDeath {
   by: MafiaDeathCause;
 }
 
+/**
+ * Смерть в том виде, в каком её можно показать клиенту: роль заполнена,
+ * только если она уже раскрыта правилами (или смотрящий видит всё).
+ * Полный `MafiaDeath` с ролью наружу уходить не должен.
+ */
+export interface MafiaDeathView {
+  userId: string;
+  displayName: string;
+  role?: MafiaRole;
+  day: number;
+  by: MafiaDeathCause;
+}
+
 export interface MafiaSnapshot {
   code: string;
   title: string | null;
@@ -305,7 +318,7 @@ export interface MafiaView {
   you: MafiaYouView;
   vote?: MafiaVoteView;
   winner?: MafiaWinner;
-  deaths: MafiaDeath[];
+  deaths: MafiaDeathView[];
   timer?: { msLeft: number; paused: boolean };
   /** Имя/роль того, кого убрали прошлой ночью/голосованием (для MORNING/VOTE_RESULT/LAST_WORD). */
   spotlight?: { displayName: string; role?: MafiaRole; cause?: MafiaDeathCause };

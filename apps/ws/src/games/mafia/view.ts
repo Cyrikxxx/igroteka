@@ -9,6 +9,7 @@ import type {
   MafiaYouView,
   MafiaVoteView,
   MafiaPlayerFull,
+  MafiaDeathView,
 } from "@alias/shared/mafia";
 import { roleTeam } from "@alias/shared/mafia";
 
@@ -129,6 +130,17 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
     };
   }
 
+  // ── список смертей ──
+  // Роль погибшего — такой же секрет, как и роль живого: отдаём её только
+  // когда правила раскрывают роли или смотрящий и так видит всё.
+  const deaths: MafiaDeathView[] = snap.deaths.map((d) => ({
+    userId: d.userId,
+    displayName: d.displayName,
+    day: d.day,
+    by: d.by,
+    ...(reveal || seeAll ? { role: d.role } : {}),
+  }));
+
   // ── spotlight (для MORNING / VOTE_RESULT / LAST_WORD) ──
   let spotlight: MafiaView["spotlight"];
   if (snap.phase === "MORNING") {
@@ -169,7 +181,7 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
     you,
     vote,
     winner: snap.winner,
-    deaths: snap.deaths,
+    deaths,
     timer: timerView(snap),
     spotlight,
   };

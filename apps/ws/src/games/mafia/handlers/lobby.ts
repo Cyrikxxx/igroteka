@@ -6,10 +6,28 @@ import {
   MAX_MAFIA_PLAYERS,
   type MafiaSettings,
   type MafiaPlayerFull,
+  type MafiaSnapshot,
+  type MafiaWinner,
 } from "@alias/shared/mafia";
 import { mutate, load } from "../snapshot";
 import { assignRoles } from "../roles";
-import { enterNight } from "../engine";
+import {
+  enterNight,
+  ensurePhaseTimer,
+  finishGame,
+  maybeResolveNightEarly,
+  maybeTallyEarly,
+} from "../engine";
+import { checkWinner } from "../services/win";
+
+/** Хост ушёл — передаём комнату первому, кто ещё на связи. */
+function transferHostIfNeeded(s: MafiaSnapshot, leavingUserId: string): void {
+  if (s.hostId !== leavingUserId) return;
+  const heir = s.players.find((p) => p.online && p.userId !== leavingUserId);
+  if (!heir) return;
+  s.hostId = heir.userId;
+  s.players.forEach((p) => (p.isHost = p.userId === heir.userId));
+}
 import { buildView } from "../view";
 import {
   scheduleStateBroadcast,
@@ -98,6 +116,9 @@ export function registerMafiaLobbyHandlers(
     // ack отдаёт персональный view сразу; остальным — через mafia:state.
     ack?.(buildView(snap, userId));
     await broadcastStateNow(ns, roomCode);
+    // Если процесс ws перезапускался посреди партии, таймер фазы потерялся
+    // вместе с памятью — заводим его заново по дедлайну из снапшота.
+    await ensurePhaseTimer(ns, roomCode);
   });
 
   // ─── mafia:settings ─── host, только LOBBY
@@ -155,15 +176,61 @@ export function registerMafiaLobbyHandlers(
   });
 
   // ─── mafia:leave ─── любой
+  // В лобби ушедшего просто вычёркиваем. В идущей партии вычёркивать нельзя:
+  // вместе с игроком пропала бы его роль, а условие победы никто бы не
+  // пересчитал (ушла последняя мафия — партия висит вечно). Поэтому в игре
+  // помечаем выбывшим, как при смерти, и сразу проверяем победу.
   socket.on("mafia:leave", async (_payload, ack) => {
+    let winner: MafiaWinner | null = null;
     const snap = await mutate(roomCode, (s) => {
-      s.players = s.players.filter((p) => p.userId !== userId);
       s.spectators = s.spectators.filter((p) => p.userId !== userId);
-      s.players.forEach((p, i) => (p.order = i));
+
+      const inGame = s.phase !== "LOBBY" && s.phase !== "FINISHED";
+      const me = s.players.find((p) => p.userId === userId);
+
+      if (!inGame || !me) {
+        s.players = s.players.filter((p) => p.userId !== userId);
+        s.players.forEach((p, i) => (p.order = i));
+      } else if (me.alive) {
+        me.alive = false;
+        me.online = false;
+        me.eliminatedBy = "left";
+        me.deathDay = s.day;
+        s.deaths.push({
+          userId: me.userId,
+          displayName: me.displayName,
+          role: me.role ?? "civilian",
+          day: s.day,
+          by: "left",
+        });
+        // Снимаем его незакрытые ходы, иначе фаза будет ждать призрака.
+        delete s.night.mafiaVotes[userId];
+        delete s.vote.votes[userId];
+        if (s.night.doctorTarget && me.role === "doctor") s.night.doctorTarget = undefined;
+        if (s.night.sheriffTarget && me.role === "sheriff") s.night.sheriffTarget = undefined;
+        if (s.night.maniacTarget && me.role === "maniac") s.night.maniacTarget = undefined;
+      } else {
+        me.online = false;
+      }
+
+      transferHostIfNeeded(s, userId);
+      // Только в идущей партии: в лобби роли ещё не розданы, и checkWinner
+      // принял бы «нет живой мафии» за победу города.
+      if (inGame) winner = checkWinner(s);
     });
-    if (snap) scheduleStateBroadcast(ns, roomCode);
+
     ack?.({ ok: true });
     socket.disconnect(true);
+    if (!snap) return;
+
+    if (winner) {
+      await finishGame(ns, roomCode, winner);
+      return;
+    }
+    scheduleStateBroadcast(ns, roomCode);
+    // Ушедший мог быть последним, кого ждала фаза.
+    await maybeResolveNightEarly(ns, roomCode);
+    await maybeTallyEarly(ns, roomCode);
   });
 
   // ─── mafia:start ─── host, LOBBY, ≥5 игроков
@@ -204,6 +271,8 @@ export function registerMafiaLobbyHandlers(
   });
 
   // ─── disconnect ─── пометить offline, если других сокетов нет
+  // Обрыв связи НЕ выводит из игры: у человека мог переключиться Wi-Fi, и
+  // он вернётся тем же userId. Выбывшим делает только явный mafia:leave.
   socket.on("disconnect", async () => {
     const remaining = await ns.in(mafiaRoom(roomCode)).fetchSockets();
     const stillConnected = remaining.some(
@@ -215,14 +284,7 @@ export function registerMafiaLobbyHandlers(
         s.players.find((x) => x.userId === userId) ??
         s.spectators.find((x) => x.userId === userId);
       if (p) p.online = false;
-      // Хост ушёл — передаём хоста первому онлайн-игроку.
-      if (s.hostId === userId) {
-        const heir = s.players.find((x) => x.online && x.userId !== userId);
-        if (heir) {
-          s.hostId = heir.userId;
-          s.players.forEach((pl) => (pl.isHost = pl.userId === heir.userId));
-        }
-      }
+      transferHostIfNeeded(s, userId);
     });
     if (snap) scheduleStateBroadcast(ns, roomCode);
   });

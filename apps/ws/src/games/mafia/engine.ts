@@ -8,10 +8,11 @@ import {
   type MafiaSnapshot,
   type MafiaWinner,
   type MafiaDeathCause,
+  type MafiaPhase,
 } from "@alias/shared/mafia";
 import { load, mutate } from "./snapshot";
 import { broadcastStateNow } from "./broadcast";
-import { startTimer, clearTimer } from "./services/scheduler";
+import { startTimer, clearTimer, hasTimer } from "./services/scheduler";
 import { checkWinner } from "./services/win";
 import { persistFinishedGame } from "./services/persist";
 import type { MafiaNamespace } from "./io-types";
@@ -314,6 +315,43 @@ export async function onTimeout(ns: MafiaNamespace, code: string): Promise<void>
     default:
       break;
   }
+}
+
+// ─────────── Восстановление таймера ───────────
+
+/** Фазы, которые двигаются таймером и сами по себе не завершатся. */
+const TIMED_PHASES: ReadonlySet<MafiaPhase> = new Set<MafiaPhase>([
+  "NIGHT",
+  "MORNING",
+  "DISCUSSION",
+  "VOTE",
+  "VOTE_RESULT",
+  "LAST_WORD",
+]);
+
+/**
+ * Таймеры живут в памяти процесса, а дедлайн фазы — в снапшоте. После
+ * перезапуска ws (деплой, падение) снапшот в Redis цел, но тикать некому,
+ * и комната зависла бы навсегда. Вызывается на mafia:hello: если фаза
+ * таймерная, а таймера нет — доводим её до конца.
+ */
+export async function ensurePhaseTimer(
+  ns: MafiaNamespace,
+  code: string,
+): Promise<void> {
+  const snap = await load(code);
+  if (!snap) return;
+  if (!TIMED_PHASES.has(snap.phase)) return;
+  if (snap.timerPaused) return;
+  if (hasTimer(code)) return;
+
+  const msLeft = (snap.timerEndsAt ?? 0) - Date.now();
+  if (msLeft <= 0) {
+    // Дедлайн прошёл, пока сервер лежал — сразу разыгрываем переход.
+    await onTimeout(ns, code);
+    return;
+  }
+  startTimer(ns, code, msLeft, () => onTimeout(ns, code));
 }
 
 // Ранние переходы — вызываются из обработчиков после действия.
