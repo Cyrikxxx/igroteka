@@ -46,7 +46,3 @@ export function disconnectRoom(): void {
     currentKey = null;
   }
 }
-
-export function currentSocket(): Socket | null {
-  return current;
-}

@@ -1,8 +1,6 @@
 // Дебаунс room:state бродкастов: соседние во времени мутации часто
-// случаются цепочкой (team:join → setOnline → broadcast). Шлём пользователю
-// один свежий снимок через 50мс, а не серию.
-//
-// PROMPT.md §2.4.4: «room:state — после любых изменений (debounce 50ms)».
+// случаются цепочкой (team:join → смена онлайн-флага → broadcast).
+// Шлём один свежий снимок через 50мс, а не серию.
 
 import type { RoomSnapshot } from "@alias/shared/domain";
 import { load } from "./snapshot";

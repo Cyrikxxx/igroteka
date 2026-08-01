@@ -29,8 +29,3 @@ export function stopTimer(code: string): void {
 export function isRunning(code: string): boolean {
   return intervals.has(code);
 }
-
-export function stopAllTimers(): void {
-  for (const h of intervals.values()) clearInterval(h);
-  intervals.clear();
-}

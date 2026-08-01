@@ -74,29 +74,6 @@ export function removePlayer(
   return null;
 }
 
-/** Меняет онлайн-флаг игрока (где бы он ни находился). */
-export function setOnline(
-  snapshot: RoomSnapshot,
-  userId: string,
-  online: boolean,
-): boolean {
-  for (const team of snapshot.teams) {
-    for (const p of team.players) {
-      if (p.userId === userId) {
-        p.online = online;
-        return true;
-      }
-    }
-  }
-  for (const s of snapshot.spectators) {
-    if (s.userId === userId) {
-      s.online = online;
-      return true;
-    }
-  }
-  return false;
-}
-
 /** Следующий локальный id команды (в лобби Team-row в Postgres ещё нет). */
 export function nextTeamId(snapshot: RoomSnapshot): number {
   let max = 0;

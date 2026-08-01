@@ -69,7 +69,3 @@ export async function popNextWord(code: string): Promise<WordItem | null> {
 export async function clearWordsQueue(code: string): Promise<void> {
   await redis.del(roomWordsKey(code));
 }
-
-export async function remainingWordsCount(code: string): Promise<number> {
-  return redis.llen(roomWordsKey(code));
-}

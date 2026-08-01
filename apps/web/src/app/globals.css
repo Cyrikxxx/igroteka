@@ -201,11 +201,6 @@ html { scrollbar-color: var(--bg-4) transparent; }
   70% { box-shadow: 0 0 0 24px transparent; }
   100% { box-shadow: 0 0 0 0 transparent; }
 }
-@keyframes cdPop {
-  0% { transform: scale(0.4); opacity: 0; }
-  35% { transform: scale(1.08); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.45; transform: scale(0.85); }
@@ -1102,11 +1097,6 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .pass-note { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--fg-3); font-size: 13px; }
   .pass-note svg { color: var(--accent); }
   @media (max-width: 860px) { .pass-wrap { grid-template-columns: 1fr; gap: clamp(20px, 4vh, 34px); } }
-
-  /* ============ PRE_ROUND COUNTDOWN ============ */
-  .countdown-overlay { position: fixed; inset: 0; z-index: 70; background: color-mix(in oklch, var(--bg) 82%, transparent); backdrop-filter: blur(14px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
-  .countdown-overlay .eyebrow { color: var(--accent); }
-  .cd-num { font-size: clamp(120px, 30vh, 320px); font-weight: 900; letter-spacing: -0.05em; line-height: 1; color: var(--accent); text-shadow: var(--glow); animation: cdPop .85s cubic-bezier(0.2, 0.8, 0.2, 1); }
 
   /* guesser/spectator extra bits */
   .guesser-hidden { display: inline-flex; align-items: center; gap: 7px; font-size: clamp(11px, 0.8vw, 13px); letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-3); padding: 5px 12px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--line); }

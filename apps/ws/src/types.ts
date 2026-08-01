@@ -1,9 +1,8 @@
-// Типы Socket.io для WS-сервера. Полный набор событий см. PROMPT.md §2.4.
+// Типы Socket.io для неймспейса /room (Алиас): события клиент↔сервер.
 
 import type {
   RoomSnapshot,
   RoundPhasePayload,
-  RoundCountdownPayload,
   RoundTickPayload,
   RoundWordPayload,
   RoundWordCountPayload,
@@ -88,7 +87,6 @@ export interface ServerToClientEvents {
   error: (payload: { code: string; message: string }) => void;
 
   "round:phase": (payload: RoundPhasePayload) => void;
-  "round:countdown": (payload: RoundCountdownPayload) => void;
   "round:tick": (payload: RoundTickPayload) => void;
   "round:word": (payload: RoundWordPayload) => void;
   "round:word_count": (payload: RoundWordCountPayload) => void;

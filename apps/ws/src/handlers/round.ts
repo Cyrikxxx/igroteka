@@ -1,11 +1,11 @@
-// Игровой цикл онлайн. Состояния и переходы — PROMPT.md §2.6.1.
+// Игровой цикл онлайн-партии Алиаса: серверная машина состояний
+// LOBBY → PRE_ROUND → ROUND_ACTIVE → ROUND_REVIEW → BETWEEN_ROUNDS → FINISHED.
 //
 // Главные события (client→server): round:start_game, round:guess,
 // round:pause, round:resume, round:end, round:review_toggle,
 // round:review_confirm.
-// Главные бродкасты (server→client): round:phase, round:countdown,
-// round:tick, round:word (приватно), round:word_count, round:review,
-// round:committed.
+// Главные бродкасты (server→client): round:phase, round:tick,
+// round:word (приватно), round:word_count, round:review, round:committed.
 
 import type {
   RoomSnapshot,

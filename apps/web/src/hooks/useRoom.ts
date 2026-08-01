@@ -38,7 +38,6 @@ export interface UseRoomResult {
   status: ConnStatus;
   error: string | null;
   // Игровой цикл
-  countdown: number | null;
   tick: RoundTickState | null;
   currentWord: RoundWordPayload | null;
   wordCount: { got: number; skip: number } | null;
@@ -50,7 +49,6 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
   const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null);
   const [status, setStatus] = useState<ConnStatus>("connecting");
   const [error, setError] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState<number | null>(null);
   const [tick, setTick] = useState<RoundTickState | null>(null);
   const [currentWord, setCurrentWord] = useState<RoundWordPayload | null>(null);
   const [wordCount, setWordCount] = useState<{ got: number; skip: number } | null>(null);
@@ -94,16 +92,12 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
       if (!s.timer) setTick(null);
     };
     const onPhase = (p: RoundPhasePayload) => {
-      if (p.phase === "PRE_ROUND") setCountdown(3);
       if (p.phase === "ROUND_ACTIVE") {
-        setCountdown(null);
         setWordCount({ got: 0, skip: 0 });
         if (p.durationMs) setTick({ msLeft: p.durationMs, paused: false });
       }
       if (p.phase === "ROUND_REVIEW") setTick((prev) => prev ? { ...prev, paused: true } : null);
     };
-    const onCountdown = (p: { secondsLeft: number }) =>
-      setCountdown(p.secondsLeft);
     const onTick = (p: { msLeft: number }) =>
       setTick((prev) => ({ msLeft: p.msLeft, paused: prev?.paused ?? false }));
     const onWord = (p: RoundWordPayload) => setCurrentWord(p);
@@ -138,7 +132,6 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
     sock.on("connect", onConnect);
     sock.on("room:state", onState);
     sock.on("round:phase", onPhase);
-    sock.on("round:countdown", onCountdown);
     sock.on("round:tick", onTick);
     sock.on("round:word", onWord);
     sock.on("round:word_count", onWordCount);
@@ -160,7 +153,6 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
       sock.off("connect", onConnect);
       sock.off("room:state", onState);
       sock.off("round:phase", onPhase);
-      sock.off("round:countdown", onCountdown);
       sock.off("round:tick", onTick);
       sock.off("round:word", onWord);
       sock.off("round:word_count", onWordCount);
@@ -185,7 +177,6 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
     snapshot,
     status,
     error,
-    countdown,
     tick,
     currentWord,
     wordCount,

@@ -54,17 +54,6 @@ export async function deleteRoundState(code: string): Promise<void> {
   await redis.del(KEY(code));
 }
 
-export async function mutateRoundState(
-  code: string,
-  fn: (state: RoundState) => RoundState | void,
-): Promise<RoundState | null> {
-  const state = await loadRoundState(code);
-  if (!state) return null;
-  const next = fn(state) ?? state;
-  await saveRoundState(code, next);
-  return next;
-}
-
 /** Сколько мс осталось в раунде с учётом пауз. */
 export function msLeft(state: RoundState, now: number = Date.now()): number {
   const elapsed = now - state.startedAt - state.pausedTotalMs -

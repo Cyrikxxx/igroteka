@@ -1,4 +1,5 @@
-// Доменные типы, общие для apps/web и apps/ws. См. PROMPT.md §2.3.
+// Доменные типы Алиаса, общие для apps/web и apps/ws.
+// Типы Мафии — в соседнем mafia.ts.
 
 export type GameMode = "LOCAL" | "ONLINE";
 export type GameStatus = "IN_PROGRESS" | "FINISHED";
@@ -7,9 +8,7 @@ export type GameStatus = "IN_PROGRESS" | "FINISHED";
 
 export type RoomStatus = "LOBBY" | "IN_GAME" | "FINISHED";
 
-export type ParticipantRole = "PLAYER" | "SPECTATOR";
-
-/** Фазы игрового цикла онлайн-комнаты. См. PROMPT.md §2.6.1. */
+/** Фазы игрового цикла онлайн-комнаты. */
 export type Phase =
   | "LOBBY"
   | "PRE_ROUND"
@@ -113,10 +112,6 @@ export interface RoundPhasePayload {
   currentTeamId: number | null;
   currentPlayerId: string | null;
   durationMs?: number;
-}
-
-export interface RoundCountdownPayload {
-  secondsLeft: number;
 }
 
 export interface RoundTickPayload {
@@ -262,13 +257,4 @@ export interface CategoryFromAPI {
   emoji: string | null;
   isPublic: boolean;
   _count?: { words: number };
-}
-
-export interface RoundResult {
-  round: { id: number; roundNumber: number; scoreEarned: number };
-  teamScore: number;
-  nextTeamIndex: number;
-  nextRoundNumber: number;
-  gameFinished: boolean;
-  winnerId?: number;
 }
