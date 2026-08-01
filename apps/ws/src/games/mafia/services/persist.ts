@@ -24,6 +24,7 @@ export async function persistFinishedGame(snap: MafiaSnapshot): Promise<void> {
       status: "FINISHED",
       winner: WINNER_DB[snap.winner],
       settings: JSON.parse(JSON.stringify(snap.settings)),
+      events: JSON.parse(JSON.stringify(snap.events ?? [])),
       dayCount: snap.day,
       startedAt: new Date(snap.createdAt),
       endedAt: new Date(),

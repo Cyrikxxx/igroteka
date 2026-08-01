@@ -7,7 +7,14 @@ import {
   emptyVoteState,
   type MafiaSnapshot,
   type MafiaDeathCause,
+  type MafiaEvent,
 } from "@alias/shared/mafia";
+
+/** Дописать запись в журнал партии. Журнал никогда не уходит живым игрокам. */
+export function logEvent(s: MafiaSnapshot, event: Omit<MafiaEvent, "day">): void {
+  if (!s.events) s.events = [];
+  s.events.push({ day: s.day, ...event });
+}
 
 /** Переводит снапшот в новую ночь, перенося «память» ролей с прошлой. */
 export function applyEnterNight(s: MafiaSnapshot): void {
@@ -22,6 +29,7 @@ export function applyEnterNight(s: MafiaSnapshot): void {
   s.night.sheriffResults = sheriffResults;
   s.vote = emptyVoteState();
   s.pendingElim = undefined;
+  logEvent(s, { kind: "night_fell" });
 }
 
 export function killPlayer(
@@ -40,6 +48,12 @@ export function killPlayer(
     role: p.role ?? "civilian",
     day: s.day,
     by: cause,
+  });
+  logEvent(s, {
+    kind: cause === "vote" ? "exile" : cause === "left" ? "left" : "kill",
+    displayName: p.displayName,
+    role: p.role ?? "civilian",
+    cause,
   });
 }
 
@@ -79,6 +93,14 @@ export function resolveNight(s: MafiaSnapshot): void {
   if (maniacTarget && maniacTarget !== saved && !causes[maniacTarget])
     causes[maniacTarget] = "maniac";
   for (const [id, cause] of Object.entries(causes)) killPlayer(s, id, cause);
+
+  // Спасение доктора попадает в журнал, только если оно что-то изменило.
+  const wasAttacked = saved && (mafiaTarget === saved || maniacTarget === saved);
+  if (wasAttacked) {
+    const rescued = s.players.find((p) => p.userId === saved);
+    logEvent(s, { kind: "save", actor: "doctor", displayName: rescued?.displayName });
+  }
+  if (Object.keys(causes).length === 0) logEvent(s, { kind: "no_deaths" });
 
   // Доктор полечил себя — самолечение израсходовано (переносится в след. ночь).
   const doctor = s.players.find((p) => p.role === "doctor");

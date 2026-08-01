@@ -267,6 +267,11 @@ model MafiaGame {
    * Снимок настроек партии (MafiaSettings).
    */
   settings Json
+  /**
+   * Хроника партии (MafiaEvent[]): ночи, смерти, спасения, изгнания.
+   * Нужна, чтобы история игр показывала не только счёт, но и ход партии.
+   */
+  events   Json?
   dayCount Int  @default(0)
 
   createdAt DateTime  @default(now())

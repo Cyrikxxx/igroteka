@@ -218,6 +218,42 @@ export interface MafiaDeathView {
   by: MafiaDeathCause;
 }
 
+// ─────────── Журнал партии ───────────
+
+/**
+ * Что произошло по ходу партии. Из журнала строятся два экрана: живая
+ * лента у зрителя и «хроника партии» в финале.
+ *
+ * ВАЖНО: записи содержат роли и результаты проверок, поэтому живым
+ * игрокам журнал не отдаётся вовсе — см. buildView.
+ */
+export type MafiaEventKind =
+  | "night_fell"
+  | "kill"
+  | "save"
+  | "check"
+  | "no_deaths"
+  | "exile"
+  | "vote_tie"
+  | "left"
+  | "game_over";
+
+export interface MafiaEvent {
+  /** Игровой день/ночь, к которым относится запись. */
+  day: number;
+  kind: MafiaEventKind;
+  /** Кого касается запись (жертва, спасённый, проверенный, изгнанный). */
+  displayName?: string;
+  role?: MafiaRole;
+  /** Кто сделал ход — для «доктор спас», «шериф проверил». */
+  actor?: MafiaRole;
+  /** Результат проверки шерифа. */
+  isMafia?: boolean;
+  /** Чем закончилась партия. */
+  winner?: MafiaWinner;
+  cause?: MafiaDeathCause;
+}
+
 export interface MafiaSnapshot {
   code: string;
   title: string | null;
@@ -237,6 +273,8 @@ export interface MafiaSnapshot {
   timerRemainingMs?: number;
   winner?: MafiaWinner;
   deaths: MafiaDeath[];
+  /** Хронология партии: ночи, смерти, спасения, проверки, изгнания. */
+  events: MafiaEvent[];
   /** userId, ожидающий «последнего слова» перед изгнанием. */
   pendingElim?: string;
 }
@@ -330,6 +368,12 @@ export interface MafiaView {
   vote?: MafiaVoteView;
   winner?: MafiaWinner;
   deaths: MafiaDeathView[];
+  /**
+   * Журнал партии. Заполнен ТОЛЬКО для тех, кому и так видно всё
+   * (финал, выбывшие и зрители при включённом правиле) — живому игроку
+   * он раскрыл бы роли и проверки шерифа.
+   */
+  events?: MafiaEvent[];
   timer?: { msLeft: number; paused: boolean };
   /**
    * Кого подсвечивает текущая фаза: всех погибших этой ночью (MORNING) или

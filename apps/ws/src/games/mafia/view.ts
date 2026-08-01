@@ -196,6 +196,8 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
     vote,
     winner: snap.winner,
     deaths,
+    // Журнал раскрывает роли и проверки шерифа — живому игроку нельзя.
+    events: seeAll ? (snap.events ?? []) : undefined,
     timer: timerView(snap),
     spotlight,
   };

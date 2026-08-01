@@ -19,6 +19,7 @@ import {
   tallyVotes,
   allNightActorsDone,
   allVoted,
+  logEvent,
 } from "./engine-core";
 import { load, mutate } from "./snapshot";
 import { broadcastStateNow } from "./broadcast";
@@ -98,6 +99,7 @@ async function tallyPhase(ns: MafiaNamespace, code: string): Promise<void> {
     s.vote.leaders = res.leaders;
     s.vote.eliminated = res.eliminated;
     s.vote.tie = res.tie;
+    if (res.tie) logEvent(s, { kind: "vote_tie" });
     s.phase = "VOTE_RESULT";
     s.timerEndsAt = Date.now() + VOTE_RESULT_MS;
     s.timerPaused = false;
@@ -176,6 +178,8 @@ export async function finishGame(
     s.winner = winner;
     s.timerEndsAt = undefined;
     s.timerPaused = false;
+    s.timerRemainingMs = undefined;
+    logEvent(s, { kind: "game_over", winner });
   });
   if (!snap) return;
   await broadcastStateNow(ns, code);
@@ -328,6 +332,7 @@ export async function restartToLobby(
     s.night = emptyNightState();
     s.vote = emptyVoteState();
     s.deaths = [];
+    s.events = [];
     s.winner = undefined;
     s.pendingElim = undefined;
     s.timerEndsAt = undefined;

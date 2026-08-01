@@ -2,6 +2,7 @@
 // фазами хостом. Валидация роли/цели/фазы — здесь; переходы — в engine.
 
 import { mutate, load } from "../snapshot";
+import { logEvent } from "../engine-core";
 import { scheduleStateBroadcast } from "../broadcast";
 import { clearTimer } from "../services/scheduler";
 import {
@@ -71,6 +72,12 @@ export function registerMafiaGameHandlers(
           if (t?.role === "don" && s.settings.rules.donHiddenFromSheriff)
             isMafia = false;
           s.night.sheriffResults[targetId] = isMafia;
+          logEvent(s, {
+            kind: "check",
+            actor: "sheriff",
+            displayName: t?.displayName,
+            isMafia,
+          });
         }
       } else if (action === "maniac") {
         s.night.maniacTarget = targetId ?? undefined;

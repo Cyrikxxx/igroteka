@@ -73,6 +73,44 @@ describe("роли погибших", () => {
   });
 });
 
+describe("журнал партии", () => {
+  const withEvents = () =>
+    snapshot(cast(), {
+      events: [
+        { day: 1, kind: "night_fell" },
+        { day: 1, kind: "kill", displayName: "civ", role: "civilian", cause: "mafia" },
+        { day: 1, kind: "check", actor: "sheriff", displayName: "maf", isMafia: true },
+      ],
+    });
+
+  it("живому игроку журнал не отдаётся вовсе", () => {
+    // Иначе город прочитал бы результаты проверок шерифа и роли погибших.
+    const view = buildView(withEvents(), "civ");
+    expect(view.events).toBeUndefined();
+    expect(JSON.stringify(view)).not.toContain("check");
+  });
+
+  it("выбывший видит журнал целиком", () => {
+    const players = cast();
+    players[4].alive = false; // civ убит
+    const s = snapshot(players, {
+      events: [{ day: 1, kind: "check", actor: "sheriff", displayName: "maf", isMafia: true }],
+    });
+    const view = buildView(s, "civ");
+    expect(view.events).toHaveLength(1);
+    expect(view.events?.[0].isMafia).toBe(true);
+  });
+
+  it("в финале журнал доступен всем", () => {
+    const s = snapshot(cast(), {
+      phase: "FINISHED",
+      winner: "city",
+      events: [{ day: 2, kind: "game_over", winner: "city" }],
+    });
+    expect(buildView(s, "civ").events).toHaveLength(1);
+  });
+});
+
 describe("ночные секреты", () => {
   it("результаты проверок шерифа уходят только шерифу", () => {
     const s = snapshot(cast());

@@ -7,6 +7,7 @@ import type { LucideIcon } from "lucide-react";
 import type { MafiaView, MafiaWinner, MafiaDeathCause } from "@alias/shared/mafia";
 import MafiaAvatar from "./MafiaAvatar";
 import { RoleChip } from "./roleMeta";
+import { Chronicle } from "./Chronicle";
 
 const WIN_META: Record<MafiaWinner, { title: string; color: string; Icon: LucideIcon }> = {
   city: { title: "Победа города", color: "var(--alias-green)", Icon: Shield },
@@ -63,11 +64,12 @@ export default function FinaleScreen({
         </div>
       </div>
 
-      <div style={{ padding: "0 20px", flex: 1, display: "flex", flexDirection: "column", gap: 7, overflowY: "auto" }}>
-        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.09em", textTransform: "uppercase", color: "var(--mf-text-faint)", margin: "4px 0" }}>
-          Кто кем был
-        </div>
-        {view.players.map((p) => (
+      <div className="mf-finale-body">
+        <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.09em", textTransform: "uppercase", color: "var(--mf-text-faint)", marginBottom: 2 }}>
+            Кто кем был
+          </div>
+          {view.players.map((p) => (
           <div
             key={p.userId}
             style={{
@@ -88,6 +90,16 @@ export default function FinaleScreen({
             {p.role ? <RoleChip role={p.role} /> : null}
           </div>
         ))}
+        </div>
+
+        {view.events && view.events.length > 0 ? (
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.09em", textTransform: "uppercase", color: "var(--mf-text-faint)", margin: "4px 0 10px" }}>
+              Хроника партии
+            </div>
+            <Chronicle events={view.events} />
+          </div>
+        ) : null}
       </div>
 
       <div style={{ padding: "14px 20px 24px", display: "flex", flexDirection: "column", gap: 10 }}>

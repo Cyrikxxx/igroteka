@@ -8,6 +8,7 @@ import type { MafiaView } from "@alias/shared/mafia";
 import MafiaAvatar from "./MafiaAvatar";
 import { RoleChip } from "./roleMeta";
 import { fmtClock } from "./PhaseHead";
+import { EventFeed } from "./Chronicle";
 
 const PHASE_LABEL: Record<string, string> = {
   NIGHT: "Ночь",
@@ -49,7 +50,15 @@ export default function SpectatorScreen({ view, exiled }: { view: MafiaView; exi
         </div>
       </div>
 
+      {view.events && view.events.length > 0 ? (
+        <div style={{ padding: "14px 20px 0" }}>
+          <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 9 }}>Сейчас</div>
+          <EventFeed events={view.events} />
+        </div>
+      ) : null}
+
       <div style={{ padding: "14px 20px", flex: 1, display: "flex", flexDirection: "column", gap: 7, overflowY: "auto" }}>
+        <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 2 }}>Игроки и роли</div>
         {view.players.map((p) => (
           <div
             key={p.userId}

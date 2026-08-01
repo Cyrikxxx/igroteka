@@ -185,7 +185,7 @@ async function main(): Promise<void> {
   }
 
   await waitPhase(host, "MORNING");
-  const killed = host.view?.spotlight?.displayName;
+  const killed = host.view?.spotlight?.[0]?.displayName;
   console.log(`[morning] погиб: ${killed ?? "никто"}`);
   if (killed !== victim.name) throw new Error(`ожидали смерть ${victim.name}, получили ${killed}`);
 
@@ -208,7 +208,7 @@ async function main(): Promise<void> {
     await c.emit("mafia:vote", { targetId: victimId(suspect) });
   }
   await waitPhase(host, "VOTE_RESULT");
-  console.log(`[vote] изгоняют: ${host.view?.spotlight?.displayName}`);
+  console.log(`[vote] изгоняют: ${host.view?.spotlight?.[0]?.displayName}`);
 
   await waitPhase(host, "LAST_WORD");
   await suspect.emit("mafia:last_word_done");
@@ -223,6 +223,15 @@ async function main(): Promise<void> {
   if (host.phase !== "NIGHT" && host.phase !== "FINISHED") {
     throw new Error(`партия зависла в фазе ${host.phase}`);
   }
+
+  // ─── Журнал партии ───
+  // Живым он не приходит, выбывшим — приходит целиком.
+  const aliveClient = clients.find((c) => c.view?.you.alive && !c.view.you.isSpectator);
+  if (aliveClient?.view?.events) throw new Error("журнал утёк живому игроку");
+  const deadClient = clients.find((c) => c.view && !c.view.you.alive);
+  const journal = deadClient?.view?.events ?? [];
+  if (journal.length === 0) throw new Error("выбывший не получил журнал");
+  console.log(`[journal] выбывшему видно ${journal.length} записей: ${journal.map((e) => e.kind).join(", ")}`);
 
   for (const c of clients) c.sock.disconnect();
   console.log("[ok] smoke-mafia passed");

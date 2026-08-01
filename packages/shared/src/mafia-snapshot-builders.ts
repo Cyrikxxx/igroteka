@@ -42,5 +42,6 @@ export function buildMafiaLobbySnapshot(args: {
     night: emptyNightState(),
     vote: emptyVoteState(),
     deaths: [],
+    events: [],
   };
 }

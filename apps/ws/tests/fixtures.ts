@@ -51,6 +51,7 @@ export function snapshot(
     night: emptyNightState(),
     vote: emptyVoteState(),
     deaths: [],
+    events: [],
     ...overrides,
     settings,
   };
