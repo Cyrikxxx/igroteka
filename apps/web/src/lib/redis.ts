@@ -1,8 +1,7 @@
 // Singleton ioredis-клиент для web. Тот же `REDIS_URL`, что и в apps/ws,
-// поэтому web и WS-сервер пишут/читают один Upstash.
+// поэтому web и WS-сервер читают и пишут один Redis.
 //
-// В production на Vercel при cold-start процесс перерабатывается, соединение
-// перезаключается. На длинноживущем процессе (dev) singleton переиспользуется.
+// В dev клиент кладётся в globalThis, чтобы hot reload не плодил соединения.
 
 import Redis from "ioredis";
 

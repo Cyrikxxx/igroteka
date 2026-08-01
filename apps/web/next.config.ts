@@ -28,28 +28,18 @@ try {
     process.env[key] = value;
   }
 } catch (err) {
-  // .env может отсутствовать в проде (там Vercel/Railway проставят сами).
+  // В контейнере .env-файла нет — значения приходят из окружения напрямую.
   if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
 }
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  // Маршруты Алиаса переехали под /alias/* (игротека: Алиас + Мафия).
-  // Редиректим старые прод-ссылки и «продолжить игру» из истории.
-  async redirects() {
-    return [
-      { source: "/room/:path*", destination: "/alias/room/:path*", permanent: false },
-      { source: "/local/:path*", destination: "/alias/local/:path*", permanent: false },
-      { source: "/results/:path*", destination: "/alias/results/:path*", permanent: false },
-      { source: "/join", destination: "/alias/join", permanent: false },
-    ];
-  },
   // packages/shared — TypeScript-исходники, Next/Turbopack должен
   // транспилировать их при импорте.
   transpilePackages: ["@alias/shared"],
   // Монорепо: говорим трассировщику зависимостей, что корень проекта —
-  // на 2 уровня выше apps/web. Без этого Vercel может пропустить
-  // workspace-зависимости при бандлинге.
+  // на 2 уровня выше apps/web. Без этого в сборку не попадут
+  // workspace-зависимости (@alias/shared).
   outputFileTracingRoot: resolve(__dirname, "../.."),
   // Разрешаем LAN-устройствам (телефон с того же Wi-Fi) подключаться к
   // dev-серверу. Next.js 16 по умолчанию блокирует cross-origin доступ

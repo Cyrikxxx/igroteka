@@ -1,4 +1,5 @@
-// Socket.io сервер для онлайн-комнат Alias. См. PROMPT.md §2.1.1, §2.4.
+// Socket.io сервер игротеки: неймспейс /room (Алиас) и /mafia (Мафия).
+// Держит постоянные соединения, гоняет серверные стейт-машины партий.
 
 import "./env";
 
@@ -20,14 +21,13 @@ import type {
 import type { AppNamespace } from "./io-types";
 import type { MafiaNamespace, MafiaSocket } from "./games/mafia/io-types";
 
-// Railway передаёт порт через стандартную `PORT`. Локально используем
-// `WS_PORT=3001`, чтобы не конфликтовать с Next.js на 3000.
+// Порт берём из `PORT` (задаёт контейнер), локально — `WS_PORT=3001`,
+// чтобы не конфликтовать с Next.js на 3000.
 const PORT = Number(process.env.PORT ?? process.env.WS_PORT ?? 3001);
 // В dev разрешаем любой origin — иначе телефон на LAN (192.168.x.x)
 // блокируется CORS, когда подключается к WS на том же роутере.
-// В production обязателен WS_CORS_ORIGIN с URL Vercel-приложения
-// (например, https://alias-online.vercel.app). Несколько origin'ов
-// через запятую: "https://alias.vercel.app,https://alias-preview.vercel.app".
+// В production обязателен WS_CORS_ORIGIN с адресом сайта
+// (например, https://example.com). Несколько origin'ов — через запятую.
 function resolveCorsOrigin(): string | string[] | true {
   const env = process.env.WS_CORS_ORIGIN;
   if (env) {
@@ -37,7 +37,7 @@ function resolveCorsOrigin(): string | string[] | true {
   if (process.env.NODE_ENV === "production") {
     console.warn(
       "[ws] WARNING: WS_CORS_ORIGIN is not set in production. " +
-        "Falling back to closed CORS. Set it to the Vercel app URL.",
+        "Falling back to closed CORS. Set it to the site URL.",
     );
     return "https://example.invalid"; // заведомо несовпадающий — заблокирует всё
   }

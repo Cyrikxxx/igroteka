@@ -43,7 +43,7 @@ export function issueWsToken(args: {
 /**
  * URL WS-сервера для клиента.
  *
- * - В production: всегда `NEXT_PUBLIC_WS_URL` (например, Railway-домен).
+ * - В production: всегда `NEXT_PUBLIC_WS_URL`.
  * - В development: если запрос пришёл на `localhost` — отдаём
  *   `http://localhost:3001`. Если же страницу открыли по LAN-адресу
  *   (например, с телефона `http://192.168.1.5:3000`), отдаём

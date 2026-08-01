@@ -1,15 +1,12 @@
-// Alias Online v2 — Prisma schema
-// Источник истины: project-context/PROMPT.md §2.2.1
+// Схема БД игротеки: Алиас + Мафия.
 // Postgres хранит долговременное состояние; Redis (онлайн) — горячее.
 
 generator client {
-  // Классический генератор: выводит клиент в node_modules/@prisma/client,
-  // Vercel/Railway бандлят его автоматически.
+  // Классический генератор: выводит клиент в node_modules/@prisma/client.
   provider      = "prisma-client-js"
-  // `native` — генерация под локальную ОС (Windows/Mac для dev).
-  // `rhel-openssl-3.0.x` — Vercel serverless runtime (Linux).
-  // `debian-openssl-3.0.x` — Railway (Debian/Ubuntu в контейнере).
-  binaryTargets = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]
+  // `native` — под локальную ОС для разработки (Windows/macOS).
+  // `debian-openssl-3.0.x` — под базовый образ контейнеров на VPS.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {

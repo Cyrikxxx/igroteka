@@ -1,6 +1,6 @@
 # Локальные базы для разработки (НЕ для прода).
 # Поднимают Postgres и Redis в контейнерах прямо на твоём ПК.
-# Прод (Vercel/Railway/Neon/Upstash) это никак не трогает.
+# Прод живёт отдельно — см. docker-compose.prod.yml.
 #
 #   docker compose up -d     # поднять базы в фоне
 #   docker compose down      # остановить (данные сохранятся в volume)
