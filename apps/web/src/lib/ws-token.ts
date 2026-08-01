@@ -42,32 +42,28 @@ export function issueWsToken(args: {
 }
 
 /**
- * URL WS-сервера для клиента.
+ * Адрес WS-сервера, который получит браузер.
  *
- * - В production: всегда `NEXT_PUBLIC_WS_URL`.
- * - В development: если запрос пришёл на `localhost` — отдаём
- *   `http://localhost:3001`. Если же страницу открыли по LAN-адресу
- *   (например, с телефона `http://192.168.1.5:3000`), отдаём
- *   `http://192.168.1.5:3001` — иначе на телефоне Socket.io попытается
- *   подключиться к самому себе и тихо не подключится.
+ * - `NEXT_PUBLIC_WS_URL` задан — отдаём его как есть (нужно, если ws вынесен
+ *   на отдельный домен).
+ * - production без переменной — пустая строка. На VPS web и ws стоят за одним
+ *   реверс-прокси, и клиент подключается к origin страницы: socket.io
+ *   получает относительный адрес вида `/mafia` и сам подставит нужную схему
+ *   (wss:// на https-странице) и порт. Собирать URL руками нельзя —
+ *   за прокси ни схема, ни порт приложению не известны.
+ * - development — LAN-осознанный адрес: если страницу открыли с телефона по
+ *   `http://192.168.1.5:3000`, ws должен быть `http://192.168.1.5:3001`, а не
+ *   `localhost`, иначе телефон будет стучаться сам в себя.
  */
 export function wsConnectUrlFor(request: NextRequest): string {
-  const explicit = process.env.NEXT_PUBLIC_WS_URL;
-  // В production — всегда явный URL.
-  if (process.env.NODE_ENV === "production" && explicit) return explicit;
+  const explicit = process.env.NEXT_PUBLIC_WS_URL?.trim();
+  if (explicit) return explicit;
+  if (process.env.NODE_ENV === "production") return "";
 
   const host = request.headers.get("host") ?? "localhost:3000";
   const hostname = host.split(":")[0];
+  const isLoopback =
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0";
 
-  // Если хост — это localhost / 127.0.0.1, доверяем NEXT_PUBLIC_WS_URL.
-  if (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "0.0.0.0"
-  ) {
-    return explicit ?? "http://localhost:3001";
-  }
-
-  // LAN-доступ — собираем URL с тем же хостом, что и страница.
-  return `http://${hostname}:3001`;
+  return isLoopback ? "http://localhost:3001" : `http://${hostname}:3001`;
 }

@@ -10,8 +10,12 @@ import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
 import type { MafiaView, MafiaPhase } from "@alias/shared/mafia";
 
-const WEB = "http://localhost:3000";
-const WS = process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001";
+// По умолчанию бьём в dev-серверы. Чтобы проверить прод-сборку за прокси,
+// где web и ws на одном адресе:
+//   SMOKE_WEB=http://localhost SMOKE_WS=http://localhost npm run smoke:mafia -w @alias/ws
+const WEB = process.env.SMOKE_WEB ?? "http://localhost:3000";
+const WS =
+  process.env.SMOKE_WS ?? process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001";
 const NAMES = ["Хост", "Кира", "Стас", "Маша", "Пётр", "Лена"];
 
 /** Отдельная «банка» cookie на каждого игрока — иначе все будут одним userId. */

@@ -35,3 +35,22 @@ export function getRedis(label: string): Redis {
   if (process.env.NODE_ENV !== "production") globalForRedis.redis = client;
   return client;
 }
+
+/**
+ * Ленивая обёртка: соединение открывается на первом обращении к методу,
+ * а не в момент импорта модуля.
+ *
+ * Это принципиально для сборки образа — `next build` импортирует все
+ * API-роуты, чтобы собрать метаданные, и жадный клиент падал бы с
+ * «REDIS_URL is not set». Секретов на сборке быть не должно: они
+ * появляются только при запуске контейнера.
+ */
+export function lazyRedis(label: string): Redis {
+  return new Proxy({} as Redis, {
+    get(_target, prop) {
+      const instance = getRedis(label) as unknown as Record<string | symbol, unknown>;
+      const value = instance[prop];
+      return typeof value === "function" ? value.bind(instance) : value;
+    },
+  });
+}

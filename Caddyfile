@@ -1,0 +1,26 @@
+# Реверс-прокси перед web и ws. Оба живут на одном адресе, поэтому
+# клиенту не нужен отдельный домен для сокетов — и CORS не возникает.
+#
+# SITE_ADDRESS задаётся в .env:
+#   :80              — пока домена нет, доступ по IP без TLS
+#   example.com      — Caddy сам получит и будет продлевать сертификат
+#
+# После покупки домена достаточно поменять одну переменную и перезапустить
+# контейнер: docker compose -f docker-compose.prod.yml up -d caddy
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# Socket.io: и рукопожатие, и апгрейд до WebSocket. Caddy проксирует
+	# Upgrade/Connection сам, отдельные заголовки прописывать не нужно.
+	handle /socket.io/* {
+		reverse_proxy ws:3001
+	}
+
+	# /health сервера ws наружу не выставляем — он нужен только внутри
+	# сети compose, для healthcheck'ов.
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

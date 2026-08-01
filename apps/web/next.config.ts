@@ -13,6 +13,10 @@ loadEnvFile(resolve(__dirname, "../../.env"));
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  // Самодостаточная сборка для контейнера: Next кладёт в .next/standalone
+  // сервер вместе с нужными файлами node_modules, и образ не тащит весь
+  // node_modules монорепо.
+  output: "standalone",
   // packages/shared — TypeScript-исходники, Next/Turbopack должен
   // транспилировать их при импорте.
   transpilePackages: ["@alias/shared"],

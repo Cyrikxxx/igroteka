@@ -27,6 +27,8 @@ export function connectToRoom(opts: ConnectOpts): Socket {
     current.disconnect();
     current = null;
   }
+  // Пустой wsUrl — намеренно: получается относительный `/room` или `/mafia`,
+  // и socket.io подключается к origin страницы (прод за общим прокси).
   current = io(`${opts.wsUrl}${ns}`, {
     auth: { token: opts.token, code: opts.code, name: opts.name },
     transports: ["websocket"],
