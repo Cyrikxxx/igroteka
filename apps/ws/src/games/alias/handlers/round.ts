@@ -18,7 +18,7 @@ import {
 } from "@alias/shared/constants";
 import { findPlayer, removePlayer } from "@alias/shared/snapshot-builders";
 import { mutate, load, save } from "../snapshot";
-import { prisma } from "../prisma";
+import { prisma } from "../../../prisma";
 import {
   fetchWordsBatch,
   pushWordsToQueue,

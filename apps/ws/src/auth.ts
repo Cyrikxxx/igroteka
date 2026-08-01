@@ -2,7 +2,15 @@
 // выданный REST-эндпоинтом (apps/web).
 
 import { verifyWsToken } from "@alias/shared/token";
-import type { AppSocket } from "./io-types";
+import type { SocketData } from "./socket-data";
+
+// Middleware смотрит только на handshake и socket.data, поэтому описываем
+// сокет структурно — так один и тот же обработчик подходит обоим
+// неймспейсам (/room и /mafia) без приведения типов.
+interface AuthenticatingSocket {
+  handshake: { auth: unknown };
+  data: SocketData;
+}
 
 const secret = process.env.WS_TOKEN_SECRET;
 if (!secret) {
@@ -10,7 +18,7 @@ if (!secret) {
 }
 
 export function authMiddleware(
-  socket: AppSocket,
+  socket: AuthenticatingSocket,
   next: (err?: Error) => void,
 ): void {
   const auth = socket.handshake.auth as { token?: unknown; code?: unknown };

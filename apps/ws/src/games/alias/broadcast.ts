@@ -7,7 +7,7 @@ import type { AppNamespace } from "./io-types";
 import {
   createDebouncer,
   STATE_BROADCAST_DEBOUNCE_MS,
-} from "./lib/debounce";
+} from "../../lib/debounce";
 
 const debouncer = createDebouncer(STATE_BROADCAST_DEBOUNCE_MS);
 

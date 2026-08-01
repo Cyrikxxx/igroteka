@@ -2,8 +2,8 @@
 
 import { WORDS_BATCH_SIZE } from "@alias/shared/constants";
 import { roomWordsKey } from "@alias/shared/redis-keys";
-import { redis } from "../redis";
-import { prisma } from "../prisma";
+import { redis } from "../../../redis";
+import { prisma } from "../../../prisma";
 
 export interface WordItem {
   id: number;

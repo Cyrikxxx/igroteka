@@ -7,8 +7,8 @@ import { createServer } from "node:http";
 import { Server } from "socket.io";
 import { redis } from "./redis";
 import { authMiddleware } from "./auth";
-import { registerLobbyHandlers } from "./handlers/lobby";
-import { registerRoundHandlers } from "./handlers/round";
+import { registerLobbyHandlers } from "./games/alias/handlers/lobby";
+import { registerRoundHandlers } from "./games/alias/handlers/round";
 import { registerMafiaLobbyHandlers } from "./games/mafia/handlers/lobby";
 import { registerMafiaGameHandlers } from "./games/mafia/handlers/game";
 import { mafiaRoom } from "./games/mafia/broadcast";
@@ -16,10 +16,10 @@ import type {
   ClientToServerEvents,
   ServerToClientEvents,
   InterServerEvents,
-  SocketData,
-} from "./types";
-import type { AppNamespace } from "./io-types";
-import type { MafiaNamespace, MafiaSocket } from "./games/mafia/io-types";
+} from "./games/alias/types";
+import type { SocketData } from "./socket-data";
+import type { AppNamespace } from "./games/alias/io-types";
+import type { MafiaNamespace } from "./games/mafia/io-types";
 
 // Порт берём из `PORT` (задаёт контейнер), локально — `WS_PORT=3001`,
 // чтобы не конфликтовать с Next.js на 3000.
@@ -95,13 +95,11 @@ roomNs.on("connection", (socket) => {
 });
 
 // ─── Неймспейс Мафии ───
-// Сервер типизирован под события Алиаса; у Мафии свой набор — кастуем.
+// Сервер типизирован под события Алиаса; у Мафии свой набор — кастуем
+// сам неймспейс. Middleware приводить не нужно: он описан структурно и
+// подходит обоим (см. auth.ts).
 const mafiaNs = io.of("/mafia") as unknown as MafiaNamespace;
-const mafiaAuth = authMiddleware as unknown as (
-  socket: MafiaSocket,
-  next: (err?: Error) => void,
-) => void;
-mafiaNs.use(mafiaAuth);
+mafiaNs.use(authMiddleware);
 
 mafiaNs.on("connection", (socket) => {
   const { userId, roomCode, role, game } = socket.data;

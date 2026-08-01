@@ -9,7 +9,6 @@ import type {
   RoundReviewPayload,
   RoundCommittedPayload,
 } from "@alias/shared/domain";
-import type { WsRole, WsGame } from "@alias/shared/token";
 
 type Ack<T> = (resp: T) => void;
 type OkErr = { ok: true } | { error: string };
@@ -98,9 +97,5 @@ export interface InterServerEvents {
   [key: string]: unknown;
 }
 
-export interface SocketData {
-  userId: string;
-  roomCode: string;
-  role: WsRole;
-  game: WsGame;
-}
+// SocketData общая для обеих игр — см. src/socket-data.ts.
+export type { SocketData } from "../../socket-data";

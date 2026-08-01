@@ -2,7 +2,7 @@
 // раздувать broadcast'ы при каждом guess'е.
 // Ключ: `room:<code>:round` → JSON {RoundState}.
 
-import { redis } from "../redis";
+import { redis } from "../../../redis";
 import { ROOM_TTL_SECONDS } from "@alias/shared/constants";
 
 export interface WordSeen {

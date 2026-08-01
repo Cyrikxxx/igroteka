@@ -1,7 +1,7 @@
 // Postgres-мутации игрового цикла: создание Game/Team/Player при старте,
 // фиксация раунда при review_confirm.
 
-import { prisma } from "../prisma";
+import { prisma } from "../../../prisma";
 import type { RoomSnapshot } from "@alias/shared/domain";
 import type { RoundState } from "./roundState";
 import { scoreRound, checkWinner } from "./score";
