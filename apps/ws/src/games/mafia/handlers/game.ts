@@ -9,6 +9,8 @@ import {
   maybeTallyEarly,
   afterDiscussion,
   afterLastWord,
+  pausePhase,
+  resumePhase,
 } from "../engine";
 import type { MafiaSocket, MafiaNamespace } from "../io-types";
 
@@ -119,6 +121,25 @@ export function registerMafiaGameHandlers(
     ack?.({ ok: true });
     clearTimer(code);
     await afterDiscussion(ns, code);
+  });
+
+  // ─── Пауза / продолжение ─── только хост
+  // Нужна за живым столом: кто-то вышел, кому-то позвонили. Таймер
+  // останавливается, остаток запоминается и досчитывается после resume.
+  socket.on("mafia:pause", async (_p, ack) => {
+    const snap = await load(code);
+    if (!snap) return ack?.({ error: "room_not_found" });
+    if (snap.hostId !== userId) return ack?.({ error: "forbidden" });
+    const ok = await pausePhase(ns, code);
+    ack?.(ok ? { ok: true } : { error: "cant_pause" });
+  });
+
+  socket.on("mafia:resume", async (_p, ack) => {
+    const snap = await load(code);
+    if (!snap) return ack?.({ error: "room_not_found" });
+    if (snap.hostId !== userId) return ack?.({ error: "forbidden" });
+    const ok = await resumePhase(ns, code);
+    ack?.(ok ? { ok: true } : { error: "not_paused" });
   });
 
   // ─── Последнее слово сказано (изгнанный или хост) ───

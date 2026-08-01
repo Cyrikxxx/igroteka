@@ -25,6 +25,11 @@ function findSelf(
 }
 
 function timerView(snap: MafiaSnapshot): MafiaView["timer"] {
+  // На паузе показываем замороженный остаток, а не обратный отсчёт от
+  // старого дедлайна — иначе таймер продолжал бы «таять» на экране.
+  if (snap.timerPaused && snap.timerRemainingMs != null) {
+    return { msLeft: snap.timerRemainingMs, paused: true };
+  }
   if (!snap.timerEndsAt) return undefined;
   const msLeft = Math.max(0, snap.timerEndsAt - Date.now());
   return { msLeft, paused: Boolean(snap.timerPaused) };

@@ -23,12 +23,15 @@ function fate(by?: MafiaDeathCause, day?: number): string {
 
 export default function FinaleScreen({
   view,
+  isHost,
+  onRematch,
   onHome,
-  onAgain,
 }: {
   view: MafiaView;
+  isHost: boolean;
+  /** Вернуть комнату в лобби тем же составом (только хост). */
+  onRematch: () => void;
   onHome: () => void;
-  onAgain: () => void;
 }) {
   const winner = view.winner ?? "city";
   const m = WIN_META[winner];
@@ -87,12 +90,18 @@ export default function FinaleScreen({
         ))}
       </div>
 
-      <div style={{ padding: "14px 20px 24px", display: "flex", gap: 10 }}>
-        <button type="button" className="mf-btn mf-btn-ghost" style={{ flex: 1 }} onClick={onHome}>
+      <div style={{ padding: "14px 20px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
+        {isHost ? (
+          <button type="button" className="mf-btn mf-btn-crimson" style={{ width: "100%" }} onClick={onRematch}>
+            <RotateCcw size={18} /> Сыграть ещё
+          </button>
+        ) : (
+          <div className="mf-mono" style={{ textAlign: "center", fontSize: 13, color: "var(--mf-text-faint)", fontWeight: 700 }}>
+            хост может собрать всех на новую партию
+          </div>
+        )}
+        <button type="button" className="mf-btn mf-btn-ghost" style={{ width: "100%" }} onClick={onHome}>
           <Home size={18} /> На главную
-        </button>
-        <button type="button" className="mf-btn mf-btn-crimson" style={{ flex: 1 }} onClick={onAgain}>
-          <RotateCcw size={18} /> Ещё партия
         </button>
       </div>
     </div>

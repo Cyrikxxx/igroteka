@@ -150,6 +150,20 @@ async function main(): Promise<void> {
   const roles = clients.map((c) => `${c.name}:${c.role}`).join(" ");
   console.log(`[night 1] ${roles}`);
 
+  // ─── Пауза посреди ночи ───
+  await host.emit("mafia:pause");
+  await sleep(300);
+  if (!host.view?.timer?.paused) throw new Error("пауза не включилась");
+  const frozen = host.view.timer.msLeft;
+  await sleep(1500);
+  if (host.view?.timer?.msLeft !== frozen) {
+    throw new Error("таймер продолжил идти на паузе");
+  }
+  await host.emit("mafia:resume");
+  await sleep(300);
+  if (host.view?.timer?.paused) throw new Error("пауза не снялась");
+  console.log(`[pause] таймер замер на ${Math.round(frozen / 1000)}с и пошёл дальше`);
+
   // ─── Ночные ходы ───
   const mafias = clients.filter((c) => c.role === "mafia" || c.role === "don");
   const sheriff = clients.find((c) => c.role === "sheriff");

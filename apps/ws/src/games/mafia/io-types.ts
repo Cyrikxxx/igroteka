@@ -26,6 +26,8 @@ export interface MafiaClientToServerEvents {
   "mafia:last_word_done": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
   "mafia:pause": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
   "mafia:resume": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
+  /** Сыграть ещё раз тем же составом: комната возвращается в лобби. */
+  "mafia:restart": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
 }
 
 export interface MafiaServerToClientEvents {

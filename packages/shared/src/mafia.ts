@@ -233,6 +233,8 @@ export interface MafiaSnapshot {
   vote: MafiaVoteState;
   timerEndsAt?: number;
   timerPaused?: boolean;
+  /** Сколько оставалось на момент паузы — из этого считается новый дедлайн. */
+  timerRemainingMs?: number;
   winner?: MafiaWinner;
   deaths: MafiaDeath[];
   /** userId, ожидающий «последнего слова» перед изгнанием. */

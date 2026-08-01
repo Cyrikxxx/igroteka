@@ -5,7 +5,13 @@
 // Чистая часть (резолв ночи, подсчёт голосов, готовность фазы) — в
 // engine-core.ts, она покрыта тестами.
 
-import type { MafiaWinner, MafiaPhase } from "@alias/shared/mafia";
+import {
+  emptyNightState,
+  emptyVoteState,
+  MAX_MAFIA_PLAYERS,
+  type MafiaWinner,
+  type MafiaPhase,
+} from "@alias/shared/mafia";
 import {
   applyEnterNight,
   killPlayer,
@@ -242,6 +248,95 @@ export async function ensurePhaseTimer(
     return;
   }
   startTimer(ns, code, msLeft, () => onTimeout(ns, code));
+}
+
+// ─────────── Пауза ───────────
+
+/** Остановить таймер фазы, запомнив остаток. */
+export async function pausePhase(
+  ns: MafiaNamespace,
+  code: string,
+): Promise<boolean> {
+  const current = await load(code);
+  if (!current) return false;
+  if (!TIMED_PHASES.has(current.phase) || current.timerPaused) return false;
+
+  const remaining = Math.max(0, (current.timerEndsAt ?? 0) - Date.now());
+  clearTimer(code);
+  const snap = await mutate(code, (s) => {
+    s.timerPaused = true;
+    s.timerRemainingMs = remaining;
+  });
+  if (!snap) return false;
+  await broadcastStateNow(ns, code);
+  return true;
+}
+
+/** Продолжить с того же остатка. */
+export async function resumePhase(
+  ns: MafiaNamespace,
+  code: string,
+): Promise<boolean> {
+  const current = await load(code);
+  if (!current || !current.timerPaused) return false;
+
+  const remaining = current.timerRemainingMs ?? 0;
+  const snap = await mutate(code, (s) => {
+    s.timerPaused = false;
+    s.timerRemainingMs = undefined;
+    s.timerEndsAt = Date.now() + remaining;
+  });
+  if (!snap) return false;
+  await broadcastStateNow(ns, code);
+  if (remaining <= 0) {
+    await onTimeout(ns, code);
+  } else {
+    startTimer(ns, code, remaining, () => onTimeout(ns, code));
+  }
+  return true;
+}
+
+// ─────────── Новая партия тем же составом ───────────
+
+/**
+ * Возврат комнаты в лобби после финала: роли сбрасываются, выбывшие
+ * оживают, зрители, подсевшие по ходу партии, становятся игроками.
+ */
+export async function restartToLobby(
+  ns: MafiaNamespace,
+  code: string,
+): Promise<boolean> {
+  const current = await load(code);
+  if (!current || current.phase !== "FINISHED") return false;
+
+  clearTimer(code);
+  const snap = await mutate(code, (s) => {
+    const returning = [...s.players, ...s.spectators].slice(0, MAX_MAFIA_PLAYERS);
+    s.players = returning.map((p, i) => ({
+      ...p,
+      order: i,
+      alive: true,
+      ready: false,
+      role: null,
+      eliminatedBy: undefined,
+      deathDay: undefined,
+      isHost: p.userId === s.hostId,
+    }));
+    s.spectators = [];
+    s.phase = "LOBBY";
+    s.day = 0;
+    s.night = emptyNightState();
+    s.vote = emptyVoteState();
+    s.deaths = [];
+    s.winner = undefined;
+    s.pendingElim = undefined;
+    s.timerEndsAt = undefined;
+    s.timerPaused = false;
+    s.timerRemainingMs = undefined;
+  });
+  if (!snap) return false;
+  await broadcastStateNow(ns, code);
+  return true;
 }
 
 // Ранние переходы — вызываются из обработчиков после действия.

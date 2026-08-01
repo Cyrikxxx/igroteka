@@ -17,6 +17,7 @@ import {
   finishGame,
   maybeResolveNightEarly,
   maybeTallyEarly,
+  restartToLobby,
 } from "../engine";
 import { checkWinner } from "../services/win";
 
@@ -247,6 +248,16 @@ export function registerMafiaLobbyHandlers(
     if (!snap) return ack?.({ error: "room_not_found" });
     ack?.({ ok: true });
     await broadcastStateNow(ns, roomCode);
+  });
+
+  // ─── mafia:restart ─── host, только после финала
+  socket.on("mafia:restart", async (_payload, ack) => {
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
+    if (current.phase !== "FINISHED") return ack?.({ error: "not_finished" });
+    const ok = await restartToLobby(ns, roomCode);
+    ack?.(ok ? { ok: true } : { error: "cant_restart" });
   });
 
   // ─── mafia:ready ─── игрок подтвердил, что запомнил роль
