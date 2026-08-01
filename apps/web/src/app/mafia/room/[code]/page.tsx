@@ -16,6 +16,7 @@ import {
 import MafiaShell from "@/components/mafia/MafiaShell";
 import MafiaAvatar from "@/components/mafia/MafiaAvatar";
 import MafiaSettingsForm from "@/components/mafia/MafiaSettingsForm";
+import QrCode from "@/components/common/QrCode";
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
 import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
 
@@ -59,6 +60,9 @@ export default function MafiaLobbyPage() {
   const settings = view?.settings;
   const comp = settings ? computeComposition(Math.max(count, MIN_MAFIA_PLAYERS), settings) : null;
 
+  const inviteUrl =
+    typeof window === "undefined" ? "" : `${window.location.origin}/mafia/join?code=${code}`;
+
   const copyCode = () => {
     navigator.clipboard?.writeText(code).then(() => {
       setCopied(true);
@@ -66,9 +70,9 @@ export default function MafiaLobbyPage() {
     });
   };
   const shareLink = () => {
-    const url = `${window.location.origin}/mafia/join?code=${code}`;
-    if (navigator.share) navigator.share({ title: "Мафия", text: "Заходи в комнату", url }).catch(() => {});
-    else navigator.clipboard?.writeText(url);
+    if (navigator.share)
+      navigator.share({ title: "Мафия", text: "Заходи в комнату", url: inviteUrl }).catch(() => {});
+    else navigator.clipboard?.writeText(inviteUrl);
   };
 
   const start = () => socket?.emit("mafia:start", {}, () => {});
@@ -84,7 +88,7 @@ export default function MafiaLobbyPage() {
   };
 
   return (
-    <MafiaShell>
+    <MafiaShell wide>
       <div className="mf-phase-head">
         <div className="mf-phase-title">
           <DoorOpen size={21} color="var(--mf-crimson)" />
@@ -100,12 +104,13 @@ export default function MafiaLobbyPage() {
         </button>
       </div>
 
+      <div className="mf-lobby-grid">
       {/* Код комнаты */}
-      <div style={{ padding: "18px 20px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+      <div className="mf-lobby-code" style={{ padding: "18px 20px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "var(--mf-text-faint)", textTransform: "uppercase" }}>
           Код комнаты
         </div>
-        <div className="mf-mono" style={{ fontSize: 46, fontWeight: 700, letterSpacing: "0.22em", marginLeft: "0.22em", lineHeight: 1 }}>
+        <div className="mf-mono mf-lobby-code-value" style={{ fontWeight: 700, letterSpacing: "0.22em", marginLeft: "0.22em", lineHeight: 1 }}>
           {code}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -118,8 +123,18 @@ export default function MafiaLobbyPage() {
             Поделиться
           </button>
         </div>
+        {/* QR удобен, когда компания рядом: навёл камеру — и ты в комнате. */}
+        <div className="mf-lobby-qr">
+          <QrCode value={inviteUrl} />
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--mf-text-faint)", textAlign: "center", marginTop: 10 }}>
+            Наведи камеру телефона,
+            <br />
+            чтобы войти в комнату
+          </div>
+        </div>
       </div>
 
+      <div className="mf-lobby-right">
       {/* Игроки */}
       <div style={{ padding: "22px 20px 0", flex: 1, display: "flex", flexDirection: "column", gap: 8, minHeight: 0 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -237,6 +252,8 @@ export default function MafiaLobbyPage() {
         {error ? (
           <div style={{ textAlign: "center", color: "var(--mf-crimson)", fontSize: 13, fontWeight: 700 }}>{error}</div>
         ) : null}
+      </div>
+      </div>
       </div>
 
       {/* Шит настроек */}
