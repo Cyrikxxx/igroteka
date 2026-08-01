@@ -5,11 +5,14 @@
 import { load } from "./snapshot";
 import { buildView } from "./view";
 import type { MafiaNamespace } from "./io-types";
+import {
+  createDebouncer,
+  STATE_BROADCAST_DEBOUNCE_MS,
+} from "../../lib/debounce";
 
 export const mafiaRoom = (code: string) => `mafia:${code}`;
 
-const DEBOUNCE_MS = 50;
-const pending = new Map<string, NodeJS.Timeout>();
+const debouncer = createDebouncer(STATE_BROADCAST_DEBOUNCE_MS);
 
 async function emitPersonalized(ns: MafiaNamespace, code: string): Promise<void> {
   const snap = await load(code);
@@ -22,12 +25,7 @@ async function emitPersonalized(ns: MafiaNamespace, code: string): Promise<void>
 
 /** Дебаунс — несколько мутаций подряд сольются в один бродкаст. */
 export function scheduleStateBroadcast(ns: MafiaNamespace, code: string): void {
-  if (pending.has(code)) return;
-  const handle = setTimeout(async () => {
-    pending.delete(code);
-    await emitPersonalized(ns, code);
-  }, DEBOUNCE_MS);
-  pending.set(code, handle);
+  debouncer.schedule(code, () => emitPersonalized(ns, code));
 }
 
 /** Немедленный персонализированный бродкаст (hello, смена фазы). */

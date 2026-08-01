@@ -14,8 +14,10 @@
     "./token": "./src/token.ts",
     "./redis-keys": "./src/redis-keys.ts",
     "./snapshot-builders": "./src/snapshot-builders.ts",
+    "./mafia-snapshot-builders": "./src/mafia-snapshot-builders.ts",
     "./server/prisma": "./src/server/prisma.ts",
-    "./server/redis": "./src/server/redis.ts"
+    "./server/redis": "./src/server/redis.ts",
+    "./server/snapshot-store": "./src/server/snapshot-store.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

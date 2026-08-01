@@ -1,25 +1,24 @@
-// Дебаунс room:state бродкастов: соседние во времени мутации часто
-// случаются цепочкой (team:join → смена онлайн-флага → broadcast).
-// Шлём один свежий снимок через 50мс, а не серию.
+// Рассылка room:state всем участникам комнаты Алиаса: один общий снимок
+// на всех (в отличие от Мафии, где вид персональный).
 
 import type { RoomSnapshot } from "@alias/shared/domain";
 import { load } from "./snapshot";
 import type { AppNamespace } from "./io-types";
+import {
+  createDebouncer,
+  STATE_BROADCAST_DEBOUNCE_MS,
+} from "./lib/debounce";
 
-const DEBOUNCE_MS = 50;
-const pending = new Map<string, NodeJS.Timeout>();
+const debouncer = createDebouncer(STATE_BROADCAST_DEBOUNCE_MS);
 
 export function scheduleStateBroadcast(
   ns: AppNamespace,
   code: string,
 ): void {
-  if (pending.has(code)) return;
-  const handle = setTimeout(async () => {
-    pending.delete(code);
+  debouncer.schedule(code, async () => {
     const snap = await load(code);
     if (snap) ns.to(`room:${code}`).emit("room:state", snap);
-  }, DEBOUNCE_MS);
-  pending.set(code, handle);
+  });
 }
 
 /** Immediate broadcast (для room:hello, где клиенту нужно сразу синхронизироваться). */
