@@ -1,15 +1,19 @@
-// Движок партии Мафии: переходы фаз, резолв ночи, подсчёт голосов, проверка
-// победы. Таймеры — через scheduler; по истечении срабатывает onTimeout,
+// Движок партии Мафии: переходы фаз с побочными эффектами — запись снапшота,
+// рассылка состояния, таймеры. По истечении таймера срабатывает onTimeout,
 // который диспетчеризует следующий шаг по текущей фазе.
+//
+// Чистая часть (резолв ночи, подсчёт голосов, готовность фазы) — в
+// engine-core.ts, она покрыта тестами.
 
+import type { MafiaWinner, MafiaPhase } from "@alias/shared/mafia";
 import {
-  emptyNightState,
-  emptyVoteState,
-  type MafiaSnapshot,
-  type MafiaWinner,
-  type MafiaDeathCause,
-  type MafiaPhase,
-} from "@alias/shared/mafia";
+  applyEnterNight,
+  killPlayer,
+  resolveNight,
+  tallyVotes,
+  allNightActorsDone,
+  allVoted,
+} from "./engine-core";
 import { load, mutate } from "./snapshot";
 import { broadcastStateNow } from "./broadcast";
 import { startTimer, clearTimer, hasTimer } from "./services/scheduler";
@@ -19,120 +23,6 @@ import type { MafiaNamespace } from "./io-types";
 
 const MORNING_MS = 5000;
 const VOTE_RESULT_MS = 4500;
-
-// ─────────── Чистые помощники (мутируют snap) ───────────
-
-function applyEnterNight(s: MafiaSnapshot): void {
-  const prevDoctorTarget = s.night?.doctorTarget;
-  const selfHealUsed = s.night?.doctorSelfHealUsed ?? false;
-  const sheriffResults = s.night?.sheriffResults ?? {};
-  s.day = (s.day ?? 0) + 1;
-  s.phase = "NIGHT";
-  s.night = emptyNightState();
-  s.night.doctorPrevTarget = prevDoctorTarget;
-  s.night.doctorSelfHealUsed = selfHealUsed;
-  s.night.sheriffResults = sheriffResults;
-  s.vote = emptyVoteState();
-  s.pendingElim = undefined;
-}
-
-function killPlayer(s: MafiaSnapshot, userId: string, cause: MafiaDeathCause): void {
-  const p = s.players.find((x) => x.userId === userId);
-  if (!p || !p.alive) return;
-  p.alive = false;
-  p.eliminatedBy = cause;
-  p.deathDay = s.day;
-  s.deaths.push({
-    userId,
-    displayName: p.displayName,
-    role: p.role ?? "civilian",
-    day: s.day,
-    by: cause,
-  });
-}
-
-/** Решение мафии о жертве: голос дона, иначе большинство. */
-function decideMafiaTarget(s: MafiaSnapshot): string | undefined {
-  const mafiaIds = new Set(
-    s.players
-      .filter((p) => p.alive && (p.role === "mafia" || p.role === "don"))
-      .map((p) => p.userId),
-  );
-  const don = s.players.find((p) => p.alive && p.role === "don");
-  if (don && s.night.mafiaVotes[don.userId]) return s.night.mafiaVotes[don.userId];
-
-  const counts: Record<string, number> = {};
-  for (const [voter, target] of Object.entries(s.night.mafiaVotes)) {
-    if (!mafiaIds.has(voter)) continue;
-    counts[target] = (counts[target] ?? 0) + 1;
-  }
-  let best: string | undefined;
-  let bestN = 0;
-  for (const [target, c] of Object.entries(counts)) {
-    if (c > bestN) {
-      bestN = c;
-      best = target;
-    }
-  }
-  return best;
-}
-
-function resolveNight(s: MafiaSnapshot): void {
-  const saved = s.night.doctorTarget;
-  const mafiaTarget = decideMafiaTarget(s);
-  const maniacTarget = s.night.maniacTarget;
-  const causes: Record<string, MafiaDeathCause> = {};
-  if (mafiaTarget && mafiaTarget !== saved) causes[mafiaTarget] = "mafia";
-  if (maniacTarget && maniacTarget !== saved && !causes[maniacTarget])
-    causes[maniacTarget] = "maniac";
-  for (const [id, cause] of Object.entries(causes)) killPlayer(s, id, cause);
-
-  // Доктор полечил себя — самолечение израсходовано (переносится в след. ночь).
-  const doctor = s.players.find((p) => p.role === "doctor");
-  if (saved && doctor && saved === doctor.userId) s.night.doctorSelfHealUsed = true;
-}
-
-interface TallyResult {
-  leaders: string[];
-  eliminated?: string;
-  tie: boolean;
-}
-function tallyVotes(s: MafiaSnapshot): TallyResult {
-  const counts: Record<string, number> = {};
-  for (const target of Object.values(s.vote.votes)) {
-    if (target === "abstain") continue;
-    counts[target] = (counts[target] ?? 0) + 1;
-  }
-  let max = 0;
-  for (const c of Object.values(counts)) max = Math.max(max, c);
-  const leaders = Object.keys(counts).filter((k) => counts[k] === max && max > 0);
-  if (leaders.length === 1) return { leaders, eliminated: leaders[0], tie: false };
-  return { leaders, tie: true };
-}
-
-// ─────────── Готовность фазы (ранний переход) ───────────
-
-export function allNightActorsDone(s: MafiaSnapshot): boolean {
-  for (const p of s.players) {
-    if (!p.alive) continue;
-    if (p.role === "mafia" || p.role === "don") {
-      if (!s.night.mafiaVotes[p.userId]) return false;
-    } else if (p.role === "doctor") {
-      if (!s.night.doctorTarget) return false;
-    } else if (p.role === "sheriff") {
-      if (!s.night.sheriffTarget) return false;
-    } else if (p.role === "maniac") {
-      if (!s.night.maniacTarget) return false;
-    }
-  }
-  return true;
-}
-
-export function allVoted(s: MafiaSnapshot): boolean {
-  return s.players
-    .filter((p) => p.alive)
-    .every((p) => s.vote.votes[p.userId] !== undefined);
-}
 
 // ─────────── Переходы фаз (mutate + broadcast + timer) ───────────
 

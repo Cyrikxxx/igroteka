@@ -10,7 +10,8 @@
     "smoke:auth": "tsx scripts/smoke-auth.ts",
     "smoke:lobby": "tsx scripts/smoke-lobby.ts",
     "smoke:flow": "tsx scripts/smoke-flow.ts",
-    "smoke:game": "tsx scripts/smoke-game.ts"
+    "smoke:game": "tsx scripts/smoke-game.ts",
+    "smoke:mafia": "tsx scripts/smoke-mafia.ts"
   },
   "dependencies": {
     "@alias/shared": "*",

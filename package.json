@@ -16,6 +16,9 @@
     "start": "npm run start --workspace @alias/web",
     "lint": "npm run lint --workspace @alias/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run test",
     "db:deploy": "prisma migrate deploy",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
@@ -31,6 +34,7 @@
   "devDependencies": {
     "concurrently": "^9.1.0",
     "prisma": "^6.19.3",
-    "tsx": "^4.19.2"
+    "tsx": "^4.19.2",
+    "vitest": "^3.2.7"
   }
 }
