@@ -306,6 +306,15 @@ export interface MafiaVoteView {
   tie?: boolean;
 }
 
+/** Игрок, на котором сейчас держится экран (утро, итог голосования). */
+export interface MafiaSpotlightEntry {
+  userId: string;
+  displayName: string;
+  avatarIdx: number;
+  role?: MafiaRole;
+  cause?: MafiaDeathCause;
+}
+
 export interface MafiaView {
   code: string;
   title: string | null;
@@ -322,8 +331,12 @@ export interface MafiaView {
   winner?: MafiaWinner;
   deaths: MafiaDeathView[];
   timer?: { msLeft: number; paused: boolean };
-  /** Имя/роль того, кого убрали прошлой ночью/голосованием (для MORNING/VOTE_RESULT/LAST_WORD). */
-  spotlight?: { displayName: string; role?: MafiaRole; cause?: MafiaDeathCause };
+  /**
+   * Кого подсвечивает текущая фаза: всех погибших этой ночью (MORNING) или
+   * изгоняемого (VOTE_RESULT/LAST_WORD). Список, а не один игрок: с
+   * маньяком за ночь легко гибнут двое, и второго нельзя терять.
+   */
+  spotlight?: MafiaSpotlightEntry[];
 }
 
 // ─────────── Приватные/широковещательные события ───────────

@@ -3,6 +3,7 @@
 // Ночной экран Мафии, зависит от роли смотрящего: мирный спит, мафия/доктор/
 // шериф/маньяк выбирают цель. Сетка живых игроков + статус-строка.
 
+import { useState } from "react";
 import type { ReactNode } from "react";
 import {
   Moon,
@@ -19,6 +20,7 @@ import type { LucideIcon } from "lucide-react";
 import type { MafiaView, MafiaNightAction } from "@alias/shared/mafia";
 import PhaseHead from "./PhaseHead";
 import PlayerCard from "./PlayerCard";
+import { SheriffConfirm, SheriffVerdict } from "./SheriffCheck";
 
 function StatusBar({
   icon: Icon,
@@ -73,6 +75,10 @@ export default function NightScreen({
   const alive = view.players.filter((p) => p.alive);
   const t = view.timer?.msLeft ?? null;
   const acted = you.nightTarget != null;
+
+  // Состояние проверки шерифа. Хуки — до всех ранних возвратов.
+  const [pending, setPending] = useState<{ userId: string; name: string; avatarIdx: number } | null>(null);
+  const [verdictClosed, setVerdictClosed] = useState<string | null>(null);
 
   // ─── Мирный (или без ночной роли) ───
   if (!role || role === "civilian") {
@@ -232,6 +238,12 @@ export default function NightScreen({
   // ─── Шериф ───
   if (role === "sheriff") {
     const results = you.sheriffResults ?? {};
+    const target = you.nightTarget;
+    const verdict = target ? results[target] : undefined;
+    // Проверка сделана и её результат ещё не отсмотрен — показываем вердикт.
+    const showVerdict = target != null && verdict !== undefined && verdictClosed !== target;
+    const targetName = alive.find((p) => p.userId === target)?.displayName ?? "Игрок";
+
     return (
       <>
         <PhaseHead icon={Search} title={`Ночь ${view.day}`} timerMs={t} gold />
@@ -253,8 +265,11 @@ export default function NightScreen({
                 me={isMe}
                 picked={picked}
                 gold
-                disabled={isMe}
-                onClick={() => onAction("sheriff", p.userId)}
+                // Проверка необратима, поэтому после хода сетка блокируется.
+                disabled={isMe || acted}
+                onClick={() =>
+                  setPending({ userId: p.userId, name: p.displayName, avatarIdx: p.avatarIdx })
+                }
                 subline={
                   known !== undefined ? (
                     <div style={{ fontSize: 11.5, fontWeight: 800, color: known ? "var(--mf-crimson)" : "var(--mf-text-dim)" }}>
@@ -267,8 +282,28 @@ export default function NightScreen({
           })}
         </div>
         <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--mf-gold)" : undefined}>
-          {acted ? "Результат проверки виден на карточке" : "Тапни по игроку, чтобы проверить"}
+          {acted ? "Ход принят. Ждём остальных…" : "Тапни по игроку, чтобы проверить"}
         </StatusBar>
+
+        {pending ? (
+          <SheriffConfirm
+            name={pending.name}
+            avatarIdx={pending.avatarIdx}
+            onCancel={() => setPending(null)}
+            onConfirm={() => {
+              onAction("sheriff", pending.userId);
+              setPending(null);
+            }}
+          />
+        ) : null}
+
+        {showVerdict ? (
+          <SheriffVerdict
+            name={targetName}
+            isMafia={Boolean(verdict)}
+            onClose={() => setVerdictClosed(target)}
+          />
+        ) : null}
       </>
     );
   }

@@ -1311,3 +1311,42 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .hub-footer a { color: inherit; text-decoration: none; }
   .hub-footer a:hover { color: var(--mf-text-dim); }
 }
+
+/* ============================================================
+   МАФИЯ — лендинг /mafia. Порт mafia-design/mafia/screen-landing.
+   ============================================================ */
+@layer components {
+  .mf-landing { display: flex; flex-direction: column; gap: 8px; padding-bottom: 28px; }
+
+  .mf-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; padding: clamp(40px, 7vw, 72px) clamp(20px, 5vw, 64px) clamp(32px, 4vw, 56px); }
+  .mf-hero-chip { background: rgba(225, 29, 72, 0.1); color: var(--mf-crimson-hover); }
+  .mf-hero-title { margin: 0; font-weight: 800; font-size: clamp(56px, 12vw, 108px); letter-spacing: 0.04em; line-height: 1; color: var(--mf-crimson); text-shadow: 0 0 60px rgba(225, 29, 72, 0.4); }
+  .mf-hero-sub { margin: 0; font-weight: 700; font-size: clamp(16px, 2vw, 22px); color: var(--mf-text-dim); max-width: 460px; line-height: 1.4; text-wrap: pretty; }
+  .mf-hero-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 10px; }
+  .mf-hero-actions .mf-btn { text-decoration: none; }
+  @media (min-width: 640px) { .mf-hero-actions { flex-direction: row; width: auto; } .mf-hero-actions .mf-btn { min-width: 200px; } }
+  .mf-hero-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; color: var(--mf-text-faint); font-size: 13px; font-weight: 700; margin-top: 6px; }
+  .mf-hero-facts span { display: inline-flex; align-items: center; gap: 5px; }
+
+  .mf-section { padding: 0 clamp(16px, 4vw, 64px) clamp(24px, 4vw, 40px); }
+  .mf-section h2 { margin: 0 0 16px; font-weight: 800; font-size: clamp(23px, 3vw, 30px); letter-spacing: -0.02em; }
+
+  .mf-steps { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 900px) { .mf-steps { grid-template-columns: repeat(4, 1fr); } }
+  .mf-step { background: var(--mf-surface); border: 1px solid var(--mf-border); border-radius: var(--r-card); padding: 18px 16px; display: flex; gap: 13px; align-items: center; }
+  @media (min-width: 900px) { .mf-step { flex-direction: column; align-items: flex-start; } }
+  .mf-step-head { display: flex; align-items: center; gap: 10px; color: var(--mf-text-dim); flex-shrink: 0; }
+  .mf-step-num { font-size: 13px; font-weight: 700; color: var(--mf-crimson); }
+  .mf-step-title { font-weight: 800; font-size: 15.5px; }
+  .mf-step-sub { font-weight: 600; font-size: 13px; color: var(--mf-text-faint); margin-top: 3px; line-height: 1.45; text-wrap: pretty; }
+
+  .mf-roles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (min-width: 900px) { .mf-roles { grid-template-columns: repeat(3, 1fr); } }
+  .mf-role-card { background: var(--mf-surface); border-radius: var(--r-card); border: 1.5px solid var(--mf-border); padding: 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .mf-role-icon { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .mf-role-name { font-weight: 800; font-size: 17px; }
+  .mf-role-desc { font-weight: 600; font-size: 13px; color: var(--mf-text-dim); line-height: 1.45; text-wrap: pretty; }
+
+  .mf-landing-foot { display: flex; justify-content: center; padding: 0 20px; }
+  .mf-landing-foot .mf-btn { text-decoration: none; min-width: 200px; }
+}

@@ -32,7 +32,8 @@ const ALIAS: GameCardProps = {
 };
 
 const MAFIA: GameCardProps = {
-  href: "/mafia/new",
+  // На лендинг, как и Алиас: правила и роли до создания комнаты.
+  href: "/mafia",
   accent: "var(--mf-crimson)",
   accentText: "var(--mf-crimson)",
   title: "Мафия",
@@ -72,13 +73,29 @@ function GameCard({ card }: { card: GameCardProps }) {
 export default function HubPage() {
   const router = useRouter();
   const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const go = (e: React.FormEvent) => {
+  // Игрок вводит код, не указывая игру, — спрашиваем сервер, чей он.
+  // Если комнату не нашли, всё равно уводим на вход Алиаса: там человек
+  // увидит понятную ошибку вместо молчания.
+  const go = async (e: React.FormEvent) => {
     e.preventDefault();
     const c = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
-    if (!c) return;
-    // TODO (Phase 2): определять игру по коду и вести в нужный join.
-    router.push(`/alias/join?code=${c}`);
+    if (!c || busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/rooms/resolve?code=${c}`);
+      const platform = res.ok
+        ? ((await res.json()) as { platform: string }).platform
+        : "ALIAS";
+      router.push(
+        platform === "MAFIA" ? `/mafia/join?code=${c}` : `/alias/join?code=${c}`,
+      );
+    } catch {
+      router.push(`/alias/join?code=${c}`);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

@@ -147,28 +147,37 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
   }));
 
   // ── spotlight (для MORNING / VOTE_RESULT / LAST_WORD) ──
+  const avatarOf = (userId: string) =>
+    snap.players.find((p) => p.userId === userId)?.avatarIdx ?? 0;
+
   let spotlight: MafiaView["spotlight"];
   if (snap.phase === "MORNING") {
+    // Все, кто не пережил эту ночь: мафия и маньяк могут сработать порознь.
     const nightDeaths = snap.deaths.filter(
       (d) => d.day === snap.day && d.by !== "vote",
     );
     if (nightDeaths.length > 0) {
-      const d = nightDeaths[0];
-      spotlight = {
+      spotlight = nightDeaths.map((d) => ({
+        userId: d.userId,
         displayName: d.displayName,
+        avatarIdx: avatarOf(d.userId),
         role: reveal || seeAll ? d.role : undefined,
         cause: d.by,
-      };
+      }));
     }
   } else if (snap.phase === "VOTE_RESULT" || snap.phase === "LAST_WORD") {
     const targetId = snap.vote.eliminated ?? snap.pendingElim;
     const target = snap.players.find((p) => p.userId === targetId);
     if (target) {
-      spotlight = {
-        displayName: target.displayName,
-        role: (reveal || seeAll) && target.role ? target.role : undefined,
-        cause: "vote",
-      };
+      spotlight = [
+        {
+          userId: target.userId,
+          displayName: target.displayName,
+          avatarIdx: target.avatarIdx,
+          role: (reveal || seeAll) && target.role ? target.role : undefined,
+          cause: "vote",
+        },
+      ];
     }
   }
 

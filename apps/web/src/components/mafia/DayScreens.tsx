@@ -21,28 +21,36 @@ import { RoleChip } from "./roleMeta";
 
 // ─────────── Утро ───────────
 export function MorningScreen({ view }: { view: MafiaView }) {
-  const sp = view.spotlight;
+  const fallen = view.spotlight ?? [];
   const footer = (
     <div className="mf-mono" style={{ textAlign: "center", fontSize: 13, color: "var(--mf-text-faint)", fontWeight: 700 }}>
       обсуждение через {fmtClock(view.timer?.msLeft ?? 0)}
     </div>
   );
-  if (sp) {
+  if (fallen.length > 0) {
+    const names = fallen.map((f) => f.displayName).join(" и ");
     return (
       <Announce
         icon={Sunrise}
         iconColor="var(--mf-crimson)"
         glow="var(--sh-glow-crimson)"
         kicker="Город просыпается…"
-        title={`Этой ночью погиб ${sp.displayName}`}
+        title={fallen.length > 1 ? `Этой ночью погибли ${names}` : `Этой ночью погиб ${names}`}
         footer={footer}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--mf-surface)", border: "1px solid var(--mf-border)", borderRadius: 16, padding: "12px 18px" }}>
-          <MafiaAvatar name={sp.displayName} idx={0} size={42} dead />
-          <div style={{ textAlign: "left" }}>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>{sp.displayName}</div>
-            {sp.role ? <RoleChip role={sp.role} /> : null}
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {fallen.map((f) => (
+            <div
+              key={f.userId}
+              style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--mf-surface)", border: "1px solid var(--mf-border)", borderRadius: 16, padding: "12px 18px" }}
+            >
+              <MafiaAvatar name={f.displayName} idx={f.avatarIdx} size={42} dead />
+              <div style={{ textAlign: "left" }}>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>{f.displayName}</div>
+                {f.role ? <RoleChip role={f.role} /> : null}
+              </div>
+            </div>
+          ))}
         </div>
       </Announce>
     );
@@ -204,7 +212,7 @@ export function VoteScreen({
 
 // ─────────── Итог голосования ───────────
 export function VoteResultScreen({ view }: { view: MafiaView }) {
-  const sp = view.spotlight;
+  const sp = view.spotlight?.[0];
   const tie = view.vote?.tie && !view.vote?.eliminated;
   if (tie) {
     return (
@@ -247,7 +255,7 @@ export function LastWordScreen({
   onDone: () => void;
   isHost: boolean;
 }) {
-  const sp = view.spotlight;
+  const sp = view.spotlight?.[0];
   const isMe = view.vote?.eliminated === view.you.userId;
   if (isMe) {
     return (
@@ -287,7 +295,7 @@ export function LastWordScreen({
       }
     >
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
-        <MafiaAvatar name={sp?.displayName ?? "?"} idx={4} size={64} />
+        <MafiaAvatar name={sp?.displayName ?? "?"} idx={sp?.avatarIdx ?? 0} size={64} />
         <div className="mf-timer" style={{ fontSize: 48, lineHeight: 1 }}>{fmtClock(view.timer?.msLeft ?? 0)}</div>
       </div>
     </Announce>

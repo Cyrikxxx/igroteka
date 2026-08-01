@@ -4,13 +4,14 @@
 // Ночь — NightScreen; мёртвые/зрители — SpectatorScreen; поверх всего —
 // служебные оверлеи (пауза, реконнект, смена хоста).
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Pause } from "lucide-react";
 import MafiaShell from "@/components/mafia/MafiaShell";
 import RoleReveal from "@/components/mafia/RoleReveal";
 import NightScreen from "@/components/mafia/NightScreen";
 import SpectatorScreen from "@/components/mafia/SpectatorScreen";
+import YouDeadScreen from "@/components/mafia/YouDeadScreen";
 import {
   MorningScreen,
   DiscussionScreen,
@@ -53,6 +54,12 @@ export default function MafiaPlayPage() {
   );
   const { socket, view, status, error } = useMafiaRoom(opts);
   const hostToast = useHostToast(view?.you.isHost ?? false);
+  // Экран «ты убит» показываем один раз, пока игрок сам не уйдёт в зрители.
+  const [deathSeen, setDeathSeen] = useState(false);
+  const alive = view?.you.alive ?? true;
+  useEffect(() => {
+    if (alive) setDeathSeen(false);
+  }, [alive]);
 
   useEffect(() => {
     if (code && !creds) router.replace(`/mafia/join?code=${code}`);
@@ -117,6 +124,15 @@ export default function MafiaPlayPage() {
               router.push("/");
             }}
           />
+        </MafiaShell>
+      );
+    }
+
+    // Только что выбыл — сначала объявление, потом уже режим зрителя.
+    if (dead && !deathSeen) {
+      return (
+        <MafiaShell vignette vignetteLevel={0.2}>
+          <YouDeadScreen exiled={exiled} onWatch={() => setDeathSeen(true)} />
         </MafiaShell>
       );
     }
