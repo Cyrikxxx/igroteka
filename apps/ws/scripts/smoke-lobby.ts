@@ -2,7 +2,7 @@
 // проверяем team:create/join/rename и room:state broadcast.
 // Запуск: `npx tsx apps/ws/src/smoke-lobby.ts` при поднятом `npm run dev`.
 
-import "./env";
+import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
 import type { RoomSnapshot } from "@alias/shared/domain";
 

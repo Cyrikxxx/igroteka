@@ -2,9 +2,9 @@
 // с 2 игроками каждая, начать игру, пройти первый раунд (PRE_ROUND →
 // ROUND_ACTIVE → один guess → ROUND_REVIEW → review_confirm → BETWEEN_ROUNDS).
 //
-// Запуск: `npx tsx apps/ws/src/smoke-game.ts` при поднятом `npm run dev`.
+// Запуск: `npm run smoke:game -w @alias/ws` при поднятом `npm run dev`.
 
-import "./env";
+import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
 import type {
   RoomSnapshot,
@@ -179,7 +179,7 @@ async function main() {
   );
   if ("error" in startResp) throw new Error(`start: ${JSON.stringify(startResp)}`);
 
-  // 8. Ждём PRE_ROUND countdown (3 сек) + initial round_active setup → ROUND_ACTIVE
+  // 8. Ждём переход PRE_ROUND → ROUND_ACTIVE (сервер ставит его сам)
   console.log("[waiting PRE_ROUND → ROUND_ACTIVE]");
   await new Promise((r) => setTimeout(r, 5000));
 

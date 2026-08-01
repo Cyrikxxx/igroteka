@@ -2,7 +2,7 @@
 // токеном из ответа. Запуск: `npx tsx apps/ws/src/smoke-flow.ts`
 // (при запущенном `npm run dev`).
 
-import "./env";
+import "../src/env";
 import { io as ioClient } from "socket.io-client";
 
 const WEB = "http://localhost:3000";

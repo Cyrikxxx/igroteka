@@ -1,8 +1,8 @@
 // Одноразовый smoke-тест: проверяет, что WS-сервер отвергает
 // неавторизованные подключения и принимает корректно подписанные.
-// Запуск из корня монорепо: `tsx apps/ws/src/smoke.ts`
+// Запуск: `npm run smoke:auth -w @alias/ws` при поднятом `npm run dev`.
 
-import "./env";
+import "../src/env";
 import { io as ioClient } from "socket.io-client";
 import { signWsToken } from "@alias/shared/token";
 

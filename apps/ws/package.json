@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke:auth": "tsx scripts/smoke-auth.ts",
+    "smoke:lobby": "tsx scripts/smoke-lobby.ts",
+    "smoke:flow": "tsx scripts/smoke-flow.ts",
+    "smoke:game": "tsx scripts/smoke-game.ts"
   },
   "dependencies": {
     "@alias/shared": "*",
