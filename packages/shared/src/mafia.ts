@@ -277,6 +277,11 @@ export interface MafiaSnapshot {
   events: MafiaEvent[];
   /** userId, ожидающий «последнего слова» перед изгнанием. */
   pendingElim?: string;
+  /**
+   * Кого выгнал хост. Без этого списка кик бесполезен: токен у выгнанного
+   * остаётся рабочим, и он тут же вернулся бы по mafia:hello.
+   */
+  banned?: string[];
 }
 
 export function emptyNightState(): MafiaNightState {

@@ -4,7 +4,7 @@
 // и тост о передаче комнаты. Порт из mafia-design/mafia/screen-service.
 
 import { useEffect, useState } from "react";
-import { Pause, RefreshCw, Crown, X } from "lucide-react";
+import { Pause, RefreshCw, Crown, X, DoorClosed } from "lucide-react";
 
 function Backdrop({ children }: { children: React.ReactNode }) {
   return (
@@ -94,6 +94,28 @@ export function ReconnectOverlay() {
         Твоя роль и голос сохранены.
       </div>
       <style>{`@keyframes mfPulse { 0%,100% { opacity: .55 } 50% { opacity: 1 } }`}</style>
+    </Backdrop>
+  );
+}
+
+/**
+ * Соединение закрыто сервером: комнаты больше нет, хост выгнал или истёк
+ * токен. Без этого экрана игрок остался бы смотреть на замерший интерфейс
+ * и не понял бы, что игра для него закончилась.
+ */
+export function ClosedOverlay({ reason, onHome }: { reason: string | null; onHome: () => void }) {
+  return (
+    <Backdrop>
+      <Circle>
+        <DoorClosed size={38} strokeWidth={1.6} color="var(--mf-crimson)" />
+      </Circle>
+      <div style={{ fontWeight: 800, fontSize: 28, letterSpacing: "-0.02em" }}>Игра прервана</div>
+      <div style={{ fontWeight: 600, fontSize: 14.5, color: "var(--mf-text-dim)", lineHeight: 1.5 }}>
+        {reason ?? "Соединение с комнатой закрыто"}
+      </div>
+      <button type="button" className="mf-btn mf-btn-surface" style={{ minWidth: 220, marginTop: 8 }} onClick={onHome}>
+        На главную
+      </button>
     </Backdrop>
   );
 }

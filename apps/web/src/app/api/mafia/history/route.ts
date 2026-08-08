@@ -1,5 +1,5 @@
-// GET /api/mafia/history — завершённые партии Мафии, которые хостил юзер
-// (MafiaGame.hostId = aid). Для экрана истории.
+// GET /api/mafia/history — завершённые партии Мафии, в которых участвовал
+// юзер: и те, что он хостил, и те, где просто играл. Для экрана истории.
 
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
@@ -9,7 +9,12 @@ export async function GET() {
   try {
     const userId = await requireUserId();
     const games = await prisma.mafiaGame.findMany({
-      where: { hostId: userId, status: "FINISHED" },
+      where: {
+        status: "FINISHED",
+        // Хостов меньшинство: показывать только свои комнаты значило бы
+        // прятать историю от большинства игроков.
+        OR: [{ hostId: userId }, { players: { some: { userId } } }],
+      },
       orderBy: { endedAt: "desc" },
       take: 30,
       select: {

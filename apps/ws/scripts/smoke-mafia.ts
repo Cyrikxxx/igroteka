@@ -159,6 +159,21 @@ async function main(): Promise<void> {
   if (host.view?.timer?.msLeft !== frozen) {
     throw new Error("таймер продолжил идти на паузе");
   }
+
+  // Пауза обязана останавливать и ходы, иначе она бесполезна: игроки
+  // доиграли бы ночь, пока хост думает, что всё замерло.
+  const mafiaOnPause = clients.find((c) => c.role === "mafia" || c.role === "don");
+  const anyTarget = clients.find((c) => c.role === "civilian");
+  if (mafiaOnPause && anyTarget) {
+    const resp = (await mafiaOnPause.emit("mafia:night_action", {
+      action: "mafia",
+      targetId: victimId(anyTarget),
+    })) as { error?: string };
+    if (resp?.error !== "paused") {
+      throw new Error(`ход на паузе прошёл: ${JSON.stringify(resp)}`);
+    }
+  }
+
   await host.emit("mafia:resume");
   await sleep(300);
   if (host.view?.timer?.paused) throw new Error("пауза не снялась");
@@ -177,6 +192,16 @@ async function main(): Promise<void> {
   if (sheriff) {
     const target = mafias[0];
     await sheriff.emit("mafia:night_action", { action: "sheriff", targetId: victimId(target) });
+
+    // Вторая проверка за ту же ночь должна отлетать на сервере: сетку
+    // блокирует клиент, но события можно слать и мимо интерфейса.
+    const second = (await sheriff.emit("mafia:night_action", {
+      action: "sheriff",
+      targetId: victimId(doctor ?? victim),
+    })) as { error?: string };
+    if (second?.error !== "already_checked") {
+      throw new Error(`вторая проверка шерифа прошла: ${JSON.stringify(second)}`);
+    }
   }
   if (doctor) {
     // Лечим не жертву — иначе ночь пройдёт без смертей и утро будет пустым.

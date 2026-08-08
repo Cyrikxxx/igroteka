@@ -23,6 +23,7 @@ import FinaleScreen from "@/components/mafia/FinaleScreen";
 import {
   PauseOverlay,
   ReconnectOverlay,
+  ClosedOverlay,
   HostToast,
   useHostToast,
 } from "@/components/mafia/Overlays";
@@ -254,6 +255,16 @@ export default function MafiaPlayPage() {
       ) : null}
 
       {status === "reconnecting" ? <ReconnectOverlay /> : null}
+
+      {status === "closed" ? (
+        <ClosedOverlay
+          reason={error}
+          onHome={() => {
+            clearRoomCreds(code);
+            router.push("/");
+          }}
+        />
+      ) : null}
 
       <HostToast show={hostToast.show} onClose={hostToast.close} />
     </>

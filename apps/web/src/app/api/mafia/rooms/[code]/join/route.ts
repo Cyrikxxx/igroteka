@@ -8,7 +8,7 @@ import { ensureUser, requireUserId } from "@/lib/identity";
 import { isValidRoomCode } from "@/lib/room-code";
 import { issueWsToken, wsConnectUrlFor } from "@/lib/ws-token";
 import { loadMafiaSnapshot } from "@/lib/mafia-snapshot";
-import type { MafiaJoinRoomResponse } from "@alias/shared/mafia";
+import { MAX_MAFIA_PLAYERS, type MafiaJoinRoomResponse } from "@alias/shared/mafia";
 
 type Ctx = { params: Promise<{ code: string }> };
 
@@ -48,6 +48,31 @@ export async function POST(request: NextRequest, { params }: Ctx) {
       return NextResponse.json({ error: "Room is finished" }, { status: 410 });
     }
 
+    // Снимок — источник истины по составу: там и бан-лист, и текущая фаза.
+    const snapshot = await loadMafiaSnapshot(code);
+    if (snapshot) {
+      const known =
+        snapshot.players.some((p) => p.userId === userId) ||
+        snapshot.spectators.some((p) => p.userId === userId);
+      if (!known) {
+        if (snapshot.banned?.includes(userId)) {
+          return NextResponse.json(
+            { error: "Хост удалил вас из этой комнаты" },
+            { status: 403 },
+          );
+        }
+        if (
+          snapshot.phase === "LOBBY" &&
+          snapshot.players.length >= MAX_MAFIA_PLAYERS
+        ) {
+          return NextResponse.json(
+            { error: `В комнате уже ${MAX_MAFIA_PLAYERS} игроков` },
+            { status: 409 },
+          );
+        }
+      }
+    }
+
     await ensureUser(userId, trimmed);
     const isHost = room.hostId === userId;
 
@@ -72,8 +97,6 @@ export async function POST(request: NextRequest, { params }: Ctx) {
         },
       });
     }
-
-    const snapshot = await loadMafiaSnapshot(code);
 
     const wsToken = issueWsToken({
       userId,

@@ -27,6 +27,22 @@ export interface MafiaTimerState {
   paused: boolean;
 }
 
+/** Коды ошибок сервера → человеческий текст. Иначе игрок видит «room_full». */
+const ERROR_TEXT: Record<string, string> = {
+  room_not_found: "Комната не найдена или уже закрыта",
+  room_full: "В комнате уже максимум игроков",
+  kicked: "Хост удалил вас из этой комнаты",
+  forbidden: "Это может сделать только хост",
+  paused: "Игра на паузе",
+  already_checked: "Проверку можно сделать один раз за ночь",
+  not_enough_players: "Нужно больше игроков",
+  too_many_players: "Слишком много игроков",
+};
+
+export function mafiaErrorText(code: string): string {
+  return ERROR_TEXT[code] ?? code;
+}
+
 export interface UseMafiaRoomResult {
   socket: Socket | null;
   view: MafiaView | null;
@@ -69,7 +85,7 @@ export function useMafiaRoom(
           typeof resp === "object" &&
           "error" in (resp as Record<string, unknown>)
         ) {
-          setError(String((resp as { error: string }).error));
+          setError(mafiaErrorText(String((resp as { error: string }).error)));
           return;
         }
         const v = resp as MafiaView;

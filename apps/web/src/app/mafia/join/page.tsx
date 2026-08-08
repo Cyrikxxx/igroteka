@@ -54,8 +54,11 @@ function Inner() {
         body: JSON.stringify({ displayName: name.trim() }),
       });
       if (!res.ok) {
+        // Сервер присылает текст для 403/409 (бан, переполнено) — показываем его.
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
         if (res.status === 404) setError("Комната не найдена. Проверь код.");
         else if (res.status === 410) setError("Партия уже закончилась");
+        else if (body?.error) setError(body.error);
         else setError("Не удалось войти");
         setSubmitting(false);
         return;

@@ -26,6 +26,7 @@ export function registerMafiaGameHandlers(
     const snap0 = await load(code);
     if (!snap0) return ack?.({ error: "room_not_found" });
     if (snap0.phase !== "NIGHT") return ack?.({ error: "not_night" });
+    if (snap0.timerPaused) return ack?.({ error: "paused" });
     const me = snap0.players.find((p) => p.userId === userId);
     if (!me || !me.alive) return ack?.({ error: "not_active" });
 
@@ -35,6 +36,13 @@ export function registerMafiaGameHandlers(
       (action === "sheriff" && me.role === "sheriff") ||
       (action === "maniac" && me.role === "maniac");
     if (!roleOk) return ack?.({ error: "wrong_role" });
+
+    // Проверка шерифа необратима и одна за ночь. Клиент блокирует сетку
+    // после хода, но полагаться на клиент нельзя: без этой проверки можно
+    // было отправить событие напрямую и вскрыть за ночь весь стол.
+    if (action === "sheriff" && snap0.night.sheriffTarget) {
+      return ack?.({ error: "already_checked" });
+    }
 
     if (targetId !== null) {
       const t = snap0.players.find((p) => p.userId === targetId && p.alive);
@@ -94,6 +102,7 @@ export function registerMafiaGameHandlers(
     const snap0 = await load(code);
     if (!snap0) return ack?.({ error: "room_not_found" });
     if (snap0.phase !== "VOTE") return ack?.({ error: "not_vote" });
+    if (snap0.timerPaused) return ack?.({ error: "paused" });
     const me = snap0.players.find((p) => p.userId === userId);
     if (!me || !me.alive) return ack?.({ error: "not_active" });
 
@@ -125,6 +134,7 @@ export function registerMafiaGameHandlers(
     if (!snap) return ack?.({ error: "room_not_found" });
     if (snap.hostId !== userId) return ack?.({ error: "forbidden" });
     if (snap.phase !== "DISCUSSION") return ack?.({ error: "not_discussion" });
+    if (snap.timerPaused) return ack?.({ error: "paused" });
     ack?.({ ok: true });
     clearTimer(code);
     await afterDiscussion(ns, code);
@@ -154,6 +164,7 @@ export function registerMafiaGameHandlers(
     const snap = await load(code);
     if (!snap) return ack?.({ error: "room_not_found" });
     if (snap.phase !== "LAST_WORD") return ack?.({ error: "not_lastword" });
+    if (snap.timerPaused) return ack?.({ error: "paused" });
     if (snap.hostId !== userId && snap.pendingElim !== userId)
       return ack?.({ error: "forbidden" });
     ack?.({ ok: true });

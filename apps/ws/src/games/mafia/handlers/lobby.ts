@@ -81,6 +81,23 @@ export function registerMafiaLobbyHandlers(
 
   // ─── mafia:hello ─── любой клиент после connect
   socket.on("mafia:hello", async (_payload, ack) => {
+    const before = await load(roomCode);
+    if (!before) return ack?.({ error: "room_not_found" });
+
+    const known =
+      before.players.some((p) => p.userId === userId) ||
+      before.spectators.some((p) => p.userId === userId);
+    if (!known) {
+      // Выгнанный хостом не должен возвращаться: токен у него остался
+      // рабочим, и без этой проверки кик ничего бы не значил.
+      if (before.banned?.includes(userId)) return ack?.({ error: "kicked" });
+      // Лобби заполнено. Пускать сверх лимита нельзя — старт всё равно
+      // отказал бы, и хосту пришлось бы вычищать лишних руками.
+      if (before.phase === "LOBBY" && before.players.length >= MAX_MAFIA_PLAYERS) {
+        return ack?.({ error: "room_full" });
+      }
+    }
+
     const snap = await mutate(roomCode, (s) => {
       const inPlayers = s.players.find((p) => p.userId === userId);
       const inSpecs = s.spectators.find((p) => p.userId === userId);
@@ -94,12 +111,20 @@ export function registerMafiaLobbyHandlers(
       }
       // Новый участник. В лобби — игрок, иначе — зритель.
       const total = s.players.length + s.spectators.length;
+      // Аватар считаем от максимального занятого, а не от количества:
+      // после чьего-то ухода счётчик повторился бы и два игрока получили
+      // бы одинаковую картинку.
+      const nextAvatar =
+        [...s.players, ...s.spectators].reduce(
+          (max, p) => Math.max(max, p.avatarIdx),
+          -1,
+        ) + 1;
       const entry: MafiaPlayerFull = {
         userId,
         displayName: socket.handshake.auth?.name
           ? String((socket.handshake.auth as { name: string }).name).slice(0, 50)
           : userId.slice(0, 6),
-        avatarIdx: total,
+        avatarIdx: nextAvatar,
         order: total,
         online: true,
         alive: true,
@@ -110,12 +135,23 @@ export function registerMafiaLobbyHandlers(
       if (s.phase === "LOBBY") s.players.push(entry);
       else s.spectators.push(entry);
     });
+
+    // Хост мог выйти, когда в комнате не осталось никого, кому передать
+    // права: тогда hostId указывает на ушедшего, и начать игру некому.
+    // Чиним при первом же появлении живого игрока.
+    const withHost = await mutate(roomCode, (s) => {
+      if (s.players.length === 0) return;
+      if (s.players.some((p) => p.userId === s.hostId)) return;
+      const heir = s.players.find((p) => p.online) ?? s.players[0];
+      s.hostId = heir.userId;
+      s.players.forEach((p) => (p.isHost = p.userId === heir.userId));
+    });
     if (!snap) {
       ack?.({ error: "room_not_found" });
       return;
     }
     // ack отдаёт персональный view сразу; остальным — через mafia:state.
-    ack?.(buildView(snap, userId));
+    ack?.(buildView(withHost ?? snap, userId));
     await broadcastStateNow(ns, roomCode);
     // Если процесс ws перезапускался посреди партии, таймер фазы потерялся
     // вместе с памятью — заводим его заново по дедлайну из снапшота.
@@ -162,6 +198,8 @@ export function registerMafiaLobbyHandlers(
       s.players = s.players.filter((p) => p.userId !== target);
       s.spectators = s.spectators.filter((p) => p.userId !== target);
       s.players.forEach((p, i) => (p.order = i));
+      // Помним, кого выгнали: иначе он просто переподключится тем же токеном.
+      s.banned = [...(s.banned ?? []), target];
     });
     if (!snap) return ack?.({ error: "room_not_found" });
     // Отключаем сокеты кикнутого.
