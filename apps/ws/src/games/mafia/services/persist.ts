@@ -49,3 +49,17 @@ export async function persistFinishedGame(snap: MafiaSnapshot): Promise<void> {
       .catch(() => {});
   }
 }
+
+/**
+ * Вернуть комнату в набор после «сыграть ещё». Без этого запись в Postgres
+ * осталась бы FINISHED, и REST-вход отвечал бы новым игрокам «партия уже
+ * закончилась» — хотя в комнате идёт сбор на следующую.
+ */
+export async function reopenRoom(code: string): Promise<void> {
+  await prisma.room
+    .updateMany({
+      where: { code },
+      data: { status: "LOBBY", endedAt: null, startedAt: null },
+    })
+    .catch(() => {});
+}

@@ -25,7 +25,7 @@ import { load, mutate } from "./snapshot";
 import { broadcastStateNow } from "./broadcast";
 import { startTimer, clearTimer, hasTimer } from "./services/scheduler";
 import { checkWinner } from "./services/win";
-import { persistFinishedGame } from "./services/persist";
+import { persistFinishedGame, reopenRoom } from "./services/persist";
 import type { MafiaNamespace } from "./io-types";
 
 const MORNING_MS = 5000;
@@ -340,6 +340,9 @@ export async function restartToLobby(
     s.timerRemainingMs = undefined;
   });
   if (!snap) return false;
+  // Комната была помечена завершённой при финале — открываем её снова,
+  // иначе новые игроки не смогут войти по коду.
+  await reopenRoom(code);
   await broadcastStateNow(ns, code);
   return true;
 }
