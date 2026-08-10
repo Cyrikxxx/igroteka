@@ -21,11 +21,15 @@ import {
   allVoted,
   logEvent,
 } from "./engine-core";
-import { load, mutate } from "./snapshot";
-import { broadcastStateNow } from "./broadcast";
+import { load, mutate, remove } from "./snapshot";
+import { broadcastStateNow, mafiaRoom } from "./broadcast";
 import { startTimer, clearTimer, hasTimer } from "./services/scheduler";
 import { checkWinner } from "./services/win";
-import { persistFinishedGame, reopenRoom } from "./services/persist";
+import {
+  persistFinishedGame,
+  reopenRoom,
+  markRoomFinished,
+} from "./services/persist";
 import type { MafiaNamespace } from "./io-types";
 
 const MORNING_MS = 5000;
@@ -345,6 +349,26 @@ export async function restartToLobby(
   await reopenRoom(code);
   await broadcastStateNow(ns, code);
   return true;
+}
+
+/**
+ * Хост закрывает комнату: всех отключаем, снимок стираем, комнату в базе
+ * помечаем завершённой. У Алиаса это делает DELETE /api/rooms/[code];
+ * у Мафии не было никакого способа закончить брошенную партию.
+ */
+export async function closeRoom(
+  ns: MafiaNamespace,
+  code: string,
+): Promise<void> {
+  clearTimer(code);
+  await remove(code);
+  await markRoomFinished(code);
+
+  const sockets = await ns.in(mafiaRoom(code)).fetchSockets();
+  for (const s of sockets) {
+    s.emit("mafia:closed", { reason: "closed_by_host" });
+    s.disconnect(true);
+  }
 }
 
 // Ранние переходы — вызываются из обработчиков после действия.

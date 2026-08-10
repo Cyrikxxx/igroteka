@@ -28,6 +28,10 @@ export interface MafiaClientToServerEvents {
   "mafia:resume": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
   /** Сыграть ещё раз тем же составом: комната возвращается в лобби. */
   "mafia:restart": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
+  /** Хост закрывает комнату для всех. */
+  "mafia:close": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
+  /** Хост выводит из партии того, кто отвалился и не возвращается. */
+  "mafia:remove_player": (payload: { userId: string }, ack?: Ack<OkErr>) => void;
 }
 
 export interface MafiaServerToClientEvents {

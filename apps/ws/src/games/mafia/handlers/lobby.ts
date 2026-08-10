@@ -18,7 +18,9 @@ import {
   maybeResolveNightEarly,
   maybeTallyEarly,
   restartToLobby,
+  closeRoom,
 } from "../engine";
+import { eliminateLeaver } from "../engine-core";
 import { checkWinner } from "../services/win";
 
 /** Хост ушёл — передаём комнату первому, кто ещё на связи. */
@@ -230,26 +232,8 @@ export function registerMafiaLobbyHandlers(
       if (!inGame || !me) {
         s.players = s.players.filter((p) => p.userId !== userId);
         s.players.forEach((p, i) => (p.order = i));
-      } else if (me.alive) {
-        me.alive = false;
-        me.online = false;
-        me.eliminatedBy = "left";
-        me.deathDay = s.day;
-        s.deaths.push({
-          userId: me.userId,
-          displayName: me.displayName,
-          role: me.role ?? "civilian",
-          day: s.day,
-          by: "left",
-        });
-        // Снимаем его незакрытые ходы, иначе фаза будет ждать призрака.
-        delete s.night.mafiaVotes[userId];
-        delete s.vote.votes[userId];
-        if (s.night.doctorTarget && me.role === "doctor") s.night.doctorTarget = undefined;
-        if (s.night.sheriffTarget && me.role === "sheriff") s.night.sheriffTarget = undefined;
-        if (s.night.maniacTarget && me.role === "maniac") s.night.maniacTarget = undefined;
       } else {
-        me.online = false;
+        eliminateLeaver(s, userId);
       }
 
       transferHostIfNeeded(s, userId);
@@ -270,6 +254,54 @@ export function registerMafiaLobbyHandlers(
     // Ушедший мог быть последним, кого ждала фаза.
     await maybeResolveNightEarly(ns, roomCode);
     await maybeTallyEarly(ns, roomCode);
+  });
+
+  // ─── mafia:remove_player ─── host, во время партии
+  // Для тех, кто отвалился и не возвращается: без этого фаза каждый раз
+  // доходит до конца таймера, ожидая ход от закрытой вкладки.
+  socket.on("mafia:remove_player", async (payload, ack) => {
+    if (typeof payload?.userId !== "string") return ack?.({ error: "invalid_payload" });
+    const target = payload.userId;
+    if (target === userId) return ack?.({ error: "cant_remove_self" });
+
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
+    if (current.phase === "LOBBY" || current.phase === "FINISHED")
+      return ack?.({ error: "not_in_game" });
+
+    const victim = current.players.find((p) => p.userId === target);
+    if (!victim || !victim.alive) return ack?.({ error: "bad_target" });
+    // Выводить можно только тех, кто реально отвалился, — иначе это
+    // превратилось бы в кнопку «убить любого» в руках хоста.
+    if (victim.online) return ack?.({ error: "player_online" });
+
+    let winner: MafiaWinner | null = null;
+    const snap = await mutate(roomCode, (s) => {
+      eliminateLeaver(s, target);
+      transferHostIfNeeded(s, target);
+      winner = checkWinner(s);
+    });
+    if (!snap) return ack?.({ error: "room_not_found" });
+    ack?.({ ok: true });
+
+    if (winner) {
+      await finishGame(ns, roomCode, winner);
+      return;
+    }
+    scheduleStateBroadcast(ns, roomCode);
+    await maybeResolveNightEarly(ns, roomCode);
+    await maybeTallyEarly(ns, roomCode);
+  });
+
+  // ─── mafia:close ─── host, в любой момент
+  socket.on("mafia:close", async (_payload, ack) => {
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
+
+    ack?.({ ok: true });
+    await closeRoom(ns, roomCode);
   });
 
   // ─── mafia:start ─── host, LOBBY, ≥5 игроков

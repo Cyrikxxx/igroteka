@@ -15,6 +15,7 @@ import { ensureUser, requireUserId } from "@/lib/identity";
 import { generateUniqueRoomCode } from "@/lib/room-code";
 import { buildLobbySnapshot, saveRoomSnapshot } from "@/lib/room-snapshot";
 import { issueWsToken, wsConnectUrlFor } from "@/lib/ws-token";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   ROUND_TIME_DEFAULT,
   WIN_SCORE_DEFAULT,
@@ -24,6 +25,13 @@ import type { CreateRoomResponse } from "@/types";
 
 export async function POST(request: NextRequest) {
   try {
+    const limited = checkRateLimit(request, {
+      name: "create-alias",
+      limit: 10,
+      windowSec: 60,
+    });
+    if (limited) return limited;
+
     const userId = await requireUserId();
     const body = await request.json().catch(() => ({}));
     const { hostName, title, isPublic, settings } = body ?? {};

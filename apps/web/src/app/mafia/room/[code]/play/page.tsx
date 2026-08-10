@@ -174,6 +174,9 @@ export default function MafiaPlayPage() {
             view={view}
             isHost={view.you.isHost}
             onEnd={() => socket?.emit("mafia:end_discussion", {}, () => {})}
+            onRemovePlayer={(id) =>
+              socket?.emit("mafia:remove_player", { userId: id }, () => {})
+            }
           />
         </MafiaShell>
       );

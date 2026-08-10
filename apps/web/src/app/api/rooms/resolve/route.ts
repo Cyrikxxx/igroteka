@@ -5,8 +5,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { isValidRoomCode } from "@/lib/room-code";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
+  // Единственный эндпоинт, отвечающий «такая комната есть» без авторизации,
+  // поэтому именно им удобнее всего перебирать коды.
+  const limited = checkRateLimit(request, {
+    name: "resolve",
+    limit: 30,
+    windowSec: 60,
+  });
+  if (limited) return limited;
+
   const raw = request.nextUrl.searchParams.get("code") ?? "";
   const code = raw.toUpperCase();
   if (!isValidRoomCode(code)) {

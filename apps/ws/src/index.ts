@@ -12,6 +12,7 @@ import { registerRoundHandlers } from "./games/alias/handlers/round";
 import { registerMafiaLobbyHandlers } from "./games/mafia/handlers/lobby";
 import { registerMafiaGameHandlers } from "./games/mafia/handlers/game";
 import { mafiaRoom } from "./games/mafia/broadcast";
+import { startJanitor, stopJanitor } from "./services/janitor";
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -125,10 +126,13 @@ mafiaNs.on("connection", (socket) => {
 httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(`[ws] listening on http://0.0.0.0:${PORT}`);
   console.log(`[ws] CORS origin: ${CORS_ORIGIN === true ? "*" : CORS_ORIGIN}`);
+  // Раз в час закрываем комнаты, которые бросили недоигранными.
+  startJanitor();
 });
 
 function shutdown(reason: string): void {
   console.log(`[ws] shutting down (${reason})`);
+  stopJanitor();
   io.close();
   httpServer.close();
   redis.quit().catch(() => {});

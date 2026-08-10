@@ -57,6 +57,24 @@ export function killPlayer(
   });
 }
 
+/**
+ * Игрок покидает партию навсегда (сам вышел или хост вывел зависшего).
+ * Вычёркивать его из состава нельзя — пропала бы роль и сбился подсчёт
+ * победы, поэтому помечаем выбывшим и снимаем незакрытые ходы, чтобы
+ * фаза не ждала того, кого уже нет.
+ */
+export function eliminateLeaver(s: MafiaSnapshot, userId: string): void {
+  const me = s.players.find((p) => p.userId === userId);
+  if (!me) return;
+  if (me.alive) killPlayer(s, userId, "left");
+  me.online = false;
+  delete s.night.mafiaVotes[userId];
+  delete s.vote.votes[userId];
+  if (me.role === "doctor") s.night.doctorTarget = undefined;
+  if (me.role === "sheriff") s.night.sheriffTarget = undefined;
+  if (me.role === "maniac") s.night.maniacTarget = undefined;
+}
+
 /** Решение мафии о жертве: голос дона решающий, иначе большинство. */
 export function decideMafiaTarget(s: MafiaSnapshot): string | undefined {
   const mafiaIds = new Set(

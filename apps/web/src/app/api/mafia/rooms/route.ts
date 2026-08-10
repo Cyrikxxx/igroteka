@@ -7,6 +7,7 @@ import { ensureUser, requireUserId } from "@/lib/identity";
 import { generateUniqueRoomCode } from "@/lib/room-code";
 import { buildMafiaLobbySnapshot, saveMafiaSnapshot } from "@/lib/mafia-snapshot";
 import { issueWsToken, wsConnectUrlFor } from "@/lib/ws-token";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   DEFAULT_MAFIA_SETTINGS,
   type MafiaSettings,
@@ -57,6 +58,14 @@ function parseSettings(input: unknown): MafiaSettings {
 
 export async function POST(request: NextRequest) {
   try {
+    // Создание комнаты пишет в базу — без лимита её легко засыпать пустыми.
+    const limited = checkRateLimit(request, {
+      name: "create-mafia",
+      limit: 10,
+      windowSec: 60,
+    });
+    if (limited) return limited;
+
     const userId = await requireUserId();
     const body = await request.json().catch(() => ({}));
     const { hostName, title, settings } = body ?? {};

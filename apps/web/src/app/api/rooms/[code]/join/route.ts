@@ -6,12 +6,20 @@ import { ensureUser, requireUserId } from "@/lib/identity";
 import { isValidRoomCode } from "@/lib/room-code";
 import { loadRoomSnapshot, saveRoomSnapshot } from "@/lib/room-snapshot";
 import { issueWsToken, wsConnectUrlFor } from "@/lib/ws-token";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { JoinRoomResponse } from "@/types";
 
 type Ctx = { params: Promise<{ code: string }> };
 
 export async function POST(request: NextRequest, { params }: Ctx) {
   try {
+    const limited = checkRateLimit(request, {
+      name: "join-alias",
+      limit: 20,
+      windowSec: 60,
+    });
+    if (limited) return limited;
+
     const userId = await requireUserId();
     const { code: rawCode } = await params;
     const code = rawCode.toUpperCase();

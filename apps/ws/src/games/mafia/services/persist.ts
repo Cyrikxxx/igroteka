@@ -63,3 +63,13 @@ export async function reopenRoom(code: string): Promise<void> {
     })
     .catch(() => {});
 }
+
+/** Комнату закрыл хост — освобождаем код и убираем её из активных. */
+export async function markRoomFinished(code: string): Promise<void> {
+  await prisma.room
+    .updateMany({
+      where: { code },
+      data: { status: "FINISHED", endedAt: new Date() },
+    })
+    .catch(() => {});
+}

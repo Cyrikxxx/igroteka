@@ -82,6 +82,14 @@ export default function MafiaLobbyPage() {
     clearRoomCreds(code);
     router.replace("/");
   };
+  // Хост уходит не один: комната без него всё равно никому не нужна,
+  // поэтому спрашиваем и закрываем её для всех.
+  const closeRoom = () => {
+    if (!window.confirm("Закрыть комнату? Все игроки выйдут из неё.")) return;
+    socket?.emit("mafia:close", {}, () => {});
+    clearRoomCreds(code);
+    router.replace("/");
+  };
   const saveSettings = () => {
     if (draft) socket?.emit("mafia:settings", draft, () => {});
     setSettingsOpen(false);
@@ -96,9 +104,10 @@ export default function MafiaLobbyPage() {
         </div>
         <button
           type="button"
-          onClick={leave}
+          onClick={isHost ? closeRoom : leave}
           style={{ background: "none", border: "none", color: "var(--mf-text-faint)", cursor: "pointer", display: "flex", padding: 4 }}
-          aria-label="Выйти"
+          aria-label={isHost ? "Закрыть комнату" : "Выйти"}
+          title={isHost ? "Закрыть комнату" : "Выйти"}
         >
           <LogOut size={20} />
         </button>
@@ -141,6 +150,11 @@ export default function MafiaLobbyPage() {
           <span style={{ fontWeight: 800, fontSize: 16 }}>Игроки</span>
           <span className="mf-mono" style={{ fontSize: 13.5, color: "var(--mf-text-dim)", fontWeight: 700 }}>
             {count} / {MAX_MAFIA_PLAYERS}
+            {/* Зрители сидят в комнате, но в списке их не видно —
+                без счётчика непонятно, куда делся зашедший человек. */}
+            {view && view.spectatorCount > 0 ? (
+              <span style={{ color: "var(--mf-text-faint)" }}> · {view.spectatorCount} зрит.</span>
+            ) : null}
           </span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>

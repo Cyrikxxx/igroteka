@@ -8,12 +8,20 @@ import { ensureUser, requireUserId } from "@/lib/identity";
 import { isValidRoomCode } from "@/lib/room-code";
 import { issueWsToken, wsConnectUrlFor } from "@/lib/ws-token";
 import { loadMafiaSnapshot } from "@/lib/mafia-snapshot";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { MAX_MAFIA_PLAYERS, type MafiaJoinRoomResponse } from "@alias/shared/mafia";
 
 type Ctx = { params: Promise<{ code: string }> };
 
 export async function POST(request: NextRequest, { params }: Ctx) {
   try {
+    const limited = checkRateLimit(request, {
+      name: "join-mafia",
+      limit: 20,
+      windowSec: 60,
+    });
+    if (limited) return limited;
+
     const userId = await requireUserId();
     const { code: rawCode } = await params;
     const code = rawCode.toUpperCase();
