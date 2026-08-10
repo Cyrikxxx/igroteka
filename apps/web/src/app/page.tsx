@@ -1,13 +1,74 @@
 "use client";
 
 // Хаб игротеки (/). Нейтральная чернильная платформа: обе игры на равных.
-// Карточки ведут на лендинги игр, поле кода — в нужный вход (игру
-// определяет сервер по коду).
+// Раскладка повторяет HubDesktop/HubMobile из
+// project-context/mafia-design/mafia/screen-hub.jsx.
 
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Users, Clock, Loader2 } from "lucide-react";
+import { ArrowRight, Users, Loader2 } from "lucide-react";
+import type { MafiaRole } from "@alias/shared/mafia";
+import { ROLE_META } from "@/components/mafia/roleMeta";
+
+/** Слова-примеры на карточке Алиаса: показывают, из чего состоит игра. */
+const SAMPLE_WORDS = [
+  "жираф",
+  "космос",
+  "сквозняк",
+  "оркестр",
+  "карамель",
+  "пельмень",
+  "маяк",
+];
+
+/** Роли Мафии в том же порядке, что в прототипе. */
+const ROLE_ORDER: MafiaRole[] = [
+  "mafia",
+  "don",
+  "sheriff",
+  "doctor",
+  "maniac",
+  "civilian",
+];
+
+function AliasFiller() {
+  return (
+    <div className="hub-words">
+      {SAMPLE_WORDS.map((w, i) => (
+        <span
+          key={w}
+          className="hub-word"
+          // Каждое третье слово — акцентом, чтобы ряд не выглядел серой массой.
+          style={{ color: i % 3 === 0 ? "var(--alias-green)" : "var(--mf-text-dim)" }}
+        >
+          {w}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function MafiaFiller() {
+  return (
+    <div className="hub-roles">
+      {ROLE_ORDER.map((role) => {
+        const meta = ROLE_META[role];
+        const Icon = meta.Icon;
+        return (
+          <span
+            key={role}
+            className="hub-role"
+            title={meta.label}
+            style={{ borderColor: meta.color, color: meta.color }}
+          >
+            <Icon size={20} strokeWidth={1.8} />
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 interface GameCardProps {
   href: string;
@@ -16,21 +77,19 @@ interface GameCardProps {
   title: string;
   tagline: string;
   badges: string[];
-  players: string;
-  duration: string;
+  meta: string;
+  filler: React.ReactNode;
 }
 
-// Обе карточки описываются одинаковым набором фактов — иначе одна
-// выглядит содержательнее другой, а разница в высоте оставляет дыру.
 const ALIAS: GameCardProps = {
   href: "/alias",
   accent: "var(--alias-green)",
   ctaDark: true,
   title: "Алиас",
-  tagline: "Объясняй слова на время, пока команда угадывает",
+  tagline: "Объясняй слова на время",
   badges: ["Онлайн", "Локально"],
-  players: "2–6 команд",
-  duration: "15–30 мин",
+  meta: "2–6 команд",
+  filler: <AliasFiller />,
 };
 
 const MAFIA: GameCardProps = {
@@ -39,14 +98,13 @@ const MAFIA: GameCardProps = {
   title: "Мафия",
   tagline: "Найди мафию раньше, чем она найдёт тебя",
   badges: ["Онлайн"],
-  players: "5–16 игроков",
-  duration: "20–40 мин",
+  meta: "5–16 игроков",
+  filler: <MafiaFiller />,
 };
 
 function GameCard({ card }: { card: GameCardProps }) {
   return (
     <Link href={card.href} className="hub-card">
-      <span className="hub-card-edge" style={{ background: card.accent }} />
       <span className="hub-card-glow" style={{ background: card.accent }} />
 
       <div className="hub-card-badges">
@@ -62,14 +120,13 @@ function GameCard({ card }: { card: GameCardProps }) {
       </h2>
       <p className="hub-card-tag">{card.tagline}</p>
 
-      <div className="hub-card-facts">
-        <span>
-          <Users size={15} /> {card.players}
-        </span>
-        <span>
-          <Clock size={15} /> {card.duration}
-        </span>
+      <div className="hub-card-meta">
+        <Users size={16} /> {card.meta}
       </div>
+
+      {/* Нижний блок прижат к кнопке: он и заполняет карточку, и подсказывает,
+          что внутри игры. На узких экранах прячется — там места нет. */}
+      <div className="hub-card-filler">{card.filler}</div>
 
       <span
         className="hub-card-cta"
@@ -118,43 +175,41 @@ export default function HubPage() {
         <span>ИГРОТЕКА</span>
       </header>
 
-      <main className="hub-inner">
-        <h1 className="hub-title">Во что играем сегодня?</h1>
+      <h1 className="hub-title">Во что играем сегодня?</h1>
 
-        <div className="hub-cards">
-          <GameCard card={ALIAS} />
-          <GameCard card={MAFIA} />
+      <div className="hub-cards">
+        <GameCard card={ALIAS} />
+        <GameCard card={MAFIA} />
+      </div>
+
+      <form className="hub-code" onSubmit={go}>
+        <label className="hub-code-label" htmlFor="room-code">
+          Есть код комнаты?
+        </label>
+        <div className="hub-code-row">
+          <input
+            id="room-code"
+            className="hub-code-input"
+            value={code}
+            onChange={(e) =>
+              setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))
+            }
+            placeholder="K7F2QD"
+            inputMode="text"
+            autoComplete="off"
+            spellCheck={false}
+            aria-label="Код комнаты из шести символов"
+          />
+          <button
+            type="submit"
+            className="hub-code-btn"
+            disabled={!ready || busy}
+            aria-busy={busy}
+          >
+            {busy ? <Loader2 size={18} className="hub-spin" /> : "Войти"}
+          </button>
         </div>
-
-        <form className="hub-code" onSubmit={go}>
-          <label className="hub-code-label" htmlFor="room-code">
-            Уже есть код комнаты?
-          </label>
-          <div className="hub-code-row">
-            <input
-              id="room-code"
-              className="hub-code-input"
-              value={code}
-              onChange={(e) =>
-                setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))
-              }
-              placeholder="••••••"
-              inputMode="text"
-              autoComplete="off"
-              spellCheck={false}
-              aria-label="Код комнаты из шести символов"
-            />
-            <button
-              type="submit"
-              className="hub-code-btn"
-              disabled={!ready || busy}
-              aria-busy={busy}
-            >
-              {busy ? <Loader2 size={18} className="hub-spin" /> : "Войти"}
-            </button>
-          </div>
-        </form>
-      </main>
+      </form>
 
       <footer className="hub-footer">
         <Link href="/about">О нас</Link>
