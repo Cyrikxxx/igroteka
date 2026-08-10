@@ -178,10 +178,13 @@ export function useHostToast(isHost: boolean): { show: boolean; close: () => voi
   const [show, setShow] = useState(false);
   const [wasHost, setWasHost] = useState(isHost);
 
-  useEffect(() => {
-    if (isHost && !wasHost) setShow(true);
-    if (isHost !== wasHost) setWasHost(isHost);
-  }, [isHost, wasHost]);
+  // Сравнение с предыдущим значением делается прямо в рендере — так React
+  // советует выводить состояние из пропсов. Через эффект получался лишний
+  // проход рендера, и тост мигал на кадр позже смены хоста.
+  if (isHost !== wasHost) {
+    setWasHost(isHost);
+    if (isHost) setShow(true);
+  }
 
   return { show, close: () => setShow(false) };
 }
