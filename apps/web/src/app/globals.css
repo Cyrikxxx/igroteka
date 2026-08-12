@@ -1345,16 +1345,11 @@ html { scrollbar-color: var(--bg-4) transparent; }
 }
 
 /* ============================================================
-   АЛИАС — лендинг /alias. Порт mafia-design/alias/screen-landing.
+   АЛИАС — лендинг /alias. Порт mafia-design/alias/screen-landing,
+   раскладка повторяет лендинг Мафии: колонка по центру, поля по краям.
    ============================================================ */
 @layer components {
   :root {
-    --al-bg: #080d0a;
-    --al-surface: #111a14;
-    --al-border: rgba(255, 255, 255, 0.09);
-    --al-text: #f2f6f3;
-    --al-text-dim: #9aa89f;
-    --al-text-faint: #5f6b64;
     --pack-classic: #22c55e;
     --pack-friends: #a3e635;
     --pack-kids: #38bdf8;
@@ -1363,61 +1358,58 @@ html { scrollbar-color: var(--bg-4) transparent; }
     --pack-hard: #a855f7;
   }
 
-  /* Зелёная зона: своя подложка и виньетка, как чернильная у Мафии. */
-  .al-landing { position: relative; min-height: 100dvh; background: var(--al-bg); color: var(--al-text); font-family: var(--font-main); display: flex; flex-direction: column; padding-bottom: 8px; }
-  .al-landing::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(120% 60% at 50% -20%, rgba(34, 197, 94, 0.16) 0%, transparent 60%), radial-gradient(140% 50% at 50% 115%, rgba(34, 197, 94, 0.09) 0%, transparent 60%); }
-  .al-landing > * { position: relative; z-index: 1; }
+  /* Подложка нейтральная, как у Мафии: зелёный остаётся только акцентом
+     на заголовке и мелких деталях, фон-градиента нет. */
+  .al-landing { min-height: 100dvh; background: var(--mf-bg); color: var(--mf-text); font-family: var(--font-main); display: flex; justify-content: center; }
+  .al-landing-inner { width: 100%; max-width: 920px; display: flex; flex-direction: column; gap: 8px; padding-bottom: 28px; }
 
-  .al-card { background: var(--al-surface); border: 1px solid var(--al-border); border-radius: var(--r-card); }
-  .al-chip { display: inline-flex; align-items: center; gap: 6px; border-radius: var(--r-chip); padding: 5px 12px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.02em; background: rgba(255, 255, 255, 0.07); color: var(--al-text-dim); }
+  .al-chip { display: inline-flex; align-items: center; gap: 6px; border-radius: var(--r-chip); padding: 5px 12px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.02em; background: rgba(255, 255, 255, 0.07); color: var(--mf-text-dim); }
   .al-chip-green { background: rgba(34, 197, 94, 0.1); color: var(--alias-green-hover); }
-  .al-chip-faint { font-size: 12px; padding: 4px 10px; color: var(--al-text-faint); }
+  .al-chip-faint { font-size: 12px; padding: 4px 10px; color: var(--mf-text-faint); }
+  .al-card { background: var(--mf-surface); border: 1px solid var(--mf-border); border-radius: var(--r-card); }
 
   /* ── Герой ── */
-  .al-hero { display: flex; flex-direction: column; align-items: center; gap: 34px; padding: 52px 24px 40px; }
+  .al-hero { display: flex; flex-direction: column; align-items: center; gap: 34px; padding: clamp(40px, 7vw, 68px) clamp(20px, 5vw, 64px) clamp(32px, 4vw, 56px); }
   .al-hero-copy { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; }
-  .al-hero-title { margin: 0; font-weight: 800; font-size: clamp(56px, 12vw, 62px); letter-spacing: 0.03em; line-height: 1; color: var(--alias-green); text-shadow: 0 0 60px rgba(34, 197, 94, 0.35); }
-  .al-hero-lead { margin: 0; font-weight: 700; font-size: 17px; color: var(--al-text-dim); max-width: 440px; line-height: 1.4; text-wrap: pretty; }
+  .al-hero-title { margin: 0; font-weight: 800; font-size: clamp(56px, 12vw, 104px); letter-spacing: 0.03em; line-height: 1; color: var(--alias-green); text-shadow: 0 0 60px rgba(34, 197, 94, 0.4); }
+  .al-hero-lead { margin: 0; font-weight: 700; font-size: clamp(16px, 2vw, 22px); color: var(--mf-text-dim); max-width: 440px; line-height: 1.4; text-wrap: pretty; }
   .al-hero-ctas { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; width: 100%; }
   .al-hero-ctas > a { text-decoration: none; }
-  .al-hero-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-top: 6px; color: var(--al-text-faint); font-size: 13px; font-weight: 700; }
+  .al-hero-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-top: 6px; color: var(--mf-text-faint); font-size: 13px; font-weight: 700; }
   .al-hero-facts span { display: inline-flex; align-items: center; gap: 5px; }
-
+  @media (min-width: 640px) { .al-hero-ctas { flex-direction: row; width: auto; } .al-hero-ctas > a { min-width: 190px; } }
   @media (min-width: 900px) {
-    .al-hero { flex-direction: row; align-items: center; justify-content: space-between; gap: 48px; padding: 68px 64px 56px; }
+    .al-hero { flex-direction: row; align-items: center; justify-content: space-between; gap: 48px; }
     .al-hero-copy { align-items: flex-start; text-align: left; }
-    .al-hero-title { font-size: 104px; }
-    .al-hero-lead { font-size: 22px; }
-    .al-hero-ctas { flex-direction: row; width: auto; }
     .al-hero-facts { justify-content: flex-start; }
   }
 
   /* ── Карточка слова ── */
-  .al-wordcard { width: 250px; flex-shrink: 0; background: var(--al-surface); border: 1.5px solid rgba(34, 197, 94, 0.35); border-radius: var(--r-card); padding: 20px 18px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(34, 197, 94, 0.12); transform: rotate(-3deg); display: flex; flex-direction: column; gap: 14px; }
+  /* Зелёная рамка и свечение — тот же акцент, что на заголовке; фон
+     карточки нейтральный, без зелёной заливки. */
+  .al-wordcard { width: 250px; flex-shrink: 0; background: var(--mf-surface); border: 1.5px solid rgba(34, 197, 94, 0.35); border-radius: var(--r-card); padding: 20px 18px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5); transform: rotate(-3deg); display: flex; flex-direction: column; gap: 14px; }
   @media (min-width: 900px) { .al-wordcard { width: 300px; padding: 24px 22px; } }
   .al-wordcard-top { display: flex; justify-content: space-between; align-items: center; }
-  .al-wordcard-timer { font-size: 17px; color: var(--al-text-dim); }
+  .al-wordcard-timer { font-size: 17px; color: var(--mf-text-dim); }
   .al-wordcard-word { font-weight: 800; font-size: 34px; letter-spacing: -0.02em; line-height: 1; }
   @media (min-width: 900px) { .al-wordcard-word { font-size: 40px; } }
   .al-wordcard-ban { display: flex; flex-direction: column; gap: 5px; }
-  .al-wordcard-ban-label { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--al-text-faint); }
+  .al-wordcard-ban-label { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mf-text-faint); }
   .al-wordcard-ban-list { display: flex; flex-wrap: wrap; gap: 6px; }
 
   /* ── Секции ── */
-  .al-section { padding: 0 20px; }
-  .al-section-last { padding: 32px 20px 36px; }
-  @media (min-width: 900px) { .al-section { padding: 0 64px; } .al-section-last { padding: 40px 64px 56px; } }
-  .al-section-title { margin: 0 0 16px; font-weight: 800; font-size: 23px; letter-spacing: -0.02em; }
-  @media (min-width: 900px) { .al-section-title { font-size: 30px; } }
+  .al-section { padding: 0 clamp(16px, 4vw, 64px) clamp(24px, 4vw, 40px); }
+  .al-section-last { padding-bottom: clamp(28px, 4vw, 48px); }
+  .al-section-title { margin: 0 0 16px; font-weight: 800; font-size: clamp(23px, 3vw, 30px); letter-spacing: -0.02em; }
 
   .al-steps { display: grid; grid-template-columns: 1fr; gap: 12px; }
   @media (min-width: 900px) { .al-steps { grid-template-columns: repeat(4, 1fr); } }
   .al-step { padding: 18px 16px; display: flex; flex-direction: row; align-items: center; gap: 13px; }
   @media (min-width: 900px) { .al-step { flex-direction: column; align-items: flex-start; } }
-  .al-step-head { display: flex; align-items: center; gap: 10px; }
+  .al-step-head { display: flex; align-items: center; gap: 10px; color: var(--mf-text-dim); flex-shrink: 0; }
   .al-step-num { font-size: 13px; font-weight: 700; color: var(--alias-green); }
   .al-step-title { font-weight: 800; font-size: 15.5px; }
-  .al-step-sub { font-weight: 600; font-size: 13px; color: var(--al-text-faint); margin-top: 3px; line-height: 1.45; text-wrap: pretty; }
+  .al-step-sub { font-weight: 600; font-size: 13px; color: var(--mf-text-faint); margin-top: 3px; line-height: 1.45; text-wrap: pretty; }
 
   .al-packs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (min-width: 900px) { .al-packs { grid-template-columns: repeat(3, 1fr); } }
@@ -1425,8 +1417,11 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .al-pack-ic { width: 44px; height: 44px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
   .al-pack-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
   .al-pack-name { font-weight: 800; font-size: 17px; }
-  .al-pack-count { font-size: 12px; font-weight: 700; color: var(--al-text-faint); }
-  .al-pack-desc { font-weight: 600; font-size: 13px; color: var(--al-text-dim); line-height: 1.45; text-wrap: pretty; }
+  .al-pack-count { font-size: 12px; font-weight: 700; color: var(--mf-text-faint); }
+  .al-pack-desc { font-weight: 600; font-size: 13px; color: var(--mf-text-dim); line-height: 1.45; text-wrap: pretty; }
+
+  .al-landing-foot { display: flex; justify-content: center; padding: 0 20px clamp(20px, 3vw, 32px); }
+  .al-landing-foot .mf-btn { text-decoration: none; min-width: 200px; }
 }
 
 /* ============================================================

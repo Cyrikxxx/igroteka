@@ -73,6 +73,7 @@ function WordCard() {
 export default function AliasLandingPage() {
   return (
     <div className="al-landing">
+      <div className="al-landing-inner">
       <section className="al-hero">
         <div className="al-hero-copy">
           <span className="al-chip al-chip-green">
@@ -153,6 +154,13 @@ export default function AliasLandingPage() {
           ))}
         </div>
       </section>
+
+      <div className="al-landing-foot">
+        <Link href="/" className="mf-btn mf-btn-ghost">
+          ← В Игротеку
+        </Link>
+      </div>
+      </div>
     </div>
   );
 }
