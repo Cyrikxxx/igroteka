@@ -1428,3 +1428,76 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .al-pack-count { font-size: 12px; font-weight: 700; color: var(--al-text-faint); }
   .al-pack-desc { font-weight: 600; font-size: 13px; color: var(--al-text-dim); line-height: 1.45; text-wrap: pretty; }
 }
+
+/* ============================================================
+   ПЛАТФОРМЕННЫЕ СТРАНИЦЫ — О нас, Правила, История.
+   Порт mafia-design/platform/chrome.jsx. Всегда чернильные.
+   ============================================================ */
+@layer components {
+  .pl-screen { min-height: 100dvh; background: var(--ink-bg); color: var(--mf-text); font-family: var(--font-main); }
+
+  .pl-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--ink-border); }
+  @media (min-width: 900px) { .pl-topbar { padding: 20px 56px; } }
+  .pl-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 15px; letter-spacing: 0.04em; color: inherit; text-decoration: none; }
+  .pl-dot { width: 10px; height: 10px; border-radius: 3px; }
+  .pl-nav { display: none; gap: 26px; font-size: 14.5px; font-weight: 700; }
+  @media (min-width: 900px) { .pl-nav { display: flex; } }
+  .pl-nav a { color: var(--mf-text-dim); text-decoration: none; }
+  .pl-nav a:hover { color: var(--mf-text); }
+  .pl-nav .pl-nav-active { color: var(--mf-text); }
+
+  .pl-body { display: flex; flex-direction: column; gap: 30px; padding: 24px 20px 32px; }
+  @media (min-width: 900px) { .pl-body { gap: 40px; padding: 34px 56px 40px; } }
+
+  .pl-head { display: flex; flex-direction: column; gap: 20px; }
+  .pl-back { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--mf-text-dim); text-decoration: none; align-self: flex-start; }
+  .pl-back:hover { color: var(--mf-text); }
+  .pl-head-text { display: flex; flex-direction: column; gap: 10px; }
+  .pl-title { margin: 0; font-weight: 800; font-size: clamp(38px, 6vw, 58px); letter-spacing: -0.03em; line-height: 1; }
+  .pl-lead { margin: 0; font-size: clamp(15px, 1.4vw, 17px); font-weight: 600; color: var(--mf-text-dim); max-width: 660px; line-height: 1.5; text-wrap: pretty; }
+
+  .pl-section { display: flex; flex-direction: column; gap: 14px; }
+  .pl-section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .pl-section-title h2 { margin: 0; font-weight: 800; font-size: clamp(22px, 2.4vw, 28px); letter-spacing: -0.02em; }
+  .pl-section-note { font-size: 12px; font-weight: 700; color: var(--mf-text-faint); }
+
+  .pl-card { background: var(--ink-surface); border: 1px solid var(--ink-border); border-radius: var(--r-card); padding: 20px 20px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .pl-card-head { display: flex; align-items: center; gap: 10px; }
+  .pl-card-title { font-weight: 800; font-size: 16.5px; }
+  .pl-num { font-size: 12.5px; font-weight: 700; color: var(--mf-text-faint); }
+  .pl-text { margin: 0; font-size: 14.5px; font-weight: 600; color: var(--mf-text-dim); line-height: 1.55; text-wrap: pretty; }
+  .pl-text-faint { color: var(--mf-text-faint); }
+
+  .pl-intro { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 900px) { .pl-intro { grid-template-columns: 1.15fr 1fr; } }
+  .pl-chips { display: flex; gap: 10px; flex-wrap: wrap; }
+  .pl-claim { font-weight: 800; font-size: clamp(19px, 2vw, 22px); letter-spacing: -0.01em; line-height: 1.3; text-wrap: pretty; }
+
+  .pl-grid-2, .pl-grid-3 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 900px) { .pl-grid-2 { grid-template-columns: repeat(2, 1fr); } .pl-grid-3 { grid-template-columns: repeat(3, 1fr); } }
+
+  .pl-team { flex-direction: column; align-items: flex-start; gap: 20px; }
+  @media (min-width: 900px) { .pl-team { flex-direction: row; align-items: center; } }
+  .pl-avatar { width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0; border: 1.5px solid var(--ink-border); display: flex; align-items: center; justify-content: center; color: var(--mf-text-dim); }
+  .pl-team-text { display: flex; flex-direction: column; gap: 7px; max-width: 640px; }
+
+  .pl-roadmap { padding: 4px 16px; gap: 0; }
+  @media (min-width: 900px) { .pl-roadmap { padding: 8px 20px; } }
+  .pl-roadmap-row { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--ink-border); }
+  .pl-roadmap-row:last-child { border-bottom: none; }
+  @media (min-width: 900px) { .pl-roadmap-row { flex-direction: row; align-items: center; } }
+  .pl-roadmap-state { display: flex; align-items: center; gap: 8px; min-width: 132px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+  .pl-roadmap-title { font-weight: 800; font-size: 16px; }
+  @media (min-width: 900px) { .pl-roadmap-title { min-width: 220px; } }
+  .pl-roadmap-text { font-size: 14.5px; font-weight: 600; color: var(--mf-text-faint); line-height: 1.5; text-wrap: pretty; }
+
+  .pl-contact-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .pl-contact-name { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16.5px; }
+  .pl-badge { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mf-text-faint); border: 1px dashed var(--ink-border); border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+
+  .pl-footer { border-top: 1px solid var(--ink-border); margin-top: 12px; padding-top: 20px; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: space-between; color: var(--mf-text-faint); font-size: 13px; font-weight: 700; }
+  @media (min-width: 900px) { .pl-footer { flex-direction: row; } }
+  .pl-footer-links { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; }
+  .pl-footer-links a { color: inherit; text-decoration: none; }
+  .pl-footer-links a:hover { color: var(--mf-text-dim); }
+}
