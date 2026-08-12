@@ -1501,3 +1501,76 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .pl-footer-links a { color: inherit; text-decoration: none; }
   .pl-footer-links a:hover { color: var(--mf-text-dim); }
 }
+
+/* ============================================================
+   ПРАВИЛА и ИСТОРИЯ — надстройка над каркасом платформы.
+   ============================================================ */
+@layer components {
+  /* ── Табы и фильтры ── */
+  .pl-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pl-tab { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-family: var(--font-main); font-weight: 800; font-size: 15px; padding: 11px 20px; border-radius: 999px; background: transparent; border: 1px solid var(--ink-border); color: var(--mf-text-faint); transition: color 0.15s, border-color 0.15s; }
+  .pl-tab:hover:not(.pl-tab-on) { color: var(--mf-text-dim); }
+  .pl-tab-sm { font-size: 13.5px; font-weight: 700; padding: 8px 16px; }
+
+  /* ── Правила ── */
+  .pl-rules-top { display: flex; flex-direction: column; gap: 18px; }
+  @media (min-width: 900px) { .pl-rules-top { gap: 22px; } }
+  .pl-facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  @media (min-width: 900px) { .pl-facts { grid-template-columns: repeat(4, 1fr); } }
+  .pl-fact { gap: 5px; padding: 14px 16px; }
+  @media (min-width: 900px) { .pl-fact { padding: 18px 20px; } }
+  .pl-fact-value { font-weight: 700; font-size: 20px; line-height: 1.1; }
+  @media (min-width: 900px) { .pl-fact-value { font-size: 24px; } }
+  .pl-fact-label { font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mf-text-faint); }
+
+  .pl-list { padding: 4px 16px; gap: 0; }
+  @media (min-width: 900px) { .pl-list { padding: 6px 22px; } }
+  .pl-step { display: flex; gap: 16px; padding: 18px 0; align-items: flex-start; border-bottom: 1px solid var(--ink-border); }
+  .pl-step:last-child { border-bottom: none; }
+  .pl-step-num { font-size: 14px; font-weight: 700; padding-top: 2px; min-width: 24px; }
+  .pl-step-body { display: flex; flex-direction: column; gap: 4px; }
+  .pl-role-ic { width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+  .pl-dispute { display: flex; flex-direction: column; gap: 10px; padding: 16px 0; border-bottom: 1px solid var(--ink-border); }
+  .pl-dispute:last-child { border-bottom: none; }
+  @media (min-width: 900px) { .pl-dispute { flex-direction: row; gap: 24px; } }
+  .pl-dispute-q { font-weight: 800; font-size: 15.5px; flex-shrink: 0; }
+  @media (min-width: 900px) { .pl-dispute-q { min-width: 280px; } }
+
+  /* ── История ── */
+  .hist-stats { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 900px) { .hist-stats { grid-template-columns: repeat(3, 1fr); } }
+  .hist-stat { gap: 6px; padding: 16px 18px; }
+  @media (min-width: 900px) { .hist-stat { padding: 22px 24px; } }
+  .hist-stat-value { font-weight: 700; font-size: 30px; line-height: 1; }
+  @media (min-width: 900px) { .hist-stat-value { font-size: 38px; } }
+  .hist-stat-label { font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mf-text-faint); }
+
+  .hist-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .hist-count { font-size: 12.5px; font-weight: 700; color: var(--mf-text-faint); }
+
+  .hist-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 900px) { .hist-grid { grid-template-columns: repeat(3, 1fr); } }
+  .hist-card { padding: 15px 16px 14px; gap: 12px; }
+  .hist-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .hist-card-game { display: flex; align-items: center; gap: 7px; font-weight: 800; font-size: 15px; }
+  .hist-card-mode { display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mf-text-faint); }
+
+  .hist-lines { display: flex; flex-direction: column; gap: 8px; }
+  .hist-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255, 255, 255, 0.035); border-radius: 12px; padding: 10px 14px; }
+  .hist-line-name { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 14.5px; }
+  .hist-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .hist-line-value { font-weight: 700; font-size: 15px; }
+  .hist-line-faint { font-size: 13px; color: var(--mf-text-faint); }
+
+  .hist-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 2px; }
+  .hist-card-meta { font-size: 12px; font-weight: 700; color: var(--mf-text-faint); white-space: nowrap; }
+  .hist-card-actions { display: flex; align-items: center; gap: 8px; }
+  .hist-card-btn { min-height: 40px; padding: 0 14px; font-size: 14px; border-radius: 12px; white-space: nowrap; text-decoration: none; }
+  .hist-card-del { width: 40px; height: 40px; border-radius: 12px; background: transparent; border: 1px solid var(--ink-border); color: var(--mf-text-faint); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .hist-card-del:hover:not(:disabled) { color: var(--mf-crimson); border-color: var(--mf-crimson); }
+  .hist-card-del:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .hist-empty { align-items: center; text-align: center; gap: 12px; padding: 40px 24px; }
+  .hist-empty-ic { width: 62px; height: 62px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.05); color: var(--mf-text-faint); }
+  .hist-empty-cta { margin-top: 6px; text-decoration: none; }
+}

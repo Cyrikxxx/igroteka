@@ -1,41 +1,87 @@
 "use client";
 
-// История игр. Реальные данные: GET /api/stats (агрегаты) + GET /api/games
-// (локальные партии устройства). Удаление — DELETE /api/games/[id].
-// Онлайн-партии пока не персистятся в списке — показываем локальные.
+// Общая история партий: Алиас и Мафия в одном списке, фильтр по игре.
+// Порт mafia-design/platform/screen-history.jsx.
+//
+// Данные живые: /api/games (Алиас), /api/mafia/history (Мафия, включая
+// идущие партии), /api/stats (плитки).
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Dice5, Play } from "lucide-react";
+import {
+  Sparkles,
+  VenetianMask,
+  Wifi,
+  Smartphone,
+  Play,
+  ScrollText,
+  Trash2,
+  Dice5,
+} from "lucide-react";
 import type { GameFromAPI } from "@/types";
-import AppShell from "@/components/common/AppShell";
-import HistoryRow from "@/components/alias/home/HistoryRow";
-import MafiaHistoryRow, { type MafiaHistoryGame } from "@/components/mafia/MafiaHistoryRow";
+import PageShell, { PageHead, PageFooter } from "@/components/platform/PageShell";
+import type { MafiaHistoryGame } from "@/app/api/mafia/history/route";
 
 interface Stats {
   games: number;
   guessedWords: number;
   successRate: number;
+  mafiaGames: number;
+  mafiaWins: number;
+}
+
+type Filter = "all" | "alias" | "mafia";
+
+const THEME = {
+  alias: { accent: "var(--alias-green)", label: "Алиас", Icon: Sparkles, dark: true },
+  mafia: { accent: "var(--mf-crimson)", label: "Мафия", Icon: VenetianMask, dark: false },
+} as const;
+
+/** Обе игры приводим к одной форме, чтобы список был единым. */
+interface Row {
+  key: string;
+  game: "alias" | "mafia";
+  online: boolean;
+  live: boolean;
+  /** Куда ведёт основная кнопка. */
+  href: string;
+  meta: string;
+  body: React.ReactNode;
+  /** Удалять можно только локальные партии Алиаса — они наши. */
+  onDelete?: () => void;
+}
+
+function TeamRow({ name, score, dot }: { name: string; score: number; dot: string }) {
+  return (
+    <div className="hist-line">
+      <span className="hist-line-name">
+        <span className="hist-dot" style={{ background: dot }} />
+        {name}
+      </span>
+      <span className="mf-mono hist-line-value">{score}</span>
+    </div>
+  );
 }
 
 export default function HistoryPage() {
   const [games, setGames] = useState<GameFromAPI[] | null>(null);
-  const [mafiaGames, setMafiaGames] = useState<MafiaHistoryGame[]>([]);
+  const [mafia, setMafia] = useState<MafiaHistoryGame[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/games")
       .then((r) => (r.ok ? r.json() : []))
-      .then((data: GameFromAPI[]) => setGames(data))
+      .then((d: GameFromAPI[]) => setGames(d))
       .catch(() => setGames([]));
     fetch("/api/mafia/history")
       .then((r) => (r.ok ? r.json() : []))
-      .then((data: MafiaHistoryGame[]) => setMafiaGames(data))
-      .catch(() => setMafiaGames([]));
+      .then((d: MafiaHistoryGame[]) => setMafia(d))
+      .catch(() => setMafia([]));
     fetch("/api/stats")
       .then((r) => (r.ok ? r.json() : null))
-      .then((data: Stats | null) => setStats(data))
+      .then((d: Stats | null) => setStats(d))
       .catch(() => setStats(null));
   }, []);
 
@@ -49,84 +95,220 @@ export default function HistoryPage() {
     }
   };
 
-  const rate = stats ? Math.round(stats.successRate * 100) : 0;
-  const list = games ?? [];
-
-  return (
-    <AppShell className="screen-anim" nav>
-      <Link href="/" className="back-link">
-        <ArrowLeft /> На главную
-      </Link>
-
-      <div className="setup-head">
-        <div>
-          <span className="eyebrow">архив · твои партии</span>
-          <h1 className="h-display" style={{ marginTop: 10 }}>
-            История игр
-          </h1>
-          <p className="h-sub" style={{ marginTop: 8 }}>
-            Сыгранные локальные партии и статистика — можно вернуться к
-            незавершённой игре и доиграть.
-          </p>
-        </div>
-      </div>
-
-      <div className="hist-stats" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
-        <div className="stat">
-          <span className="v mono">{stats ? stats.games : "—"}</span>
-          <span className="l">сыграно игр</span>
-        </div>
-        <div className="stat">
-          <span className="v mono accent-text">
-            {stats ? stats.guessedWords.toLocaleString("ru") : "—"}
-          </span>
-          <span className="l">угадано слов</span>
-        </div>
-        <div className="stat">
-          <span className="v mono">{stats ? `${rate}%` : "—"}</span>
-          <span className="l">успешных объяснений</span>
-        </div>
-      </div>
-
-      {games === null ? (
-        <p className="muted" style={{ padding: "24px 0" }}>
-          Загрузка…
-        </p>
-      ) : list.length ? (
-        <div className="hist-list">
-          {list.map((g) => (
-            <HistoryRow key={g.id} game={g} onDelete={onDelete} deleting={deletingId === g.id} />
+  const aliasRows: Row[] = (games ?? []).map((g) => {
+    const live = g.status === "IN_PROGRESS";
+    const online = g.mode === "ONLINE";
+    const href = live
+      ? online && g.room?.code
+        ? `/alias/room/${g.room.code}`
+        : `/alias/local/${g.id}/turn`
+      : `/alias/results/${g.id}`;
+    return {
+      key: `alias-${g.id}`,
+      game: "alias",
+      online,
+      live,
+      href,
+      meta: `${g.currentRoundNumber} ${g.currentRoundNumber === 1 ? "раунд" : "раунда"}`,
+      body: (
+        <div className="hist-lines">
+          {g.teams.slice(0, 3).map((t, i) => (
+            <TeamRow
+              key={t.id}
+              name={t.name}
+              score={t.score}
+              dot={i === 0 ? "var(--alias-green)" : i === 1 ? "var(--mf-gold)" : "var(--role-maniac)"}
+            />
           ))}
         </div>
-      ) : (
-        <div className="hist-empty card">
-          <span className="he-ic">
-            <Dice5 size={32} />
+      ),
+      onDelete: g.mode === "LOCAL" ? () => onDelete(g.id) : undefined,
+    };
+  });
+
+  const mafiaRows: Row[] = mafia.map((m) => {
+    const live = m.status === "live";
+    const winnerLabel =
+      m.winner === "MAFIA" ? "Победа мафии" : m.winner === "MANIAC" ? "Победа маньяка" : "Победа мирных";
+    const winnerColor =
+      m.winner === "MAFIA"
+        ? "var(--mf-crimson)"
+        : m.winner === "MANIAC"
+          ? "var(--role-maniac)"
+          : "var(--role-civilian)";
+    return {
+      key: `mafia-${m.id}`,
+      game: "mafia",
+      online: true,
+      live,
+      href: live && m.code ? `/mafia/room/${m.code}` : "/history",
+      meta: `${m.dayCount} ${m.dayCount === 1 ? "ночь" : "ночи"}`,
+      body: (
+        <div className="hist-lines">
+          <div className="hist-line">
+            <span className="hist-line-name">
+              <span
+                className="hist-dot"
+                style={{ background: live ? "var(--mf-gold)" : winnerColor }}
+              />
+              {live ? m.phase : winnerLabel}
+            </span>
+            <span className="mf-mono hist-line-value hist-line-faint">
+              {live ? `${m.alive}/${m.players} в игре` : `${m.players} игроков`}
+            </span>
+          </div>
+        </div>
+      ),
+    };
+  });
+
+  const all = [...aliasRows, ...mafiaRows];
+  const rows = all.filter((r) => filter === "all" || r.game === filter);
+  const loading = games === null;
+
+  return (
+    <PageShell active="История">
+      <PageHead
+        title="История игр"
+        lead="Партии Алиаса и Мафии в одном списке — незавершённую игру можно открыть и доиграть."
+      />
+
+      <div className="hist-stats">
+        <div className="pl-card hist-stat">
+          <div className="mf-mono hist-stat-value">{stats ? stats.games + stats.mafiaGames : "—"}</div>
+          <div className="hist-stat-label">Сыграно партий</div>
+        </div>
+        <div className="pl-card hist-stat">
+          <div className="mf-mono hist-stat-value" style={{ color: "var(--alias-green)" }}>
+            {stats ? stats.guessedWords.toLocaleString("ru") : "—"}
+          </div>
+          <div className="hist-stat-label">Угадано слов в Алиасе</div>
+        </div>
+        <div className="pl-card hist-stat">
+          <div className="mf-mono hist-stat-value" style={{ color: "var(--mf-crimson)" }}>
+            {stats ? stats.mafiaWins : "—"}
+          </div>
+          <div className="hist-stat-label">Побед за мафию</div>
+        </div>
+      </div>
+
+      <div className="hist-toolbar">
+        <div className="pl-tabs">
+          {([
+            ["all", "Все", "var(--mf-text)"],
+            ["alias", "Алиас", "var(--alias-green)"],
+            ["mafia", "Мафия", "var(--mf-crimson)"],
+          ] as [Filter, string, string][]).map(([key, label, color]) => {
+            const on = filter === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setFilter(key)}
+                className={"pl-tab pl-tab-sm" + (on ? " pl-tab-on" : "")}
+                style={
+                  on
+                    ? {
+                        background: `color-mix(in srgb, ${color} 14%, transparent)`,
+                        borderColor: `color-mix(in srgb, ${color} 45%, transparent)`,
+                        color,
+                      }
+                    : undefined
+                }
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <span className="mf-mono hist-count">
+          {rows.length} из {all.length}
+        </span>
+      </div>
+
+      {loading ? (
+        <p className="pl-text">Загрузка…</p>
+      ) : rows.length === 0 ? (
+        <div className="pl-card hist-empty">
+          <span className="hist-empty-ic">
+            <Dice5 size={30} />
           </span>
-          <h2 className="h-title">Здесь пока пусто</h2>
-          <p className="h-sub">
-            Сыграй первую партию — она появится в истории, и можно будет к ней
-            вернуться.
+          <div className="pl-card-title">
+            {all.length === 0 ? "Пока ни одной партии" : "В этом фильтре пусто"}
+          </div>
+          <p className="pl-text">
+            {all.length === 0
+              ? "Сыграйте первую — она появится здесь вместе со счётом."
+              : "Попробуйте выбрать другую игру."}
           </p>
-          <Link href="/" className="btn btn-primary btn-lg" style={{ marginTop: 8 }}>
-            <Play /> Начать игру
-          </Link>
+          {all.length === 0 ? (
+            <Link href="/" className="mf-btn mf-btn-surface hist-empty-cta">
+              Выбрать игру
+            </Link>
+          ) : null}
+        </div>
+      ) : (
+        <div className="hist-grid">
+          {rows.map((r) => {
+            const t = THEME[r.game];
+            const Icon = t.Icon;
+            return (
+              <div
+                key={r.key}
+                className="pl-card hist-card"
+                style={{
+                  borderTop: `3px solid ${
+                    r.live ? t.accent : `color-mix(in srgb, ${t.accent} 45%, var(--ink-surface))`
+                  }`,
+                }}
+              >
+                <div className="hist-card-head">
+                  <span className="hist-card-game" style={{ color: t.accent }}>
+                    <Icon size={16} /> {t.label}
+                  </span>
+                  <span className="mf-mono hist-card-mode">
+                    {r.online ? <Wifi size={12} /> : <Smartphone size={12} />}
+                    {r.online ? "Онлайн" : "Локально"}
+                  </span>
+                </div>
+
+                {r.body}
+
+                <div className="hist-card-foot">
+                  <span className="mf-mono hist-card-meta">{r.meta}</span>
+                  <div className="hist-card-actions">
+                    <Link
+                      href={r.href}
+                      className="mf-btn hist-card-btn"
+                      style={
+                        r.live
+                          ? { background: t.accent, color: t.dark ? "#06130a" : "#fff" }
+                          : { background: "transparent", color: "var(--mf-text-dim)", border: "1px solid var(--ink-border)" }
+                      }
+                    >
+                      {r.live ? <Play size={16} /> : <ScrollText size={16} />}
+                      {r.live ? "Продолжить" : "Итоги"}
+                    </Link>
+                    {r.onDelete ? (
+                      <button
+                        type="button"
+                        onClick={r.onDelete}
+                        disabled={deletingId === r.key.replace("alias-", "")}
+                        className="hist-card-del"
+                        aria-label="Удалить партию"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {mafiaGames.length > 0 ? (
-        <div style={{ marginTop: 32 }}>
-          <span className="eyebrow">мафия · твои партии</span>
-          <h2 className="h-title" style={{ marginTop: 8, marginBottom: 14 }}>
-            Партии Мафии
-          </h2>
-          <div className="hist-list">
-            {mafiaGames.map((g) => (
-              <MafiaHistoryRow key={g.id} game={g} />
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </AppShell>
+      <PageFooter />
+    </PageShell>
   );
 }
