@@ -32,18 +32,21 @@
   --accent-line: rgba(34, 197, 94, 0.42);
   --accent-fg: #06130a;
 
-  /* Teams (одна светлота/насыщенность, меняется hue) */
-  --team-1: #22c55e;              /* зелёный Игротеки */
-  --team-2: oklch(0.80 0.15 55);  /* amber */
-  --team-3: oklch(0.74 0.15 285); /* violet */
-  --team-4: oklch(0.78 0.14 235); /* sky */
-  --team-5: oklch(0.72 0.17 12);  /* rose */
-  --team-6: oklch(0.82 0.16 120); /* lime */
+  /* Teams. Все шесть — из той же палитры, что наборы слов на лендинге
+     (--pack-*) и роли Мафии (--role-*): одна светлота, разный тон. Порядок
+     подобран так, чтобы две первые команды (их минимум) отличались сильнее
+     всех, а лаймовая — самая близкая к зелёной — стояла последней. */
+  --team-1: #22c55e; /* зелёный Игротеки */
+  --team-2: #f59e0b; /* янтарный, он же --mf-gold */
+  --team-3: #a855f7; /* фиолетовый, он же --role-maniac */
+  --team-4: #38bdf8; /* голубой, он же --role-doctor */
+  --team-5: #f43f5e; /* розовый, он же --mf-crimson-hover */
+  --team-6: #a3e635; /* лаймовый, он же --pack-friends */
 
-  /* Status */
+  /* Status — те же цвета, что у Мафии */
   --success: #22c55e;
-  --warn: oklch(0.80 0.15 60);
-  --danger: oklch(0.66 0.20 25);
+  --warn: #f59e0b;
+  --danger: #e11d48;
 
   /* Geometry — совпадает с --r-card / --r-btn зоны Мафии */
   --r-xs: 8px;
@@ -370,7 +373,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .pill-mono { font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px; font-weight: 600; }
   .pill-accent { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
   .pill-warn { background: color-mix(in oklch, var(--warn) 16%, var(--bg-2)); border-color: color-mix(in oklch, var(--warn) 38%, var(--line)); color: var(--warn); }
-  .pill-live { background: color-mix(in oklch, var(--danger) 18%, var(--bg-2)); color: oklch(0.74 0.20 25); border-color: color-mix(in oklch, var(--danger) 36%, var(--line)); }
+  .pill-live { background: color-mix(in oklch, var(--danger) 18%, var(--bg-2)); color: var(--mf-crimson-hover); border-color: color-mix(in oklch, var(--danger) 36%, var(--line)); }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
   .dot-pulse { animation: ping 1.6s ease-out infinite; }
 
@@ -519,16 +522,18 @@ html { scrollbar-color: var(--bg-4) transparent; }
   /* ============================================================
      Team card
      ============================================================ */
+  /* Как .mf-role-card в Мафии: поверхность нейтральная, цвет команды живёт
+     в рамке, точке и названии. Раньше внутрь карточки была залита
+     диагональная растяжка цвета, а сверху шла полоска в 4px. */
   .team-card {
     --tc: var(--team-1);
-    background: linear-gradient(165deg, color-mix(in oklch, var(--tc) 16%, var(--bg-1)), var(--bg-1) 62%);
-    border: 1px solid color-mix(in oklch, var(--tc) 42%, var(--line));
+    background: var(--bg-1);
+    border: 1.5px solid color-mix(in srgb, var(--tc) 35%, transparent);
     border-radius: var(--r-lg);
     padding: var(--pad-card);
     position: relative;
     overflow: hidden;
   }
-  .team-card::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--tc); }
 
   /* Player slot */
   .slot {
@@ -860,7 +865,8 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .podium-team b { font-weight: 800; font-size: clamp(15px, 1.1vw, 19px); color: var(--tc); letter-spacing: -0.01em; }
   .podium-score { font-size: clamp(20px, 1.8vw, 30px); font-weight: 800; }
   .podium-crown { color: var(--tc); margin-bottom: 2px; }
-  .podium-bar { width: 100%; border-radius: var(--r-md) var(--r-md) 0 0; background: linear-gradient(180deg, color-mix(in oklch, var(--tc) 28%, var(--bg-1)), var(--bg-1)); border: 1px solid color-mix(in oklch, var(--tc) 42%, var(--line)); border-bottom: 0; display: grid; place-items: start center; padding-top: 12px; }
+  /* Столбик подиума — ровная подкрашенная заливка вместо растяжки в фон. */
+  .podium-bar { width: 100%; border-radius: var(--r-md) var(--r-md) 0 0; background: color-mix(in oklch, var(--tc) 14%, var(--bg-1)); border: 1.5px solid color-mix(in srgb, var(--tc) 35%, transparent); border-bottom: 0; display: grid; place-items: start center; padding-top: 12px; }
   .podium-place { font-size: clamp(22px, 2vw, 34px); font-weight: 800; color: var(--tc); }
   .podium-col.p1 .podium-bar { box-shadow: 0 0 40px color-mix(in oklch, var(--tc) 24%, transparent); }
   .victory-table { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: 4px; padding: clamp(10px, 1vw, 16px); }
@@ -902,7 +908,9 @@ html { scrollbar-color: var(--bg-4) transparent; }
 
   /* ============ PASS DEVICE ============ */
   .pass-wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr); gap: clamp(28px, 4vw, 72px); align-items: center; max-width: 1100px; margin-inline: auto; width: 100%; }
-  .pass-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: clamp(10px, 1.6vh, 18px); padding: clamp(28px, 4vh, 56px) clamp(20px, 3vw, 48px); background: linear-gradient(170deg, color-mix(in oklch, var(--tc) 16%, var(--bg-1)), var(--bg-1) 64%); border: 1px solid color-mix(in oklch, var(--tc) 40%, var(--line)); border-radius: var(--r-xl); box-shadow: 0 0 60px color-mix(in oklch, var(--tc) 16%, transparent); }
+  /* Заливка плоская, как у карточек команд; цвет остаётся в рамке, имени и
+     свечении вокруг — это момент «передай телефон», подсветка тут по делу. */
+  .pass-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: clamp(10px, 1.6vh, 18px); padding: clamp(28px, 4vh, 56px) clamp(20px, 3vw, 48px); background: var(--bg-1); border: 1.5px solid color-mix(in srgb, var(--tc) 35%, transparent); border-radius: var(--r-xl); box-shadow: 0 0 60px color-mix(in srgb, var(--tc) 14%, transparent); }
   .pass-avatar .avatar { box-shadow: 0 0 0 6px color-mix(in oklch, var(--tc) 18%, transparent); }
   .pass-name { font-size: clamp(38px, 6vw, 76px); font-weight: 900; letter-spacing: -0.04em; line-height: 1; margin: 0; color: var(--tc); }
   .pass-team { font-size: clamp(15px, 1.2vw, 20px); color: var(--fg-1); font-weight: 600; margin: 0; }
