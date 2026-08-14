@@ -117,7 +117,7 @@ export default function AliasLandingPage() {
             <div key={title} className="al-card al-step">
               <div className="al-step-head">
                 <span className="mf-mono al-step-num">0{i + 1}</span>
-                <Icon size={21} color="var(--al-text-dim)" />
+                <Icon size={21} color="var(--mf-text-dim)" />
               </div>
               <div>
                 <div className="al-step-title">{title}</div>

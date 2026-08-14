@@ -7,15 +7,16 @@
    ============================================================ */
 
 :root {
-  /* Surfaces — cool ink */
-  --bg: #0a0d10;
-  --bg-1: #0e1316;
-  --bg-2: #131a1e;
-  --bg-3: #1a2227;
-  --bg-4: #232c32;
-  --bg-top: oklch(0.20 0.04 165); /* верх hero-градиента */
-  --line: rgba(255, 255, 255, 0.07);
-  --line-strong: rgba(255, 255, 255, 0.14);
+  /* Surfaces — тот же чернильный ramp, что у хаба и страниц платформы
+     (--ink-bg / --ink-surface ниже), чтобы карточки Алиаса, «О нас» и
+     хаба были одного цвета. */
+  --bg: #0e1014;
+  --bg-1: #161922;
+  --bg-2: #1b1f2a;
+  --bg-3: #232734;
+  --bg-4: #2d323f;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
 
   /* Text */
   --fg: #f1f3f4;
@@ -24,15 +25,15 @@
   --fg-3: #5b676d;
   --fg-4: #3a444a;
 
-  /* Accent — mint */
-  --accent: oklch(0.80 0.16 165);
-  --accent-2: oklch(0.86 0.15 165);
-  --accent-soft: oklch(0.80 0.16 165 / 0.16);
-  --accent-line: oklch(0.80 0.16 165 / 0.42);
-  --accent-fg: #052017;
+  /* Accent — зелёный Игротеки (тот же, что --alias-green на лендинге) */
+  --accent: #22c55e;
+  --accent-2: #4ade80;
+  --accent-soft: rgba(34, 197, 94, 0.16);
+  --accent-line: rgba(34, 197, 94, 0.42);
+  --accent-fg: #06130a;
 
   /* Teams (одна светлота/насыщенность, меняется hue) */
-  --team-1: oklch(0.80 0.16 165); /* mint */
+  --team-1: #22c55e;              /* зелёный Игротеки */
   --team-2: oklch(0.80 0.15 55);  /* amber */
   --team-3: oklch(0.74 0.15 285); /* violet */
   --team-4: oklch(0.78 0.14 235); /* sky */
@@ -40,15 +41,15 @@
   --team-6: oklch(0.82 0.16 120); /* lime */
 
   /* Status */
-  --success: oklch(0.80 0.16 165);
+  --success: #22c55e;
   --warn: oklch(0.80 0.15 60);
   --danger: oklch(0.66 0.20 25);
 
-  /* Geometry */
+  /* Geometry — совпадает с --r-card / --r-btn зоны Мафии */
   --r-xs: 8px;
   --r-sm: 12px;
-  --r-md: 16px;
-  --r-lg: 22px;
+  --r-md: 14px;
+  --r-lg: 20px;
   --r-xl: 30px;
   --r-2xl: 40px;
   --card-r: var(--r-lg); /* legacy alias (старые компоненты) */
@@ -60,7 +61,7 @@
   /* Shadows */
   --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 10px 30px rgba(0, 0, 0, 0.35);
   --shadow-pop: 0 30px 70px rgba(0, 0, 0, 0.55);
-  --glow: 0 0 50px oklch(0.80 0.16 165 / 0.28);
+  --glow: 0 0 50px rgba(34, 197, 94, 0.28);
 
   /* Fluid rhythm — растёт с вьюпортом, ограничено на больших экранах */
   --shell-w: 1240px;
@@ -203,23 +204,15 @@ html { scrollbar-color: var(--bg-4) transparent; }
     flex-direction: column;
     scrollbar-width: thin;
   }
+  /* Подложка плоская, как в Мафии и на хабе: зелёный работает акцентом на
+     элементах, а не заливкой всего экрана. Раньше здесь было ещё .app::after
+     с мятно-фиолетовым свечением сверху. */
   .app::before {
     content: "";
     position: fixed;
     inset: 0;
     z-index: -2;
     background: var(--bg);
-  }
-  .app::after {
-    content: "";
-    position: fixed;
-    inset: -20% -10% auto -10%;
-    height: 80vh;
-    z-index: -1;
-    background:
-      radial-gradient(60% 70% at 18% 0%, oklch(0.80 0.16 165 / 0.10), transparent 70%),
-      radial-gradient(55% 65% at 92% 8%, oklch(0.74 0.15 285 / 0.08), transparent 72%);
-    pointer-events: none;
   }
 
   .shell {
@@ -1300,7 +1293,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
 
   /* Подложка нейтральная, как у Мафии: зелёный остаётся только акцентом
      на заголовке и мелких деталях, фон-градиента нет. */
-  .al-landing { min-height: 100dvh; background: var(--mf-bg); color: var(--mf-text); font-family: var(--font-main); display: flex; justify-content: center; }
+  .al-landing { min-height: 100dvh; background: var(--ink-bg); color: var(--mf-text); font-family: var(--font-main); display: flex; justify-content: center; }
   .al-landing-inner { width: 100%; max-width: 920px; display: flex; flex-direction: column; gap: 8px; padding-bottom: 28px; }
 
   .al-chip { display: inline-flex; align-items: center; gap: 6px; border-radius: var(--r-chip); padding: 5px 12px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.02em; background: rgba(255, 255, 255, 0.07); color: var(--mf-text-dim); }
