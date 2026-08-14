@@ -3,7 +3,6 @@
 
 import Brand from "./Brand";
 import { NavLinks, NavMenu } from "./Nav";
-import ThemeToggle from "./ThemeToggle";
 
 interface HeaderProps {
   /** Контент справа от лого, слева от навигации/темы. */
@@ -24,7 +23,6 @@ export function Header({ right, nav }: HeaderProps) {
           <div className="header-actions">
             {right}
             {nav && <NavMenu />}
-            <ThemeToggle />
           </div>
         </div>
       </div>

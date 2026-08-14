@@ -5,7 +5,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { supportMailto } from "@/constants/site";
 
 const NAV: [string, string][] = [
@@ -35,8 +34,6 @@ export function PlatformTopBar({ active }: { active?: string }) {
         ))}
         <a href={supportMailto()}>Поддержка</a>
       </nav>
-
-      <ThemeToggle />
     </div>
   );
 }
