@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./constants": "./src/constants.ts",
+    "./countdown": "./src/countdown.ts",
     "./domain": "./src/domain.ts",
     "./load-env": "./src/load-env.ts",
     "./mafia": "./src/mafia.ts",

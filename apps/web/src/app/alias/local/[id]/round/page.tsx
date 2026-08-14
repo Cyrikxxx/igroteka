@@ -48,7 +48,7 @@ export default function LocalRoundPage() {
     setPhase("summary");
   }, []);
 
-  const { timeLeft, start, pause, isRunning } = useTimer({
+  const { timeLeft, start, pause } = useTimer({
     initialTime: game?.roundTime ?? 60,
     onTimeUp: handleTimeUp,
   });
@@ -85,12 +85,26 @@ export default function LocalRoundPage() {
     })();
   }, [gameId, router]);
 
-  // Стартуем таймер, как только игра загружена
+  // Пускаем таймер ровно один раз, когда игра загрузилась. Через ref, а не
+  // через сравнение timeLeft с длительностью раунда: иначе пауза, поставленная
+  // в первые доли секунды, тут же снималась бы этим эффектом.
+  const startedRef = useRef(false);
   useEffect(() => {
-    if (phase === "active" && game && !isRunning && timeLeft === game.roundTime) {
+    if (phase === "active" && game && !startedRef.current) {
+      startedRef.current = true;
       start();
     }
-  }, [phase, game, isRunning, timeLeft, start]);
+  }, [phase, game, start]);
+
+  // Слова кончились раньше таймера — закрываем раунд. Раньше это делалось
+  // прямо внутри updater'а setCurrentIndex, а updater обязан быть чистым:
+  // в dev-режиме React вызывает его дважды.
+  useEffect(() => {
+    if (phase === "active" && words.length > 0 && currentIndex >= words.length) {
+      pause();
+      setPhase("summary");
+    }
+  }, [phase, currentIndex, words.length, pause]);
 
   const guess = (guessed: boolean) => {
     setFlash(guessed ? "got" : "skip");
@@ -102,14 +116,7 @@ export default function LocalRoundPage() {
       next[idx] = { ...next[idx], guessed };
       return next;
     });
-    setCurrentIndex((i) => {
-      const nextIdx = i + 1;
-      if (nextIdx >= wordsRef.current.length) {
-        setPhase("summary");
-        pause();
-      }
-      return nextIdx;
-    });
+    setCurrentIndex((i) => i + 1);
   };
 
   const toggleSummaryWord = (wordId: number) =>
