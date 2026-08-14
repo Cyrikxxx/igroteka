@@ -703,6 +703,13 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .link-btn:hover { color: var(--fg); background: var(--bg-2); }
   .link-btn-accent { color: var(--accent); }
   .link-btn-accent:hover { color: var(--accent-2); background: var(--accent-soft); border-color: var(--accent-line); }
+
+  /* Плашка с сообщением. Один и тот же набор инлайновых стилей был
+     продублирован на пяти экранах — и в каждом из них подкрашивание шло
+     через oklch, из-за чего красная плашка уходила в фиолетовый. */
+  .notice { border-radius: var(--r-lg); padding: 14px 16px; font-weight: 600; }
+  .notice-danger { background: color-mix(in srgb, var(--danger) 12%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--danger) 32%, transparent); color: var(--danger); }
+  .notice-warn { background: color-mix(in srgb, var(--warn) 12%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--warn) 32%, transparent); }
   .slot-x, .st-name-input { all: unset; }
   /* flex: none — потому что `all: unset` выше вернул flex-shrink в 1, и
      крестик сам начинал сжиматься вместо того, чтобы держать размер. */

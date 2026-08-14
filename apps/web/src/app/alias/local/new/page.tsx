@@ -206,17 +206,7 @@ export default function LocalNewPage() {
       </div>
 
       {error && (
-        <div
-          className="card"
-          style={{
-            marginTop: 16,
-            background: "color-mix(in oklch, var(--danger) 12%, var(--bg-2))",
-            border: "1px solid color-mix(in oklch, var(--danger) 30%, transparent)",
-            color: "var(--danger)",
-            boxShadow: "none",
-            padding: 14,
-          }}
-        >
+        <div className="notice notice-danger" style={{ marginTop: 16 }}>
           {error}
         </div>
       )}

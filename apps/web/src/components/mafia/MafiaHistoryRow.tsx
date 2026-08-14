@@ -44,7 +44,7 @@ export default function MafiaHistoryRow({ game }: { game: MafiaHistoryGame }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "color-mix(in oklch, var(--bg-3) 70%, transparent)",
+          background: "color-mix(in srgb, var(--bg-3) 70%, transparent)",
           color: w?.color ?? "var(--fg-2)",
           flexShrink: 0,
         }}

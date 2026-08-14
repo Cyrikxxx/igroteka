@@ -217,16 +217,7 @@ export default function PlayPage() {
               />
 
               {showExplainerDropBanner && (
-                <div
-                  className="card"
-                  style={{
-                    margin: "0 0 12px",
-                    padding: 12,
-                    boxShadow: "none",
-                    background: "color-mix(in oklch, var(--warn) 14%, var(--bg-2))",
-                    border: "1px solid color-mix(in oklch, var(--warn) 35%, transparent)",
-                  }}
-                >
+                <div className="notice notice-warn" style={{ margin: "0 0 12px" }}>
                   <div className="row-between" style={{ gap: 10, flexWrap: "wrap" }}>
                     <div>
                       <div style={{ fontWeight: 700, color: "var(--warn)" }}>
