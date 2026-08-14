@@ -414,7 +414,7 @@ function GameTop({
         <LogOut /> Выйти
       </button>
       <div className="game-turn">
-        <Avatar name={explainerName} color={teamColor} size={34} online={role !== "explainer"} />
+        <Avatar name={explainerName} color={teamColor} size={40} online={role !== "explainer"} />
         <div>
           <span className="gt-name">{role === "explainer" ? "Твой ход" : `${explainerName} объясняет`}</span>
           <span className="gt-team mono">

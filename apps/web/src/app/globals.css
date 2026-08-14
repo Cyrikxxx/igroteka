@@ -184,6 +184,13 @@ html { scrollbar-color: var(--bg-4) transparent; }
   50% { opacity: 0.45; transform: scale(0.85); }
 }
 
+/* Подкрашивание поверхностей делаем ТОЛЬКО через color-mix(in srgb, …).
+   oklch — полярное пространство: он интерполирует угол тона, поэтому
+   «подмешать 11% зелёного в синеватую подложку» давало не зеленоватую
+   карточку, а голубую (тон 255° вместо 192°), а «70% поверхности +
+   transparent» уводило тон к пурпуру и на зелёном фоне читалось коричневым.
+   В зонах Мафии и платформы всегда использовался srgb — теперь и здесь. */
+
 @layer components {
   /* ============================================================
      App shell — фикс. высота вьюпорта + один внутренний скролл
@@ -341,7 +348,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
   }
   .card-flat { background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r-lg); }
   .card-glass {
-    background: color-mix(in oklch, var(--bg-1) 70%, transparent);
+    background: color-mix(in srgb, var(--bg-1) 70%, transparent);
     backdrop-filter: blur(14px);
     border: 1px solid var(--line-strong);
     border-radius: var(--r-lg);
@@ -372,8 +379,8 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .pill svg { width: 1.05em; height: 1.05em; }
   .pill-mono { font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px; font-weight: 600; }
   .pill-accent { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
-  .pill-warn { background: color-mix(in oklch, var(--warn) 16%, var(--bg-2)); border-color: color-mix(in oklch, var(--warn) 38%, var(--line)); color: var(--warn); }
-  .pill-live { background: color-mix(in oklch, var(--danger) 18%, var(--bg-2)); color: var(--mf-crimson-hover); border-color: color-mix(in oklch, var(--danger) 36%, var(--line)); }
+  .pill-warn { background: color-mix(in srgb, var(--warn) 16%, var(--bg-2)); border-color: color-mix(in srgb, var(--warn) 38%, var(--line)); color: var(--warn); }
+  .pill-live { background: color-mix(in srgb, var(--danger) 18%, var(--bg-2)); color: var(--mf-crimson-hover); border-color: color-mix(in srgb, var(--danger) 36%, var(--line)); }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
   .dot-pulse { animation: ping 1.6s ease-out infinite; }
 
@@ -545,7 +552,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
     border: 1px solid var(--line);
     border-radius: var(--r-sm);
   }
-  .slot.active { border-color: var(--accent-line); background: color-mix(in oklch, var(--accent) 9%, var(--bg-2)); }
+  .slot.active { border-color: var(--accent-line); background: color-mix(in srgb, var(--accent) 9%, var(--bg-2)); }
   /* min-width: 0 обязателен: .slot-name — это <input>, у флекс-элемента
      min-width по умолчанию auto, то есть поле не сжимается ниже своей
      предпочтительной ширины (~180px). На узкой колонке строка от этого
@@ -568,7 +575,12 @@ html { scrollbar-color: var(--bg-4) transparent; }
     min-height: clamp(76px, 6vw, 110px);
   }
   .cat-card:hover { border-color: var(--line-strong); }
-  .cat-card.on { background: color-mix(in oklch, var(--accent) 11%, var(--bg-2)); border-color: var(--accent-line); }
+  /* Выбранная категория — заметно зелёная, как .mf-player-card.picked в Мафии. */
+  .cat-card.on {
+    background: color-mix(in srgb, var(--accent) 14%, var(--bg-2));
+    border-color: var(--accent-line);
+    box-shadow: 0 0 24px rgba(34, 197, 94, 0.16);
+  }
   .cat-card .cat-emoji { font-size: clamp(22px, 1.8vw, 30px); line-height: 1; }
   .cat-card .cat-name { font-weight: 700; font-size: clamp(14px, 0.95vw, 18px); }
   .cat-card .cat-count { font-family: var(--font-mono); font-size: 12px; color: var(--fg-2); }
@@ -609,9 +621,9 @@ html { scrollbar-color: var(--bg-4) transparent; }
     transition: .12s;
   }
   .word-row .wr-ic { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; flex: none; }
-  .word-row.got { background: color-mix(in oklch, var(--accent) 10%, var(--bg-1)); border-color: var(--accent-line); }
+  .word-row.got { background: color-mix(in srgb, var(--accent) 10%, var(--bg-1)); border-color: var(--accent-line); }
   .word-row.got .wr-ic { background: var(--accent); color: var(--accent-fg); }
-  .word-row.skip { background: color-mix(in oklch, var(--danger) 9%, var(--bg-1)); border-color: color-mix(in oklch, var(--danger) 36%, var(--line)); }
+  .word-row.skip { background: color-mix(in srgb, var(--danger) 9%, var(--bg-1)); border-color: color-mix(in srgb, var(--danger) 36%, var(--line)); }
   .word-row.skip .wr-ic { background: var(--danger); color: #fff; }
   .word-row .wr-pts { margin-left: auto; font-family: var(--font-mono); font-size: 13px; color: var(--fg-2); }
 
@@ -679,11 +691,23 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .back-link:hover { color: var(--fg); }
   .back-link svg { width: 17px; height: 17px; }
   .chip-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  /* Текстовые действия в заголовке блока («Все», «Очистить»). Были 12px
+     подчёркнутого текста без области нажатия — попасть мышью тяжело,
+     пальцем тем более. */
+  .link-btn {
+    background: none; border: 1px solid transparent; cursor: pointer;
+    font: inherit; font-size: clamp(13px, 0.9vw, 15px); font-weight: 700;
+    color: var(--fg-2); padding: 8px 14px; border-radius: var(--r-sm);
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  .link-btn:hover { color: var(--fg); background: var(--bg-2); }
+  .link-btn-accent { color: var(--accent); }
+  .link-btn-accent:hover { color: var(--accent-2); background: var(--accent-soft); border-color: var(--accent-line); }
   .slot-x, .st-name-input { all: unset; }
   /* flex: none — потому что `all: unset` выше вернул flex-shrink в 1, и
      крестик сам начинал сжиматься вместо того, чтобы держать размер. */
   .slot-x { cursor: pointer; color: var(--fg-3); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; flex: none; }
-  .slot-x:hover { color: var(--danger); background: color-mix(in oklch, var(--danger) 14%, transparent); }
+  .slot-x:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
 
 
 
@@ -737,7 +761,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .lobby-team .lt-title { display: flex; flex-direction: column; gap: 3px; }
   .lobby-team .lt-name { font-weight: 800; font-size: clamp(17px, 1.3vw, 22px); letter-spacing: -0.02em; color: var(--tc); }
   .lobby-team .lt-count { font-size: 12px; color: var(--fg-2); }
-  .lobby-player { display: flex; align-items: center; gap: 11px; padding: 9px 12px; background: color-mix(in oklch, var(--bg-2) 80%, transparent); border: 1px solid var(--line); border-radius: var(--r-sm); }
+  .lobby-player { display: flex; align-items: center; gap: 11px; padding: 9px 12px; background: color-mix(in srgb, var(--bg-2) 80%, transparent); border: 1px solid var(--line); border-radius: var(--r-sm); }
   .lobby-player .lp-name { font-weight: 700; font-size: 14.5px; flex: 1; }
   .lobby-player .lp-name em { color: var(--fg-3); font-style: normal; font-weight: 600; }
   .lobby-add { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: auto; padding: 11px; border: 1px dashed var(--line-strong); border-radius: var(--r-sm); background: none; color: var(--fg-3); font-size: 13px; font-weight: 600; cursor: pointer; transition: color .15s, border-color .15s; }
@@ -762,7 +786,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .st-name-input { font-weight: 800; font-size: clamp(17px, 1.3vw, 22px); letter-spacing: -0.02em; color: var(--tc); width: 100%; min-width: 0; flex: 1; }
   /* фокус-рамка и выделение текста — в оттенке команды (--tc), а не всегда зелёные */
   .st-name-input:focus { outline: 1.5px solid var(--tc, var(--accent-line)); outline-offset: 4px; border-radius: 4px; }
-  .team-card ::selection { background: color-mix(in oklch, var(--tc) 30%, transparent); }
+  .team-card ::selection { background: color-mix(in srgb, var(--tc) 30%, transparent); }
   .st-empty { color: var(--fg-3); font-size: 13px; text-align: center; padding: 14px; margin: 0; }
   .st-add { display: flex; gap: 10px; margin-top: 14px; }
   .st-add .input { height: clamp(44px, 3vw, 52px); }
@@ -786,13 +810,22 @@ html { scrollbar-color: var(--bg-4) transparent; }
   /* ============ GAME ============ */
   .game-screen { position: relative; flex: 1; min-height: 0; display: flex; padding-block: 0; }
   .game-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, var(--accent-soft), transparent 55%); pointer-events: none; transition: background .4s; }
-  .game-screen.danger .game-bg { background: radial-gradient(ellipse at 50% 0%, color-mix(in oklch, var(--danger) 18%, transparent), transparent 55%); }
+  .game-screen.danger .game-bg { background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--danger) 18%, transparent), transparent 55%); }
   .game-shell { display: flex; flex-direction: column; min-height: 100%; flex: 1; padding-block: clamp(10px, 1.6vh, 24px) clamp(12px, 2vh, 30px); position: relative; }
-  .game-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-  .game-top .back-link { margin: 0; }
-  .game-turn { display: flex; align-items: center; gap: 12px; }
-  .game-turn .gt-name { display: block; font-weight: 800; font-size: clamp(15px, 1.1vw, 19px); letter-spacing: -0.01em; }
-  .game-turn .gt-team { display: block; font-size: 12px; color: var(--fg-2); }
+  /* Верхняя строка игрового экрана крупнее, чем те же элементы на экранах
+     настройки: до «Выйти» и паузы дотягиваются пальцем в спешке, а «Твой ход»
+     читают через стол. Прирост по высоте — около 8px, .game-center его
+     забирает своими clamp'ами, так что экран по-прежнему влезает целиком. */
+  .game-top { display: flex; align-items: center; justify-content: space-between; gap: clamp(12px, 1.6vw, 22px); }
+  .game-top .back-link { margin: 0; font-size: clamp(15px, 1.05vw, 17px); padding: 8px 10px; margin-left: -10px; border-radius: var(--r-sm); }
+  .game-top .back-link:hover { background: var(--bg-2); }
+  .game-top .back-link svg { width: 20px; height: 20px; }
+  .game-top .icon-btn { width: clamp(46px, 3.4vw, 56px); }
+  .game-top .icon-btn svg { width: 23px; height: 23px; }
+  .game-top .pill { padding: 9px 15px; font-size: clamp(12px, 0.85vw, 13.5px); }
+  .game-turn { display: flex; align-items: center; gap: 14px; }
+  .game-turn .gt-name { display: block; font-weight: 800; font-size: clamp(16px, 1.3vw, 22px); letter-spacing: -0.01em; }
+  .game-turn .gt-team { display: block; font-size: clamp(12px, 0.95vw, 14px); color: var(--fg-2); margin-top: 2px; }
   .game-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(10px, 2.6vh, 44px); padding-block: clamp(8px, 1.6vh, 32px); min-height: 0; }
   .game-timer { width: clamp(108px, 22vh, 188px); height: clamp(108px, 22vh, 188px); flex: none; }
   .game-timer .t-val { font-size: clamp(26px, 6vh, 46px); color: var(--fg); }
@@ -809,8 +842,8 @@ html { scrollbar-color: var(--bg-4) transparent; }
     transition: transform .12s, border-color .2s, background .2s;
     max-width: min(92vw, 720px);
   }
-  .word-card-big.flash-got { border-color: var(--accent); background: color-mix(in oklch, var(--accent) 12%, var(--bg-1)); transform: scale(1.02); }
-  .word-card-big.flash-skip { border-color: var(--danger); background: color-mix(in oklch, var(--danger) 10%, var(--bg-1)); transform: scale(0.99); }
+  .word-card-big.flash-got { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg-1)); transform: scale(1.02); }
+  .word-card-big.flash-skip { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--bg-1)); transform: scale(0.99); }
   .word-eyebrow { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: clamp(10px, 0.8vw, 12px); letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-3); }
   .word-main { font-size: clamp(34px, 7.5vh, 96px); font-weight: 900; letter-spacing: -0.04em; line-height: 1; }
   .word-index { font-size: 12px; color: var(--fg-3); }
@@ -825,20 +858,20 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .game-counts--big .gc span { font-size: clamp(13px, 1.6vh, 18px); }
   .gc span { font-size: 12px; font-weight: 600; color: var(--fg-2); }
   .gc-got { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
-  .gc-skip { color: var(--danger); border-color: color-mix(in oklch, var(--danger) 36%, var(--line)); }
+  .gc-skip { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 36%, var(--line)); }
   .game-actions { display: grid; grid-template-columns: 1fr 1.4fr; gap: 14px; flex: none; }
   .game-actions.single { display: block; }
   .game-btn { height: clamp(54px, 8vh, 86px); border: 0; border-radius: var(--r-lg); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; font-weight: 800; font-size: clamp(16px, 2.2vh, 23px); letter-spacing: -0.01em; transition: transform .08s, filter .15s; }
   .game-btn:active { transform: translateY(2px); }
   .game-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .game-btn.skip { background: var(--bg-2); color: var(--danger); border: 1px solid color-mix(in oklch, var(--danger) 40%, var(--line)); }
-  .game-btn.skip:hover { background: color-mix(in oklch, var(--danger) 12%, var(--bg-2)); }
+  .game-btn.skip { background: var(--bg-2); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--line)); }
+  .game-btn.skip:hover { background: color-mix(in srgb, var(--danger) 12%, var(--bg-2)); }
   .game-btn.got { background: linear-gradient(160deg, var(--accent-2), var(--accent)); color: var(--accent-fg); box-shadow: var(--glow); }
   .game-btn.got:hover { filter: brightness(1.05); }
   .guesser-foot { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; }
 
   /* Подложка всех модалок (Modal.tsx) */
-  .pause-overlay { position: fixed; inset: 0; z-index: 80; background: color-mix(in oklch, var(--bg) 78%, transparent); backdrop-filter: blur(10px); display: grid; place-items: center; padding: 24px; }
+  .pause-overlay { position: fixed; inset: 0; z-index: 80; background: color-mix(in srgb, var(--bg) 78%, transparent); backdrop-filter: blur(10px); display: grid; place-items: center; padding: 24px; }
 
   /* ============ ROUND SUMMARY ============ */
   .summary-wrap { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1fr); gap: clamp(28px, 3.5vw, 64px); align-items: center; }
@@ -857,7 +890,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
   /* ============ VICTORY ============ */
   .victory-wrap { display: flex; flex-direction: column; align-items: center; gap: clamp(16px, 2.6vh, 44px); }
   .victory-head { text-align: center; display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1.4vh, 14px); }
-  .victory-trophy { width: clamp(64px, 9vh, 116px); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; color: var(--tc); background: color-mix(in oklch, var(--tc) 16%, var(--bg-1)); border: 1px solid color-mix(in oklch, var(--tc) 44%, var(--line)); box-shadow: 0 0 50px color-mix(in oklch, var(--tc) 30%, transparent); }
+  .victory-trophy { width: clamp(64px, 9vh, 116px); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; color: var(--tc); background: color-mix(in srgb, var(--tc) 16%, var(--bg-1)); border: 1px solid color-mix(in srgb, var(--tc) 44%, var(--line)); box-shadow: 0 0 50px color-mix(in srgb, var(--tc) 30%, transparent); }
   .victory-title { line-height: 0.9; font-size: clamp(40px, 8vh, 96px); }
   .podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 1.6vw, 28px); align-items: end; width: 100%; max-width: 760px; }
   .podium-col { display: flex; flex-direction: column; align-items: center; gap: 14px; }
@@ -866,9 +899,9 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .podium-score { font-size: clamp(20px, 1.8vw, 30px); font-weight: 800; }
   .podium-crown { color: var(--tc); margin-bottom: 2px; }
   /* Столбик подиума — ровная подкрашенная заливка вместо растяжки в фон. */
-  .podium-bar { width: 100%; border-radius: var(--r-md) var(--r-md) 0 0; background: color-mix(in oklch, var(--tc) 14%, var(--bg-1)); border: 1.5px solid color-mix(in srgb, var(--tc) 35%, transparent); border-bottom: 0; display: grid; place-items: start center; padding-top: 12px; }
+  .podium-bar { width: 100%; border-radius: var(--r-md) var(--r-md) 0 0; background: color-mix(in srgb, var(--tc) 14%, var(--bg-1)); border: 1.5px solid color-mix(in srgb, var(--tc) 35%, transparent); border-bottom: 0; display: grid; place-items: start center; padding-top: 12px; }
   .podium-place { font-size: clamp(22px, 2vw, 34px); font-weight: 800; color: var(--tc); }
-  .podium-col.p1 .podium-bar { box-shadow: 0 0 40px color-mix(in oklch, var(--tc) 24%, transparent); }
+  .podium-col.p1 .podium-bar { box-shadow: 0 0 40px color-mix(in srgb, var(--tc) 24%, transparent); }
   .victory-table { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: 4px; padding: clamp(10px, 1vw, 16px); }
   .vt-row { display: grid; grid-template-columns: auto 12px 1fr auto auto; align-items: center; gap: 14px; padding: clamp(12px, 1.1vw, 18px) clamp(12px, 1.2vw, 20px); border-radius: var(--r-sm); }
   .vt-row:nth-child(odd) { background: var(--bg-2); }
@@ -886,14 +919,14 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .hist-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: var(--gap); }
   .hist-card { background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r-lg); padding: clamp(16px, 1.4vw, 24px); display: flex; flex-direction: column; gap: 14px; transition: border-color .15s; }
   .hist-card:hover { border-color: var(--line-strong); }
-  .hist-card.live { border-color: color-mix(in oklch, var(--danger) 38%, var(--line)); }
+  .hist-card.live { border-color: color-mix(in srgb, var(--danger) 38%, var(--line)); }
   .hist-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .hist-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .hist-code { font-size: 13px; color: var(--fg-2); letter-spacing: 0.04em; }
   .hist-date { font-size: 12px; color: var(--fg-3); white-space: nowrap; }
   .hist-teams { display: flex; flex-direction: column; gap: 7px; }
   .hist-team { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--r-sm); background: var(--bg-2); border: 1px solid var(--line); }
-  .hist-team.win { background: color-mix(in oklch, var(--tc) 12%, var(--bg-2)); border-color: color-mix(in oklch, var(--tc) 40%, var(--line)); }
+  .hist-team.win { background: color-mix(in srgb, var(--tc) 12%, var(--bg-2)); border-color: color-mix(in srgb, var(--tc) 40%, var(--line)); }
   .hist-team .ht-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--tc); flex: none; }
   .hist-team .ht-name { font-weight: 700; font-size: 14.5px; color: var(--fg); flex: 1; }
   .hist-team.win .ht-name { color: var(--tc); }
@@ -911,7 +944,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
   /* Заливка плоская, как у карточек команд; цвет остаётся в рамке, имени и
      свечении вокруг — это момент «передай телефон», подсветка тут по делу. */
   .pass-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: clamp(10px, 1.6vh, 18px); padding: clamp(28px, 4vh, 56px) clamp(20px, 3vw, 48px); background: var(--bg-1); border: 1.5px solid color-mix(in srgb, var(--tc) 35%, transparent); border-radius: var(--r-xl); box-shadow: 0 0 60px color-mix(in srgb, var(--tc) 14%, transparent); }
-  .pass-avatar .avatar { box-shadow: 0 0 0 6px color-mix(in oklch, var(--tc) 18%, transparent); }
+  .pass-avatar .avatar { box-shadow: 0 0 0 6px color-mix(in srgb, var(--tc) 18%, transparent); }
   .pass-name { font-size: clamp(38px, 6vw, 76px); font-weight: 900; letter-spacing: -0.04em; line-height: 1; margin: 0; color: var(--tc); }
   .pass-team { font-size: clamp(15px, 1.2vw, 20px); color: var(--fg-1); font-weight: 600; margin: 0; }
   .pass-players { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
@@ -920,7 +953,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .pass-score { display: flex; flex-direction: column; gap: 12px; }
   .pass-score-list { display: flex; flex-direction: column; gap: 8px; }
   .pass-score-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: var(--r-sm); background: var(--bg-2); border: 1px solid var(--line); }
-  .pass-score-row.lead { background: color-mix(in oklch, var(--tc) 12%, var(--bg-2)); border-color: color-mix(in oklch, var(--tc) 40%, var(--line)); }
+  .pass-score-row.lead { background: color-mix(in srgb, var(--tc) 12%, var(--bg-2)); border-color: color-mix(in srgb, var(--tc) 40%, var(--line)); }
   .pass-score-row .psr-rank { color: var(--fg-3); font-weight: 700; font-size: 14px; width: 14px; }
   .pass-score-row .psr-dot { width: 11px; height: 11px; border-radius: 50%; background: var(--tc); }
   .pass-score-row .psr-name { font-weight: 700; font-size: 15px; flex: 1; }

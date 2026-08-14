@@ -289,7 +289,7 @@ export default function LocalRoundPage() {
               <LogOut /> Выйти
             </button>
             <div className="game-turn">
-              <Avatar name={player.name} color={colorVar} size={34} />
+              <Avatar name={player.name} color={colorVar} size={40} />
               <div>
                 <span className="gt-name">Твой ход</span>
                 <span className="gt-team mono">

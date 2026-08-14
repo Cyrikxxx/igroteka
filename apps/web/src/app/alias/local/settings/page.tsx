@@ -180,18 +180,10 @@ export default function LocalSettingsPage() {
           <div className="row-between" style={{ marginBottom: 16 }}>
             <h2 className="h-title">Категории слов</h2>
             <div className="row" style={{ gap: 10 }}>
-              <button
-                type="button"
-                onClick={selectAll}
-                style={{ background: "none", border: 0, cursor: "pointer", color: "var(--accent)", fontSize: 12, fontWeight: 600, textDecoration: "underline" }}
-              >
+              <button type="button" className="link-btn link-btn-accent" onClick={selectAll}>
                 Все
               </button>
-              <button
-                type="button"
-                onClick={clearAll}
-                style={{ background: "none", border: 0, cursor: "pointer", color: "var(--fg-2)", fontSize: 12, fontWeight: 600, textDecoration: "underline" }}
-              >
+              <button type="button" className="link-btn" onClick={clearAll}>
                 Очистить
               </button>
               <span className="pill pill-mono">
