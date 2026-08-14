@@ -83,7 +83,7 @@ export function VictoryView({ game, onHome, onRematch, rematchLabel = "Рева�
 
       <div className="victory-actions">
         <button type="button" className="btn btn-secondary btn-lg" onClick={onHome}>
-          <ArrowLeft /> На главную
+          <ArrowLeft /> К Алиасу
         </button>
         <button type="button" className="btn btn-primary btn-lg" onClick={onRematch}>
           <RefreshCw /> {rematchLabel}

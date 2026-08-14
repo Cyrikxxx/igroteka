@@ -3,7 +3,7 @@
 // эти билдеры и сама записывает результат в свой ioredis-клиент.
 
 import type { RoomSnapshot, RoomSnapshotPlayer } from "./domain";
-import { teamColorVar } from "./constants";
+import { teamColorVar, DEFAULT_TEAM_NAMES } from "./constants";
 
 export function buildLobbySnapshot(args: {
   code: string;
@@ -106,4 +106,28 @@ export function nextUnusedTeamColor(snapshot: RoomSnapshot): string {
   // Все цвета заняты (=MAX_TEAMS=6 команд уже). Возвращаем первый — на
   // практике сюда не попадаем, потому что MAX_TEAMS проверяется выше.
   return palette[0];
+}
+
+/**
+ * Подбирает свободное название для новой команды. Парная к
+ * `nextUnusedTeamColor`: раньше имя бралось по числу команд
+ * (`DEFAULT_TEAM_NAMES[teams.length]`), поэтому после удаления команды из
+ * середины списка следующая получала уже занятое имя — было видно как
+ * «Барсы, Орлы, Тигры, Волки, Барсы, Орлы».
+ *
+ * Сначала пробуем словарь `DEFAULT_TEAM_NAMES`, затем «Команда N» с первым
+ * свободным N. Сравнение без учёта регистра и пробелов по краям, чтобы
+ * переименованная вручную «барсы» тоже считалась занятой.
+ */
+export function nextUnusedTeamName(usedNames: Iterable<string>): string {
+  const used = new Set<string>();
+  for (const n of usedNames) used.add(n.trim().toLowerCase());
+
+  for (const name of DEFAULT_TEAM_NAMES) {
+    if (!used.has(name.toLowerCase())) return name;
+  }
+  for (let i = 1; ; i++) {
+    const name = `Команда ${i}`;
+    if (!used.has(name.toLowerCase())) return name;
+  }
 }

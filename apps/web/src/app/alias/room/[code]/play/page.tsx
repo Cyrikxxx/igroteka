@@ -9,6 +9,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Check, Clock, EyeOff, LogOut, Pause, SkipForward, Users, X } from "lucide-react";
 import { loadRoomCreds } from "@/lib/room-session";
 import { useRoom } from "@/hooks/useRoom";
+import { pluralize, WORDS } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
 import Avatar from "@/components/common/Avatar";
 import Modal from "@/components/common/Modal";
@@ -107,6 +108,13 @@ export default function PlayPage() {
   };
   const onReviewToggle = (wordId: number) => socket?.emit("round:review_toggle", { wordId }, () => {});
   const onReviewConfirm = () => socket?.emit("round:review_confirm", {}, () => {});
+  // Раньше «Выйти» просто уводило на хаб, не спросив и не сказав серверу:
+  // игрок оставался в комнате и висел в составе команды.
+  const onLeave = () => {
+    if (!window.confirm("Выйти из комнаты? Вернуться можно будет по тому же коду.")) return;
+    socket?.emit("room:leave", {}, () => {});
+    router.push("/alias");
+  };
 
   const canControlRound = role === "explainer" || creds.userId === snapshot.hostId;
   const showReconnectOverlay = status === "reconnecting" || (status === "error" && !!error);
@@ -180,9 +188,9 @@ export default function PlayPage() {
             type="button"
             className="btn btn-ghost btn-sm"
             style={{ marginTop: 18 }}
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/alias")}
           >
-            На главную
+            Выйти к Алиасу
           </button>
         </div>
       </Modal>
@@ -204,7 +212,7 @@ export default function PlayPage() {
                 teamName={teamName}
                 teamColor={teamColor}
                 roundNumber={snapshot.currentRoundNumber}
-                onLeave={() => router.push("/")}
+                onLeave={onLeave}
                 onPause={onPause}
               />
 
@@ -538,7 +546,7 @@ function ReviewView({
       <div className="card summary-words">
         <div className="row-between" style={{ marginBottom: 14 }}>
           <h2 className="h-title">Слова раунда</h2>
-          <span className="pill pill-mono">{review.words.length} слов</span>
+          <span className="pill pill-mono">{pluralize(review.words.length, WORDS)}</span>
         </div>
         <div className="words-list">
           {review.words.map((w) => (

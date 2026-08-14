@@ -10,8 +10,10 @@ import type { GameFromAPI, WordInRound } from "@/types";
 import { useTimer } from "@/hooks/useTimer";
 import { teamColorVar } from "@/constants/game";
 import { formatTime } from "@/lib/utils";
+import { pluralize, WORDS } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
 import Avatar from "@/components/common/Avatar";
+import Modal from "@/components/common/Modal";
 import TimerRing from "@/components/alias/game/TimerRing";
 
 type Phase = "loading" | "active" | "summary" | "saving";
@@ -232,7 +234,7 @@ export default function LocalRoundPage() {
           <div className="card summary-words">
             <div className="row-between" style={{ marginBottom: 14 }}>
               <h2 className="h-title">Слова раунда</h2>
-              <span className="pill pill-mono">{answered.length} слов</span>
+              <span className="pill pill-mono">{pluralize(answered.length, WORDS)}</span>
             </div>
             <div className="words-list">
               {answered.map((w) => (
@@ -268,7 +270,13 @@ export default function LocalRoundPage() {
               className="back-link"
               onClick={() => {
                 pause();
-                router.push("/");
+                // Раунд не сохраняется, счёт этой попытки пропадёт —
+                // раньше уходили молча по одному нажатию.
+                if (window.confirm("Выйти из партии? Текущий раунд не засчитается.")) {
+                  router.push("/alias");
+                } else {
+                  start();
+                }
               }}
             >
               <LogOut /> Выйти
@@ -330,57 +338,47 @@ export default function LocalRoundPage() {
           </div>
         </div>
 
-        {pauseOpen && (
-          <PauseOverlay
-            guessedCount={gotCount}
-            answeredCount={gotCount + skipCount}
-            timeLeft={timeLeft}
-            onResume={() => {
-              setPauseOpen(false);
-              start();
-            }}
-            onEndRound={() => {
-              setPauseOpen(false);
-              handleTimeUp();
-            }}
-          />
-        )}
+        {/* Раньше здесь был свой оверлей мимо Modal — из-за этого Esc не
+            закрывал паузу, фокус уходил за диалог, а фон продолжал
+            скроллиться. Онлайн-режим давно использует общий Modal. */}
+        <Modal
+          isOpen={pauseOpen}
+          title="Пауза"
+          onClose={() => {
+            setPauseOpen(false);
+            start();
+          }}
+        >
+          <p className="muted" style={{ marginBottom: 18 }}>
+            Таймер заморожен на <b className="mono">{formatTime(timeLeft)}</b>. {gotCount}/
+            {gotCount + skipCount} угадано. Можно продолжить или завершить раунд.
+          </p>
+          <div className="row" style={{ gap: 8 }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ flex: 1 }}
+              onClick={() => {
+                setPauseOpen(false);
+                handleTimeUp();
+              }}
+            >
+              <LogOut /> Завершить
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ flex: 1 }}
+              onClick={() => {
+                setPauseOpen(false);
+                start();
+              }}
+            >
+              <Play /> Продолжить
+            </button>
+          </div>
+        </Modal>
       </div>
     </AppShell>
-  );
-}
-
-function PauseOverlay({
-  guessedCount,
-  answeredCount,
-  timeLeft,
-  onResume,
-  onEndRound,
-}: {
-  guessedCount: number;
-  answeredCount: number;
-  timeLeft: number;
-  onResume: () => void;
-  onEndRound: () => void;
-}) {
-  return (
-    <div className="pause-overlay">
-      <div className="pause-card card screen-anim">
-        <Pause size={40} className="accent-text" />
-        <h2 className="h-display">Пауза</h2>
-        <p className="h-sub">
-          Таймер заморожен на <b className="mono">{formatTime(timeLeft)}</b>. {guessedCount}/
-          {answeredCount} угадано. Можно продолжить или завершить раунд.
-        </p>
-        <div className="pause-actions">
-          <button type="button" className="btn btn-secondary" onClick={onEndRound}>
-            <LogOut /> Завершить
-          </button>
-          <button type="button" className="btn btn-primary btn-lg" onClick={onResume}>
-            <Play /> Продолжить
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }

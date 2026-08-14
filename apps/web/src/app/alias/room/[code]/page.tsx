@@ -26,6 +26,7 @@ import {
 } from "@/constants/game";
 import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
 import { useRoom } from "@/hooks/useRoom";
+import { pluralize, PLAYERS, SPECTATORS } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
 import Avatar from "@/components/common/Avatar";
 import RoomCode from "@/components/common/RoomCode";
@@ -125,7 +126,7 @@ export default function LobbyPage() {
   const handleLeave = () => {
     socket?.emit("room:leave", {}, () => {});
     clearRoomCreds(creds.code);
-    router.push("/");
+    router.push("/alias");
   };
   const createTeam = () => socket?.emit("team:create", {}, () => {});
   const renameTeam = (teamId: number, name: string) =>
@@ -159,7 +160,7 @@ export default function LobbyPage() {
           </h1>
           <p className="h-sub" style={{ marginTop: 8 }}>
             {snapshot
-              ? `${playersTotal} игрок${plural(playersTotal)} · ${spectatorsTotal} зрител${pluralZ(spectatorsTotal)}`
+              ? `${pluralize(playersTotal, PLAYERS)} · ${pluralize(spectatorsTotal, SPECTATORS)}`
               : "Подключаемся…"}
           </p>
         </div>
@@ -300,7 +301,7 @@ export default function LobbyPage() {
           <>
             <span className="muted">
               {allTeamsHaveEnoughOnline
-                ? `${playersTotal} игроков · готово к старту`
+                ? `${pluralize(playersTotal, PLAYERS)} · готово к старту`
                 : `Нужно ≥${MIN_TEAMS} команды, в каждой ≥${MIN_PLAYERS_PER_TEAM} игрока онлайн`}
             </span>
             <div className="row" style={{ gap: 10 }}>
@@ -376,9 +377,9 @@ export default function LobbyPage() {
             type="button"
             className="btn btn-ghost btn-sm"
             style={{ marginTop: 18 }}
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/alias")}
           >
-            На главную
+            Выйти к Алиасу
           </button>
         </div>
       </Modal>
@@ -511,19 +512,3 @@ function ConnIndicator({ status }: { status: string }) {
   );
 }
 
-function plural(n: number): string {
-  const m = n % 10;
-  const t = n % 100;
-  if (t >= 11 && t <= 14) return "ов";
-  if (m === 1) return "";
-  if (m >= 2 && m <= 4) return "а";
-  return "ов";
-}
-function pluralZ(n: number): string {
-  const m = n % 10;
-  const t = n % 100;
-  if (t >= 11 && t <= 14) return "ей";
-  if (m === 1) return "ь";
-  if (m >= 2 && m <= 4) return "я";
-  return "ей";
-}

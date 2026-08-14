@@ -18,6 +18,7 @@ import {
 } from "@/constants/game";
 import type { CategoryFromAPI, CreateRoomResponse } from "@/types";
 import { loadDisplayName, saveDisplayName, saveRoomCreds } from "@/lib/room-session";
+import { plural, pluralize, CATEGORIES, WORDS } from "@/lib/plural";
 
 export default function RoomNewPage() {
   const router = useRouter();
@@ -91,8 +92,8 @@ export default function RoomNewPage() {
 
   return (
     <AppShell className="screen-anim">
-      <button type="button" className="back-link" onClick={() => router.push("/")}>
-        <ArrowLeft /> На главную
+      <button type="button" className="back-link" onClick={() => router.push("/alias")}>
+        <ArrowLeft /> К Алиасу
       </button>
 
       <div className="setup-head">
@@ -107,7 +108,9 @@ export default function RoomNewPage() {
         </div>
         <div className="setup-counter">
           <span className="sc-v mono">{categoryIds.length ? totalWordsInBank : 0}</span>
-          <span className="sc-l">слов · {categoryIds.length} категорий</span>
+          <span className="sc-l">
+            {plural(totalWordsInBank, WORDS)} · {pluralize(categoryIds.length, CATEGORIES)}
+          </span>
         </div>
       </div>
 
@@ -184,7 +187,7 @@ export default function RoomNewPage() {
           <div className="row-between" style={{ marginBottom: 16 }}>
             <h2 className="h-title">Категории слов</h2>
             <span className="pill pill-mono">
-              {categoryIds.length} / {categories.length || 10}
+              {categoryIds.length} / {categories.length}
             </span>
           </div>
           <div className="cats-grid">
@@ -228,13 +231,16 @@ export default function RoomNewPage() {
 
       <div className="setup-foot">
         <span className="muted">
-          «{roomTitle}» · {roundTime}с · до {winScore} · {categoryIds.length} категорий
+          {!hostName.trim()
+            ? "Введите ваш ник"
+            : categoryIds.length === 0
+              ? "Выберите хотя бы одну категорию"
+              : `«${roomTitle}» · ${roundTime}с · до ${winScore} · ${pluralize(categoryIds.length, CATEGORIES)}`}
         </span>
         <button
           type="button"
           className="btn btn-primary btn-lg"
-          style={{ opacity: ready ? 1 : 0.5 }}
-          disabled={submitting}
+          disabled={submitting || !ready}
           onClick={onSubmit}
         >
           <Wifi /> {submitting ? "Создаём…" : "Создать комнату"}

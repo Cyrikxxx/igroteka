@@ -541,7 +541,11 @@ html { scrollbar-color: var(--bg-4) transparent; }
     border-radius: var(--r-sm);
   }
   .slot.active { border-color: var(--accent-line); background: color-mix(in oklch, var(--accent) 9%, var(--bg-2)); }
-  .slot-name { font-weight: 700; font-size: clamp(14px, 0.95vw, 17px); flex: 1; }
+  /* min-width: 0 обязателен: .slot-name — это <input>, у флекс-элемента
+     min-width по умолчанию auto, то есть поле не сжимается ниже своей
+     предпочтительной ширины (~180px). На узкой колонке строка от этого
+     переполнялась и выдавливала крестик за рамку карточки. */
+  .slot-name { font-weight: 700; font-size: clamp(14px, 0.95vw, 17px); flex: 1; min-width: 0; }
   .slot-meta { font-size: 11.5px; color: var(--fg-2); font-family: var(--font-mono); }
 
   /* Category card */
@@ -671,7 +675,9 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .back-link svg { width: 17px; height: 17px; }
   .chip-row { display: flex; gap: 10px; flex-wrap: wrap; }
   .slot-x, .st-name-input { all: unset; }
-  .slot-x { cursor: pointer; color: var(--fg-3); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; }
+  /* flex: none — потому что `all: unset` выше вернул flex-shrink в 1, и
+     крестик сам начинал сжиматься вместо того, чтобы держать размер. */
+  .slot-x { cursor: pointer; color: var(--fg-3); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; flex: none; }
   .slot-x:hover { color: var(--danger); background: color-mix(in oklch, var(--danger) 14%, transparent); }
 
 
@@ -747,8 +753,8 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .setup-counter .sc-v { font-size: clamp(40px, 4vw, 68px); font-weight: 900; letter-spacing: -0.04em; line-height: 1; color: var(--accent); }
   .setup-counter .sc-l { font-size: 13px; color: var(--fg-2); font-family: var(--font-mono); }
   .teams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--gap); }
-  .setup-team .st-swatch { width: 14px; height: 14px; border-radius: 5px; background: var(--tc); }
-  .st-name-input { font-weight: 800; font-size: clamp(17px, 1.3vw, 22px); letter-spacing: -0.02em; color: var(--tc); width: 100%; }
+  .setup-team .st-swatch { width: 14px; height: 14px; border-radius: 5px; background: var(--tc); flex: none; }
+  .st-name-input { font-weight: 800; font-size: clamp(17px, 1.3vw, 22px); letter-spacing: -0.02em; color: var(--tc); width: 100%; min-width: 0; flex: 1; }
   /* фокус-рамка и выделение текста — в оттенке команды (--tc), а не всегда зелёные */
   .st-name-input:focus { outline: 1.5px solid var(--tc, var(--accent-line)); outline-offset: 4px; border-radius: 4px; }
   .team-card ::selection { background: color-mix(in oklch, var(--tc) 30%, transparent); }
@@ -826,10 +832,8 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .game-btn.got:hover { filter: brightness(1.05); }
   .guesser-foot { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; }
 
-  /* pause */
+  /* Подложка всех модалок (Modal.tsx) */
   .pause-overlay { position: fixed; inset: 0; z-index: 80; background: color-mix(in oklch, var(--bg) 78%, transparent); backdrop-filter: blur(10px); display: grid; place-items: center; padding: 24px; }
-  .pause-card { max-width: 460px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: clamp(32px, 4vw, 52px); }
-  .pause-actions { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
 
   /* ============ ROUND SUMMARY ============ */
   .summary-wrap { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1fr); gap: clamp(28px, 3.5vw, 64px); align-items: center; }

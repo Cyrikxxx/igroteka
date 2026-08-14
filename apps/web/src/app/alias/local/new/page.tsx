@@ -16,9 +16,10 @@ import {
   MAX_TEAMS,
   MIN_PLAYERS_PER_TEAM,
   MAX_PLAYERS_PER_TEAM,
-  DEFAULT_TEAM_NAMES,
   teamColorVar,
 } from "@/constants/game";
+import { nextUnusedTeamName } from "@alias/shared/snapshot-builders";
+import { plural, pluralize, PLAYERS, TEAMS, TEAMS_IN } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
 import Stepper from "@/components/common/Stepper";
 import Avatar from "@/components/common/Avatar";
@@ -74,7 +75,9 @@ export default function LocalNewPage() {
   const addTeam = () =>
     setState((s) => {
       if (s.teams.length >= MAX_TEAMS) return s;
-      const name = DEFAULT_TEAM_NAMES[s.teams.length] ?? `Команда ${s.teams.length + 1}`;
+      // Имя — первое свободное, а не по индексу: иначе после удаления команды
+      // из середины следующая получала уже занятое название.
+      const name = nextUnusedTeamName(s.teams.map((t) => t.name));
       return { ...s, teams: [...s.teams, { name, players: [{ name: "" }, { name: "" }] }] };
     });
 
@@ -105,8 +108,8 @@ export default function LocalNewPage() {
 
   return (
     <AppShell className="screen-anim">
-      <button type="button" className="back-link" onClick={() => router.push("/")}>
-        <ArrowLeft /> На главную
+      <button type="button" className="back-link" onClick={() => router.push("/alias")}>
+        <ArrowLeft /> К Алиасу
       </button>
 
       <div className="setup-head">
@@ -123,7 +126,7 @@ export default function LocalNewPage() {
         <div className="setup-counter">
           <span className="sc-v mono">{total}</span>
           <span className="sc-l">
-            игроков · {state.teams.length} команд{state.teams.length === 1 ? "а" : ""}
+            {plural(total, PLAYERS)} · {pluralize(state.teams.length, TEAMS)}
           </span>
         </div>
       </div>
@@ -138,7 +141,7 @@ export default function LocalNewPage() {
               style={{ "--tc": `var(${colorVar})` } as React.CSSProperties}
             >
               <div className="row-between" style={{ marginBottom: 14 }}>
-                <div className="row" style={{ gap: 10 }}>
+                <div className="row" style={{ gap: 10, flex: 1, minWidth: 0 }}>
                   <span className="st-swatch" />
                   <input
                     className="st-name-input"
@@ -150,7 +153,7 @@ export default function LocalNewPage() {
                 <button
                   type="button"
                   className="icon-btn"
-                  style={{ width: 36 }}
+                  style={{ width: 36, flex: "none" }}
                   onClick={() => removeTeam(teamIdx)}
                   disabled={state.teams.length <= MIN_TEAMS}
                   aria-label="Удалить команду"
@@ -182,7 +185,6 @@ export default function LocalNewPage() {
                     )}
                   </div>
                 ))}
-                {team.players.length === 0 && <p className="st-empty">Пока пусто — добавь игрока</p>}
                 {team.players.length < MAX_PLAYERS_PER_TEAM && (
                   <button type="button" className="lobby-add" onClick={() => addPlayer(teamIdx)}>
                     <Plus size={16} /> Добавить игрока
@@ -220,8 +222,10 @@ export default function LocalNewPage() {
       )}
 
       <div className="setup-foot">
+        {/* Причину, по которой ещё нельзя дальше, показываем сразу, а не
+            после нажатия — кнопку при этом не блокируем. */}
         <span className="muted">
-          {total} игроков в {state.teams.length} командах
+          {validate() ?? `${pluralize(total, PLAYERS)} в ${pluralize(state.teams.length, TEAMS_IN)}`}
         </span>
         <button type="button" className="btn btn-primary btn-lg" onClick={onNext}>
           Далее · настройки <ArrowRight />

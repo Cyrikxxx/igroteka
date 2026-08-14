@@ -46,7 +46,7 @@ export default function LocalResultsPage() {
     <AppShell centered className="screen-anim">
       <VictoryView
         game={game}
-        onHome={() => router.push("/")}
+        onHome={() => router.push("/alias")}
         onRematch={() => router.push("/alias/local/new")}
         rematchLabel="Новая игра"
       />

@@ -121,8 +121,8 @@ function JoinPageInner() {
   return (
     <AppShell centered className="screen-anim">
       <div className="form-narrow">
-        <button type="button" className="back-link" onClick={() => router.push("/")}>
-          <ArrowLeft /> На главную
+        <button type="button" className="back-link" onClick={() => router.push("/alias")}>
+          <ArrowLeft /> К Алиасу
         </button>
 
         <form className="card form-card" onSubmit={onSubmit}>
@@ -179,8 +179,8 @@ function JoinPageInner() {
           <button
             type="submit"
             className="btn btn-primary btn-lg btn-block"
-            style={{ marginTop: 22, opacity: full ? 1 : 0.55 }}
-            disabled={submitting}
+            style={{ marginTop: 22 }}
+            disabled={submitting || !full}
           >
             {submitting ? "Входим…" : "Войти"} <ArrowRight />
           </button>

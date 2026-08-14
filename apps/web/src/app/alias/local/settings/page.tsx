@@ -14,6 +14,7 @@ import {
   type LocalSetupState,
 } from "@/lib/local-setup";
 import { ROUND_TIME_OPTIONS, WIN_SCORE_OPTIONS } from "@/constants/game";
+import { pluralize, WORDS, CATEGORIES } from "@/lib/plural";
 import { CategoryFromAPI, GameFromAPI } from "@/types";
 import AppShell from "@/components/common/AppShell";
 import Stepper from "@/components/common/Stepper";
@@ -194,7 +195,7 @@ export default function LocalSettingsPage() {
                 Очистить
               </button>
               <span className="pill pill-mono">
-                {cats.length} / {categories.length || 10}
+                {cats.length} / {categories.length}
               </span>
             </div>
           </div>
@@ -239,13 +240,14 @@ export default function LocalSettingsPage() {
 
       <div className="setup-foot">
         <span className="muted">
-          {totalWordsInBank} слов · {cats.length} категорий выбрано
+          {cats.length === 0
+            ? "Выберите хотя бы одну категорию"
+            : `${pluralize(totalWordsInBank, WORDS)} · выбрано ${pluralize(cats.length, CATEGORIES)}`}
         </span>
         <button
           type="button"
           className="btn btn-primary btn-lg"
-          style={{ opacity: cats.length ? 1 : 0.5 }}
-          disabled={submitting}
+          disabled={submitting || cats.length === 0}
           onClick={onStart}
         >
           <Play /> {submitting ? "Создаём…" : "Начать игру"}

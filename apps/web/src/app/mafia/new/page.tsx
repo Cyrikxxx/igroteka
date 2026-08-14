@@ -79,7 +79,7 @@ export default function MafiaNewPage() {
           type="button"
           className="mf-phase-title"
           style={{ background: "none", border: "none", color: "var(--mf-text)", cursor: "pointer", padding: 0 }}
-          onClick={() => (step === 1 ? router.push("/") : setStep(1))}
+          onClick={() => (step === 1 ? router.push("/mafia") : setStep(1))}
         >
           <ArrowLeft size={20} color="var(--mf-text-faint)" />
           <span style={{ fontSize: 18 }}>{step === 1 ? "Новая комната" : "Настройки игры"}</span>

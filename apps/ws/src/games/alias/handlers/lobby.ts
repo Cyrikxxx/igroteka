@@ -13,6 +13,7 @@ import {
   nextTeamId,
   removePlayer,
   nextUnusedTeamColor,
+  nextUnusedTeamName,
 } from "@alias/shared/snapshot-builders";
 import {
   MAX_TEAMS,
@@ -93,7 +94,7 @@ export function registerLobbyHandlers(
         id,
         name:
           (typeof payload?.name === "string" && payload.name.trim().slice(0, 30)) ||
-          `Команда ${s.teams.length + 1}`,
+          nextUnusedTeamName(s.teams.map((t) => t.name)),
         color:
           typeof payload?.color === "string" && payload.color.startsWith("--")
             ? payload.color
