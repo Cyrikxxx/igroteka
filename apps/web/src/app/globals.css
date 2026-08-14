@@ -189,7 +189,13 @@ html { scrollbar-color: var(--bg-4) transparent; }
    «подмешать 11% зелёного в синеватую подложку» давало не зеленоватую
    карточку, а голубую (тон 255° вместо 192°), а «70% поверхности +
    transparent» уводило тон к пурпуру и на зелёном фоне читалось коричневым.
-   В зонах Мафии и платформы всегда использовался srgb — теперь и здесь. */
+   В зонах Мафии и платформы всегда использовался srgb — теперь и здесь.
+
+   Проценты подмешивания заодно подняты. Они подбирались под старую палитру,
+   где подложка была зеленоватой (#131a1e), а акцент — мятным. На нынешней
+   синеватой (#1b1f2a) слабая подмешка тонула: у .slot.active при 9% в
+   результате получалось #1c2e2f, где синего было даже больше, чем зелёного.
+   Ориентир — чтобы канал акцента опережал синий хотя бы на ~10. */
 
 @layer components {
   /* ============================================================
@@ -552,7 +558,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
     border: 1px solid var(--line);
     border-radius: var(--r-sm);
   }
-  .slot.active { border-color: var(--accent-line); background: color-mix(in srgb, var(--accent) 9%, var(--bg-2)); }
+  .slot.active { border-color: var(--accent-line); background: color-mix(in srgb, var(--accent) 16%, var(--bg-2)); }
   /* min-width: 0 обязателен: .slot-name — это <input>, у флекс-элемента
      min-width по умолчанию auto, то есть поле не сжимается ниже своей
      предпочтительной ширины (~180px). На узкой колонке строка от этого
@@ -577,7 +583,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .cat-card:hover { border-color: var(--line-strong); }
   /* Выбранная категория — заметно зелёная, как .mf-player-card.picked в Мафии. */
   .cat-card.on {
-    background: color-mix(in srgb, var(--accent) 14%, var(--bg-2));
+    background: color-mix(in srgb, var(--accent) 22%, var(--bg-2));
     border-color: var(--accent-line);
     box-shadow: 0 0 24px rgba(34, 197, 94, 0.16);
   }
@@ -621,9 +627,9 @@ html { scrollbar-color: var(--bg-4) transparent; }
     transition: .12s;
   }
   .word-row .wr-ic { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; flex: none; }
-  .word-row.got { background: color-mix(in srgb, var(--accent) 10%, var(--bg-1)); border-color: var(--accent-line); }
+  .word-row.got { background: color-mix(in srgb, var(--accent) 18%, var(--bg-1)); border-color: var(--accent-line); }
   .word-row.got .wr-ic { background: var(--accent); color: var(--accent-fg); }
-  .word-row.skip { background: color-mix(in srgb, var(--danger) 9%, var(--bg-1)); border-color: color-mix(in srgb, var(--danger) 36%, var(--line)); }
+  .word-row.skip { background: color-mix(in srgb, var(--danger) 16%, var(--bg-1)); border-color: color-mix(in srgb, var(--danger) 36%, var(--line)); }
   .word-row.skip .wr-ic { background: var(--danger); color: #fff; }
   .word-row .wr-pts { margin-left: auto; font-family: var(--font-mono); font-size: 13px; color: var(--fg-2); }
 
@@ -849,8 +855,8 @@ html { scrollbar-color: var(--bg-4) transparent; }
     transition: transform .12s, border-color .2s, background .2s;
     max-width: min(92vw, 720px);
   }
-  .word-card-big.flash-got { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg-1)); transform: scale(1.02); }
-  .word-card-big.flash-skip { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--bg-1)); transform: scale(0.99); }
+  .word-card-big.flash-got { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, var(--bg-1)); transform: scale(1.02); }
+  .word-card-big.flash-skip { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 18%, var(--bg-1)); transform: scale(0.99); }
   .word-eyebrow { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: clamp(10px, 0.8vw, 12px); letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-3); }
   .word-main { font-size: clamp(34px, 7.5vh, 96px); font-weight: 900; letter-spacing: -0.04em; line-height: 1; }
   .word-index { font-size: 12px; color: var(--fg-3); }
@@ -897,7 +903,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
   /* ============ VICTORY ============ */
   .victory-wrap { display: flex; flex-direction: column; align-items: center; gap: clamp(16px, 2.6vh, 44px); }
   .victory-head { text-align: center; display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1.4vh, 14px); }
-  .victory-trophy { width: clamp(64px, 9vh, 116px); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; color: var(--tc); background: color-mix(in srgb, var(--tc) 16%, var(--bg-1)); border: 1px solid color-mix(in srgb, var(--tc) 44%, var(--line)); box-shadow: 0 0 50px color-mix(in srgb, var(--tc) 30%, transparent); }
+  .victory-trophy { width: clamp(64px, 9vh, 116px); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; color: var(--tc); background: color-mix(in srgb, var(--tc) 22%, var(--bg-1)); border: 1px solid color-mix(in srgb, var(--tc) 44%, var(--line)); box-shadow: 0 0 50px color-mix(in srgb, var(--tc) 30%, transparent); }
   .victory-title { line-height: 0.9; font-size: clamp(40px, 8vh, 96px); }
   .podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 1.6vw, 28px); align-items: end; width: 100%; max-width: 760px; }
   .podium-col { display: flex; flex-direction: column; align-items: center; gap: 14px; }
@@ -906,7 +912,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .podium-score { font-size: clamp(20px, 1.8vw, 30px); font-weight: 800; }
   .podium-crown { color: var(--tc); margin-bottom: 2px; }
   /* Столбик подиума — ровная подкрашенная заливка вместо растяжки в фон. */
-  .podium-bar { width: 100%; border-radius: var(--r-md) var(--r-md) 0 0; background: color-mix(in srgb, var(--tc) 14%, var(--bg-1)); border: 1.5px solid color-mix(in srgb, var(--tc) 35%, transparent); border-bottom: 0; display: grid; place-items: start center; padding-top: 12px; }
+  .podium-bar { width: 100%; border-radius: var(--r-md) var(--r-md) 0 0; background: color-mix(in srgb, var(--tc) 20%, var(--bg-1)); border: 1.5px solid color-mix(in srgb, var(--tc) 35%, transparent); border-bottom: 0; display: grid; place-items: start center; padding-top: 12px; }
   .podium-place { font-size: clamp(22px, 2vw, 34px); font-weight: 800; color: var(--tc); }
   .podium-col.p1 .podium-bar { box-shadow: 0 0 40px color-mix(in srgb, var(--tc) 24%, transparent); }
   .victory-table { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: 4px; padding: clamp(10px, 1vw, 16px); }
@@ -933,7 +939,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .hist-date { font-size: 12px; color: var(--fg-3); white-space: nowrap; }
   .hist-teams { display: flex; flex-direction: column; gap: 7px; }
   .hist-team { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--r-sm); background: var(--bg-2); border: 1px solid var(--line); }
-  .hist-team.win { background: color-mix(in srgb, var(--tc) 12%, var(--bg-2)); border-color: color-mix(in srgb, var(--tc) 40%, var(--line)); }
+  .hist-team.win { background: color-mix(in srgb, var(--tc) 18%, var(--bg-2)); border-color: color-mix(in srgb, var(--tc) 40%, var(--line)); }
   .hist-team .ht-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--tc); flex: none; }
   .hist-team .ht-name { font-weight: 700; font-size: 14.5px; color: var(--fg); flex: 1; }
   .hist-team.win .ht-name { color: var(--tc); }
@@ -960,7 +966,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .pass-score { display: flex; flex-direction: column; gap: 12px; }
   .pass-score-list { display: flex; flex-direction: column; gap: 8px; }
   .pass-score-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: var(--r-sm); background: var(--bg-2); border: 1px solid var(--line); }
-  .pass-score-row.lead { background: color-mix(in srgb, var(--tc) 12%, var(--bg-2)); border-color: color-mix(in srgb, var(--tc) 40%, var(--line)); }
+  .pass-score-row.lead { background: color-mix(in srgb, var(--tc) 18%, var(--bg-2)); border-color: color-mix(in srgb, var(--tc) 40%, var(--line)); }
   .pass-score-row .psr-rank { color: var(--fg-3); font-weight: 700; font-size: 14px; width: 14px; }
   .pass-score-row .psr-dot { width: 11px; height: 11px; border-radius: 50%; background: var(--tc); }
   .pass-score-row .psr-name { font-weight: 700; font-size: 15px; flex: 1; }
