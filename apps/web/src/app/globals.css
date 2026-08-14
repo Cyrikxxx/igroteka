@@ -232,66 +232,12 @@ html { scrollbar-color: var(--bg-4) transparent; }
   }
 
   /* ============================================================
-     Header / brand
+     Мобильное меню шапки (сама шапка — .pl-topbar, общая с платформой)
      ============================================================ */
-  .app-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding-block: clamp(16px, 2.4vh, 30px);
-  }
-  /* слева: логотип + навигация; справа: header-actions (тема и т.п.) */
-  .brand-group { display: inline-flex; align-items: center; gap: clamp(14px, 2vw, 40px); min-width: 0; }
-  .brand { display: inline-flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
-  .brand-mark {
-    width: clamp(36px, 2.6vw, 46px);
-    aspect-ratio: 1;
-    display: grid;
-    place-items: center;
-    border-radius: 13px;
-    background: linear-gradient(150deg, var(--accent-2), var(--accent));
-    color: var(--accent-fg);
-    box-shadow: var(--glow);
-  }
-  .brand-name { line-height: 1.1; }
-  .brand-name b {
-    font-size: clamp(16px, 1.3vw, 21px);
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: var(--fg);
-  }
-  .brand-name b i { color: var(--accent); font-style: normal; }
-  .brand-name span {
-    display: block;
-    font-family: var(--font-mono);
-    font-size: 10.5px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--fg-3);
-    margin-top: 2px;
-  }
-  .header-actions { display: inline-flex; align-items: center; gap: 10px; }
-
-  /* ---------- Public nav (О нас / Правила / История / Поддержка) ---------- */
   .nav { position: relative; display: inline-flex; align-items: center; }
-  .main-nav { display: inline-flex; align-items: center; gap: clamp(2px, 0.5vw, 10px); }
-  .nav-link {
-    display: inline-flex;
-    align-items: center;
-    height: clamp(34px, 2.4vw, 40px);
-    padding: 0 clamp(10px, 0.9vw, 14px);
-    border-radius: var(--r-sm);
-    color: var(--fg-1);
-    font-size: clamp(13px, 0.9vw, 15px);
-    font-weight: 600;
-    white-space: nowrap;
-    transition: color .15s, background .15s;
-  }
-  .nav-link:hover { color: var(--fg); background: var(--bg-2); }
   .nav-burger {
-    display: none; /* виден только на мобиле (см. медиа ≤640px) */
-    width: clamp(40px, 2.8vw, 48px);
+    display: grid;
+    width: 40px;
     aspect-ratio: 1;
     place-items: center;
     border-radius: var(--r-sm);
@@ -303,6 +249,8 @@ html { scrollbar-color: var(--bg-4) transparent; }
   }
   .nav-burger:hover { color: var(--fg); border-color: var(--line-strong); }
   .nav-burger svg { width: 20px; height: 20px; }
+  /* На широком экране ссылки видны рядом с брендом — бургер не нужен. */
+  @media (min-width: 900px) { .nav-burger { display: none; } }
   .nav-menu {
     position: absolute;
     top: calc(100% + 8px);
@@ -921,7 +869,6 @@ html { scrollbar-color: var(--bg-4) transparent; }
   @media (max-width: 620px) { .vt-players { display: none; } .vt-row { grid-template-columns: auto 12px 1fr auto; } }
 
   /* ============ HISTORY ============ */
-  .header-hist { padding: 0 14px; }
   .hist-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); margin-bottom: clamp(20px, 2.6vh, 34px); }
   .hist-bar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: clamp(14px, 1.8vh, 22px); flex-wrap: wrap; }
   .hist-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: var(--gap); }
@@ -978,17 +925,9 @@ html { scrollbar-color: var(--bg-4) transparent; }
      Mobile tightening (≤640 / ≤430)
      ============================================================ */
   @media (max-width: 640px) {
-    /* шапка переносит действия на 2-ю строку вместо обрезки за краем */
-    .app-header { padding-block: 14px; flex-wrap: wrap; gap: 10px; row-gap: 8px; }
-    .brand { min-width: 0; }
-    .brand-name span { display: none; }
-    .header-actions { gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-    /* на мобиле навигация прячется в бургер */
-    .main-nav { display: none; }
-    .nav-burger { display: grid; }
-    .header-hist { padding: 0; width: clamp(40px, 11vw, 44px); }
-    .header-hist .hist-label { display: none; }
-    .header-hist svg { margin: 0; }
+    /* шапка переносит статус на 2-ю строку вместо обрезки за краем */
+    .pl-topbar { flex-wrap: wrap; row-gap: 10px; }
+    .pl-topbar-right { flex: 1; justify-content: flex-end; gap: 10px; }
 
     .setup-head, .lobby-head { gap: 14px; }
     .setup-counter { text-align: left; align-items: flex-start; }
@@ -1006,7 +945,6 @@ html { scrollbar-color: var(--bg-4) transparent; }
   }
   @media (max-width: 430px) {
     .shell { padding-inline: 16px; }
-    .seg button { min-width: 34px; padding: 0 9px; }
     .victory-actions { flex-direction: column; width: 100%; }
     .victory-actions .btn { width: 100%; }
     .podium { gap: 8px; }
@@ -1366,8 +1304,11 @@ html { scrollbar-color: var(--bg-4) transparent; }
 
   .pl-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--ink-border); }
   @media (min-width: 900px) { .pl-topbar { padding: 20px 56px; } }
-  .pl-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 15px; letter-spacing: 0.04em; color: inherit; text-decoration: none; }
-  .pl-dot { width: 10px; height: 10px; border-radius: 3px; }
+  .pl-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 15px; letter-spacing: 0.04em; color: inherit; text-decoration: none; white-space: nowrap; }
+  .pl-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  /* Справа: сначала статус страницы (код комнаты, индикатор связи), затем
+     навигация — ряд ссылок на десктопе, бургер на телефоне. */
+  .pl-topbar-right { display: flex; align-items: center; gap: 14px; min-width: 0; }
   .pl-nav { display: none; gap: 26px; font-size: 14.5px; font-weight: 700; }
   @media (min-width: 900px) { .pl-nav { display: flex; } }
   .pl-nav a { color: var(--mf-text-dim); text-decoration: none; }

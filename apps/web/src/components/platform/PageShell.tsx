@@ -5,38 +5,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { supportMailto } from "@/constants/site";
-
-const NAV: [string, string][] = [
-  ["О нас", "/about"],
-  ["Правила", "/rules"],
-  ["История", "/history"],
-];
-
-export function PlatformTopBar({ active }: { active?: string }) {
-  return (
-    <div className="pl-topbar">
-      <Link href="/" className="pl-brand">
-        <span className="pl-dot" style={{ background: "var(--alias-green)" }} />
-        <span className="pl-dot" style={{ background: "var(--mf-crimson)" }} />
-        <span>ИГРОТЕКА</span>
-      </Link>
-
-      <nav className="pl-nav">
-        {NAV.map(([label, href]) => (
-          <Link
-            key={href}
-            href={href}
-            className={label === active ? "pl-nav-active" : undefined}
-          >
-            {label}
-          </Link>
-        ))}
-        <a href={supportMailto()}>Поддержка</a>
-      </nav>
-    </div>
-  );
-}
+import SiteTopBar from "@/components/common/SiteTopBar";
+import { NAV_LINKS, supportMailto } from "@/constants/site";
 
 export function PageHead({ title, lead }: { title: string; lead: string }) {
   return (
@@ -88,7 +58,7 @@ export function PageFooter() {
     <div className="pl-footer">
       <span>Игротека · Алиас и Мафия</span>
       <div className="pl-footer-links">
-        {NAV.map(([label, href]) => (
+        {NAV_LINKS.map(({ href, label }) => (
           <Link key={href} href={href}>
             {label}
           </Link>
@@ -108,7 +78,7 @@ export default function PageShell({
 }) {
   return (
     <div className="pl-screen">
-      <PlatformTopBar active={active} />
+      <SiteTopBar active={active} />
       <div className="pl-body">{children}</div>
     </div>
   );

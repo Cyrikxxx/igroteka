@@ -1,35 +1,13 @@
 "use client";
 
-// Навигация публичных страниц.
-// NavLinks — десктоп: ряд ссылок (слева, у логотипа).
-// NavMenu  — мобайл: бургер + выпадающее меню (справа, перед темой).
+// Навигация платформы. Ряд ссылок рисует SiteTopBar; здесь живёт только
+// мобильный вариант — бургер с выпадающим меню (виден ниже 900px).
 // «Поддержка» — mailto (связь с автором, без бэкенда).
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { supportMailto } from "@/constants/site";
-
-const LINKS = [
-  { href: "/about", label: "О нас" },
-  { href: "/rules", label: "Правила" },
-  { href: "/history", label: "История" },
-];
-
-export function NavLinks() {
-  return (
-    <div className="main-nav">
-      {LINKS.map((l) => (
-        <Link key={l.href} href={l.href} className="nav-link">
-          {l.label}
-        </Link>
-      ))}
-      <a href={supportMailto()} className="nav-link">
-        Поддержка
-      </a>
-    </div>
-  );
-}
+import { NAV_LINKS, supportMailto } from "@/constants/site";
 
 export function NavMenu() {
   const [open, setOpen] = useState(false);
@@ -64,7 +42,7 @@ export function NavMenu() {
       </button>
       {open && (
         <div className="nav-menu">
-          {LINKS.map((l) => (
+          {NAV_LINKS.map((l) => (
             <Link key={l.href} href={l.href} className="nav-menu-link" onClick={() => setOpen(false)}>
               {l.label}
             </Link>

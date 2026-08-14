@@ -3,13 +3,11 @@
 // прокрутки на больших экранах, нет вертикальной пустоты.
 
 import { cn } from "@/lib/utils";
-import Header from "./Header";
+import SiteTopBar from "./SiteTopBar";
 
 interface AppShellProps {
   /** Контент справа в шапке (пилюли статуса, код комнаты и т.п.). */
   right?: React.ReactNode;
-  /** Показать навигацию в шапке (О нас / Правила / История / Поддержка) — публичные страницы. */
-  nav?: boolean;
   /** Без шапки вообще (иммерсивный игровой экран со своим .game-top). */
   noHeader?: boolean;
   /** Центрировать контент по вертикали (короткие экраны: hero, лобби, pass, финал). */
@@ -24,10 +22,14 @@ interface AppShellProps {
   children: React.ReactNode;
 }
 
-export function AppShell({ right, nav, noHeader, centered, bare, className, children }: AppShellProps) {
+export function AppShell({ right, noHeader, centered, bare, className, children }: AppShellProps) {
   return (
     <div className="app">
-      {!noHeader && <Header right={right} nav={nav} />}
+      {!noHeader && (
+        <header className="app-header-wrap">
+          <SiteTopBar right={right} />
+        </header>
+      )}
       <div className="app-scroll">
         {bare ? (
           children
