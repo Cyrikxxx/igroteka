@@ -48,12 +48,13 @@ export default function LobbyPage() {
   const [creds, setCreds] = useState<Creds | null>(null);
   const [mounted, setMounted] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     const stored = loadRoomCreds(rawCode);
     if (!stored) {
-      router.replace(`/join?code=${rawCode}`);
+      router.replace(`/alias/join?code=${rawCode}`);
       return;
     }
     setCreds(stored);
@@ -94,8 +95,8 @@ export default function LobbyPage() {
   const isHost = snapshot?.hostId === creds.userId;
   const inviteUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/join?code=${creds.code}`
-      : `/join?code=${creds.code}`;
+      ? `${window.location.origin}/alias/join?code=${creds.code}`
+      : `/alias/join?code=${creds.code}`;
 
   const handleCopyCode = async () => {
     try {
@@ -104,9 +105,21 @@ export default function LobbyPage() {
       setTimeout(() => setCopied(false), 1600);
     } catch {}
   };
-  const handleCopyLink = async () => {
+  // Как в лобби Мафии: на телефоне отдаём ссылку в системный «Поделиться»,
+  // на десктопе просто кладём в буфер.
+  const handleShareLink = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Алиас", text: "Заходи в комнату", url: inviteUrl });
+        return;
+      } catch {
+        // пользователь закрыл шторку — падаем в буфер
+      }
+    }
     try {
       await navigator.clipboard.writeText(inviteUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1600);
     } catch {}
   };
   const handleLeave = () => {
@@ -180,8 +193,8 @@ export default function LobbyPage() {
               <button type="button" className="btn btn-secondary btn-sm" onClick={handleCopyCode}>
                 {copied ? <Check /> : <Copy />} {copied ? "Скопировано" : "Код"}
               </button>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={handleCopyLink}>
-                <Share2 /> Ссылка
+              <button type="button" className="btn btn-secondary btn-sm" onClick={handleShareLink}>
+                {linkCopied ? <Check /> : <Share2 />} {linkCopied ? "Скопировано" : "Ссылка"}
               </button>
             </div>
             <div className="dotted" style={{ margin: "22px 0" }} />

@@ -33,7 +33,7 @@ export default function PlayPage() {
   useEffect(() => {
     const stored = loadRoomCreds(rawCode);
     if (!stored) {
-      router.replace(`/join?code=${rawCode}`);
+      router.replace(`/alias/join?code=${rawCode}`);
       return;
     }
     setCreds(stored);
