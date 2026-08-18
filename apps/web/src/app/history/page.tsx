@@ -85,7 +85,10 @@ export default function HistoryPage() {
       .catch(() => setStats(null));
   }, []);
 
-  const onDelete = async (id: string) => {
+  // `shared` — партия онлайн: её итоги открываются не только хосту, но и
+  // всем участникам комнаты, поэтому такое удаление спрашиваем.
+  const onDelete = async (id: string, shared = false) => {
+    if (shared && !window.confirm("Удалить партию? Итоги пропадут у всех, кто в ней играл.")) return;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/games/${id}`, { method: "DELETE" });
@@ -122,7 +125,9 @@ export default function HistoryPage() {
           ))}
         </div>
       ),
-      onDelete: g.mode === "LOCAL" ? () => onDelete(g.id) : undefined,
+      // Удалять можно всё, кроме идущей онлайн-партии: её состояние живёт ещё
+      // и в Redis, и в открытых сокетах, поэтому строка в базе — не вся игра.
+      onDelete: online && live ? undefined : () => onDelete(g.id, online),
     };
   });
 
