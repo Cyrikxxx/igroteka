@@ -1,16 +1,17 @@
-// Рамка страницы. Фиксированная высота вьюпорта (.app), шапка вне скролла,
-// один внутренний скролл-контейнер (.app-scroll) — контент влезает без
-// прокрутки на больших экранах, нет вертикальной пустоты.
+// Рамка экранов Алиаса. Фиксированная высота вьюпорта (.app) и один
+// внутренний скролл-контейнер (.app-scroll) — контент влезает без прокрутки
+// на больших экранах, нет вертикальной пустоты.
+//
+// Шапки здесь нет намеренно. Навигация по сайту живёт на «сайтовых»
+// страницах — хаб, лендинги игр, «О нас / Правила / История». Как только
+// человек начал собирать партию, ссылки наружу только мешают: из лобби по
+// ним легко случайно выйти и потерять комнату. Выход с каждого экрана даёт
+// его собственная кнопка «назад», как это устроено в Мафии.
 
 import { cn } from "@/lib/utils";
-import SiteTopBar from "./SiteTopBar";
 
 interface AppShellProps {
-  /** Контент справа в шапке (пилюли статуса, код комнаты и т.п.). */
-  right?: React.ReactNode;
-  /** Без шапки вообще (иммерсивный игровой экран со своим .game-top). */
-  noHeader?: boolean;
-  /** Центрировать контент по вертикали (короткие экраны: hero, лобби, pass, финал). */
+  /** Центрировать контент по вертикали (короткие экраны: лобби, pass, финал). */
   centered?: boolean;
   /**
    * Без обёртки `.shell .screen` — страница сама управляет содержимым скролл-области
@@ -22,14 +23,9 @@ interface AppShellProps {
   children: React.ReactNode;
 }
 
-export function AppShell({ right, noHeader, centered, bare, className, children }: AppShellProps) {
+export function AppShell({ centered, bare, className, children }: AppShellProps) {
   return (
     <div className="app">
-      {!noHeader && (
-        <header className="app-header-wrap">
-          <SiteTopBar right={right} />
-        </header>
-      )}
       <div className="app-scroll">
         {bare ? (
           children

@@ -16,6 +16,7 @@ import {
 import type { MafiaRole } from "@alias/shared/mafia";
 import { MIN_MAFIA_PLAYERS, MAX_MAFIA_PLAYERS } from "@alias/shared/mafia";
 import MafiaShell from "@/components/mafia/MafiaShell";
+import SiteTopBar from "@/components/common/SiteTopBar";
 import { ROLE_META } from "@/components/mafia/roleMeta";
 
 export const metadata = {
@@ -43,6 +44,7 @@ export default function MafiaLandingPage() {
   return (
     <MafiaShell wide vignette vignetteLevel={0.1}>
       <div className="mf-landing">
+        <SiteTopBar />
         <section className="mf-hero">
           <span className="mf-chip mf-hero-chip">
             <Sparkles size={14} /> Новая игра в Игротеке

@@ -267,7 +267,7 @@ export default function LocalRoundPage() {
   const danger = phase === "active" && timeLeft <= 10;
 
   return (
-    <AppShell noHeader bare>
+    <AppShell bare>
       <div className={"game-screen screen-anim" + (danger ? " danger" : "")}>
         <div className="game-bg" />
         <div className="shell game-shell">

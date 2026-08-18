@@ -131,8 +131,6 @@ export default function PlayPage() {
   const got = wordCount?.got ?? 0;
   const skip = wordCount?.skip ?? 0;
 
-  const statusRight = <StatusPills code={creds.code} status={status} live={snapshot.phase === "ROUND_ACTIVE"} />;
-
   const modals = (
     <>
       <Modal isOpen={pauseModalOpen && canControlRound} title="Пауза" onClose={onResume}>
@@ -202,7 +200,7 @@ export default function PlayPage() {
     const active = snapshot.phase === "ROUND_ACTIVE";
     return (
       <>
-        <AppShell noHeader bare>
+        <AppShell bare>
           <div className={"game-screen" + (danger ? " danger" : "")}>
             <div className="game-bg" />
             <div className="shell game-shell">
@@ -321,7 +319,7 @@ export default function PlayPage() {
   if (snapshot.phase === "ROUND_REVIEW") {
     return (
       <>
-        <AppShell centered right={statusRight} className="screen-anim">
+        <AppShell centered className="screen-anim">
           <ReviewView
             role={role}
             review={review}
@@ -344,7 +342,7 @@ export default function PlayPage() {
       nextTeam?.players.find((p) => p.userId === snapshot.currentPlayerId)?.displayName ?? "?";
     return (
       <>
-        <AppShell centered right={statusRight} className="screen-anim">
+        <AppShell centered className="screen-anim">
           <div style={{ textAlign: "center" }}>
             <div className="eyebrow" style={{ marginBottom: 12 }}>
               следующий ход
@@ -368,7 +366,7 @@ export default function PlayPage() {
   // ─── FINISHED ───
   return (
     <>
-      <AppShell centered right={statusRight}>
+      <AppShell centered>
         <div style={{ textAlign: "center" }}>
           <h1 className="h-title" style={{ marginBottom: 8 }}>
             Игра окончена
@@ -432,30 +430,6 @@ function GameTop({
           )}
         </span>
       )}
-    </div>
-  );
-}
-
-// ─── Status pills (centered screens) ───
-function StatusPills({ code, status, live }: { code: string; status: string; live: boolean }) {
-  const color =
-    status === "connected"
-      ? "var(--accent)"
-      : status === "reconnecting" || status === "connecting"
-        ? "var(--warn)"
-        : "var(--danger)";
-  return (
-    <div className="row" style={{ gap: 8 }}>
-      {live && (
-        <span className="pill pill-live">
-          <span className="dot dot-pulse" /> LIVE
-        </span>
-      )}
-      <span className="pill pill-mono">{code}</span>
-      <span className="pill pill-mono" style={{ color }}>
-        <span className="dot" style={{ color }} />
-        {status === "connected" ? "ONLINE" : status.toUpperCase()}
-      </span>
     </div>
   );
 }

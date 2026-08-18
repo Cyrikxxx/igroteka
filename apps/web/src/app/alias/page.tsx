@@ -20,6 +20,7 @@ import {
   Skull,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import SiteTopBar from "@/components/common/SiteTopBar";
 
 const STEPS: [LucideIcon, string, string][] = [
   [Users2, "Собери команды", "Два и больше — раздели друзей поровну"],
@@ -74,6 +75,7 @@ export default function AliasLandingPage() {
   return (
     <div className="al-landing">
       <div className="al-landing-inner">
+      <SiteTopBar />
       <section className="al-hero">
         <div className="al-hero-copy">
           <span className="al-chip al-chip-green">

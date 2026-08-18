@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Users, Loader2 } from "lucide-react";
 import type { MafiaRole } from "@alias/shared/mafia";
 import { ROLE_META } from "@/components/mafia/roleMeta";
+import SiteTopBar from "@/components/common/SiteTopBar";
 
 /** Слова-примеры на карточке Алиаса: показывают, из чего состоит игра. */
 const SAMPLE_WORDS = [
@@ -169,12 +170,9 @@ export default function HubPage() {
 
   return (
     <div className="hub">
-      <header className="hub-brand">
-        <span className="hub-dot" style={{ background: "var(--alias-green)" }} />
-        <span className="hub-dot" style={{ background: "var(--mf-crimson)" }} />
-        <span>ИГРОТЕКА</span>
-      </header>
+      <SiteTopBar />
 
+      <div className="hub-body">
       <h1 className="hub-title">Во что играем сегодня?</h1>
 
       <div className="hub-cards">
@@ -216,6 +214,7 @@ export default function HubPage() {
         <Link href="/rules">Правила</Link>
         <Link href="/history">История</Link>
       </footer>
+      </div>
     </div>
   );
 }

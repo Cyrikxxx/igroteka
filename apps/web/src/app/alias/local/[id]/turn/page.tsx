@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Crown, EyeOff, Play } from "lucide-react";
+import { ArrowLeft, Crown, EyeOff, Play } from "lucide-react";
 import type { GameFromAPI } from "@/types";
 import { teamColorVar } from "@/constants/game";
 import AppShell from "@/components/common/AppShell";
@@ -57,6 +57,13 @@ export default function LocalTurnPage() {
 
   return (
     <AppShell centered className="screen-anim">
+      {/* Единственный выход с этого экрана. Партия уже сохранена и доступна
+          в Истории по «Продолжить», поэтому спрашивать подтверждение — в
+          отличие от экрана раунда — не за чем: терять нечего. */}
+      <button type="button" className="back-link" onClick={() => router.push("/alias")}>
+        <ArrowLeft /> Выйти из партии
+      </button>
+
       <div className="pass-wrap" style={{ "--tc": `var(${colorVar})` } as React.CSSProperties}>
         <div className="pass-hero">
           <span className="eyebrow">передай устройство · раунд {game.currentRoundNumber}</span>

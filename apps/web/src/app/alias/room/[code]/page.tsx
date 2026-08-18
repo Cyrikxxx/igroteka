@@ -147,7 +147,7 @@ export default function LobbyPage() {
   const s = snapshot?.settings;
 
   return (
-    <AppShell className="screen-anim" right={<ConnIndicator status={status} />}>
+    <AppShell className="screen-anim">
       <button type="button" className="back-link" onClick={handleLeave}>
         <ArrowLeft /> Выйти из комнаты
       </button>
@@ -474,31 +474,6 @@ function TeamCard({
         )}
       </div>
     </div>
-  );
-}
-
-function ConnIndicator({ status }: { status: string }) {
-  const label =
-    status === "connected"
-      ? "ONLINE"
-      : status === "connecting"
-        ? "CONNECT…"
-        : status === "reconnecting"
-          ? "RECONNECT…"
-          : status === "closed"
-            ? "OFFLINE"
-            : "ERROR";
-  const color =
-    status === "connected"
-      ? "var(--accent)"
-      : status === "reconnecting" || status === "connecting"
-        ? "var(--warn)"
-        : "var(--danger)";
-  return (
-    <span className="pill pill-mono" style={{ color }}>
-      <span className="dot" style={{ color }} />
-      {label}
-    </span>
   );
 }
 

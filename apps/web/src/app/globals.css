@@ -210,7 +210,6 @@ html { scrollbar-color: var(--bg-4) transparent; }
     isolation: isolate;
     overflow: hidden;
   }
-  .app-header-wrap { flex: none; }
   .app-scroll {
     flex: 1;
     min-height: 0;
@@ -1155,10 +1154,11 @@ html { scrollbar-color: var(--bg-4) transparent; }
   /* Одна колонка сверху вниз. Свободную высоту забирают карточки
      (flex: 1), а не промежутки между блоками — иначе на большом экране
      содержимое расползается и теряется посреди пустоты. */
-  .hub { min-height: 100dvh; background: var(--ink-bg); color: var(--mf-text); font-family: var(--font-main); display: flex; flex-direction: column; gap: clamp(16px, 2.2vw, 26px); padding: clamp(20px, 2.6vw, 28px) clamp(18px, 4vw, 64px) clamp(14px, 1.8vw, 20px); }
-
-  .hub-brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: clamp(15px, 1.2vw, 16px); letter-spacing: 0.04em; }
-  .hub-dot { width: 11px; height: 11px; border-radius: 3px; }
+  /* Шапка идёт во всю ширину, поэтому отступы живут на .hub-body, а не на
+     .hub. Раньше здесь была своя строка бренда (.hub-brand/.hub-dot) —
+     теперь тот же SiteTopBar, что и на остальных страницах. */
+  .hub { min-height: 100dvh; background: var(--ink-bg); color: var(--mf-text); font-family: var(--font-main); display: flex; flex-direction: column; }
+  .hub-body { flex: 1; display: flex; flex-direction: column; gap: clamp(16px, 2.2vw, 26px); padding: clamp(20px, 2.6vw, 28px) clamp(18px, 4vw, 64px) clamp(14px, 1.8vw, 20px); }
 
   .hub-title { margin: 12px 0 2px; font-weight: 800; font-size: clamp(33px, 4.4vw, 52px); letter-spacing: -0.03em; line-height: 1.1; text-wrap: pretty; }
   @media (min-width: 720px) { .hub-title { margin: 18px 0 0; text-align: center; line-height: 1.05; } }
