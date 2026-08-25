@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Sparkles,
   VenetianMask,
@@ -17,8 +18,12 @@ import {
   ScrollText,
   Trash2,
   Dice5,
+  RotateCcw,
 } from "lucide-react";
 import type { GameFromAPI } from "@/types";
+import type { MafiaSettings, MafiaCreateRoomResponse } from "@alias/shared/mafia";
+import { prepareLocalRematch, createRoomLike } from "@/lib/rematch";
+import { loadDisplayName, saveRoomCreds } from "@/lib/room-session";
 import PageShell, { PageHead, PageFooter } from "@/components/platform/PageShell";
 import type { MafiaHistoryGame } from "@/app/api/mafia/history/route";
 
@@ -49,6 +54,8 @@ interface Row {
   body: React.ReactNode;
   /** Удалять можно только локальные партии Алиаса — они наши. */
   onDelete?: () => void;
+  /** Собрать такую же новую партию. У идущих не показываем — они ещё идут. */
+  onAgain?: () => void;
 }
 
 function TeamRow({ name, score, dot }: { name: string; score: number; dot: string }) {
@@ -68,6 +75,7 @@ export default function HistoryPage() {
   const [mafia, setMafia] = useState<MafiaHistoryGame[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -95,6 +103,51 @@ export default function HistoryPage() {
       if (res.ok) setGames((g) => (g ?? []).filter((x) => x.id !== id));
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  // Собрать такую же новую партию: локальную — с теми же командами,
+  // онлайн — новой комнатой с теми же правилами (людей зовём по ссылке).
+  const [againBusy, setAgainBusy] = useState(false);
+  const againAlias = async (g: GameFromAPI) => {
+    if (againBusy) return;
+    setAgainBusy(true);
+    try {
+      if (g.mode === "LOCAL") {
+        prepareLocalRematch(g);
+        router.push("/alias/local/new");
+      } else {
+        const code = await createRoomLike(g);
+        router.push(`/alias/room/${code}`);
+      }
+    } catch (e) {
+      window.alert((e as Error).message);
+      setAgainBusy(false);
+    }
+  };
+  const againMafia = async (settings: MafiaSettings) => {
+    if (againBusy) return;
+    setAgainBusy(true);
+    try {
+      const res = await fetch("/api/mafia/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hostName: loadDisplayName().trim() || "Хост", settings }),
+      });
+      if (!res.ok) throw new Error("Не удалось создать комнату");
+      const data: MafiaCreateRoomResponse = await res.json();
+      saveRoomCreds({
+        code: data.room.code,
+        wsUrl: data.wsUrl,
+        wsToken: data.wsToken,
+        userId: data.user.id,
+        displayName: data.user.displayName,
+        game: "mafia",
+      });
+      router.push(`/mafia/room/${data.room.code}`);
+    } catch (e) {
+      window.alert((e as Error).message);
+      setAgainBusy(false);
     }
   };
 
@@ -128,6 +181,7 @@ export default function HistoryPage() {
       // Удалять можно всё, кроме идущей онлайн-партии: её состояние живёт ещё
       // и в Redis, и в открытых сокетах, поэтому строка в базе — не вся игра.
       onDelete: online && live ? undefined : () => onDelete(g.id, online),
+      onAgain: live ? undefined : () => againAlias(g),
     };
   });
 
@@ -147,6 +201,7 @@ export default function HistoryPage() {
       online: true,
       live,
       href: live && m.code ? `/mafia/room/${m.code}` : "/history",
+      onAgain: !live && m.settings ? () => againMafia(m.settings!) : undefined,
       meta: `${m.dayCount} ${m.dayCount === 1 ? "ночь" : "ночи"}`,
       body: (
         <div className="hist-lines">
@@ -294,6 +349,17 @@ export default function HistoryPage() {
                       {r.live ? <Play size={16} /> : <ScrollText size={16} />}
                       {r.live ? "Продолжить" : "Итоги"}
                     </Link>
+                    {r.onAgain ? (
+                      <button
+                        type="button"
+                        onClick={r.onAgain}
+                        disabled={againBusy}
+                        className="mf-btn hist-card-btn"
+                        style={{ background: t.accent, color: t.dark ? "#06130a" : "#fff" }}
+                      >
+                        <RotateCcw size={16} /> Сыграть так же
+                      </button>
+                    ) : null}
                     {r.onDelete ? (
                       <button
                         type="button"

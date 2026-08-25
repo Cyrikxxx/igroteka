@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireUserId } from "@/lib/identity";
 import { loadMafiaSnapshot } from "@/lib/mafia-snapshot";
-import type { MafiaPhase } from "@alias/shared/mafia";
+import type { MafiaPhase, MafiaSettings } from "@alias/shared/mafia";
 
 export interface MafiaHistoryGame {
   id: string;
@@ -23,6 +23,8 @@ export interface MafiaHistoryGame {
   dayCount: number;
   endedAt: string | null;
   createdAt: string;
+  /** Снимок настроек — из него собирается «сыграть так же». */
+  settings?: MafiaSettings;
 }
 
 /** Подпись фазы для карточки идущей партии. */
@@ -69,6 +71,7 @@ export async function GET() {
           dayCount: true,
           endedAt: true,
           createdAt: true,
+          settings: true,
           _count: { select: { players: true } },
         },
       }),
@@ -112,6 +115,7 @@ export async function GET() {
       dayCount: g.dayCount,
       endedAt: g.endedAt ? g.endedAt.toISOString() : null,
       createdAt: g.createdAt.toISOString(),
+      settings: (g.settings ?? undefined) as MafiaSettings | undefined,
     }));
 
     // Идущие — наверх: к ним можно вернуться прямо сейчас.
