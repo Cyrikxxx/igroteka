@@ -74,6 +74,35 @@ export function removePlayer(
   return null;
 }
 
+/**
+ * Вернуть всех, кто сейчас в комнате: игроки команд плюс зрители,
+ * в порядке «сначала игроки».
+ */
+export function everyoneIn(snapshot: RoomSnapshot): RoomSnapshotPlayer[] {
+  return [...snapshot.teams.flatMap((t) => t.players), ...snapshot.spectators];
+}
+
+/**
+ * Если хоста больше нет в комнате — отдать права первому оставшемуся.
+ *
+ * Без этого `room:leave` оставлял `hostId` указывать на ушедшего, и права
+ * не доставались никому: нельзя было ни собрать команду, ни поменять
+ * настройки, ни начать игру — комната становилась мёртвой. В Мафии
+ * наследник назначался всегда, в Алиасе — нет.
+ *
+ * Возвращает нового хоста, если смена произошла.
+ */
+export function reassignHostIfNeeded(
+  snapshot: RoomSnapshot,
+): RoomSnapshotPlayer | null {
+  const present = everyoneIn(snapshot);
+  if (present.some((p) => p.userId === snapshot.hostId)) return null;
+  const heir = present[0];
+  if (!heir) return null;
+  snapshot.hostId = heir.userId;
+  return heir;
+}
+
 /** Следующий локальный id команды (в лобби Team-row в Postgres ещё нет). */
 export function nextTeamId(snapshot: RoomSnapshot): number {
   let max = 0;

@@ -14,6 +14,7 @@ import {
   removePlayer,
   nextUnusedTeamColor,
   nextUnusedTeamName,
+  reassignHostIfNeeded,
 } from "@alias/shared/snapshot-builders";
 import {
   MAX_TEAMS,
@@ -274,6 +275,9 @@ export function registerLobbyHandlers(
   socket.on("room:leave", async (_payload, ack) => {
     const snap = await mutate(roomCode, (s) => {
       removePlayer(s, userId);
+      // Ушёл хост — права переходят следующему. Иначе hostId указывал бы на
+      // того, кого в комнате уже нет, и начать игру не мог бы никто.
+      reassignHostIfNeeded(s);
     });
     if (snap) await broadcastState(ns, roomCode, snap);
     ack?.({ ok: true });

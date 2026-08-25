@@ -76,6 +76,12 @@ export interface RoomSnapshot {
   teamIdMap?: TeamIdMap;
   /** Индекс команды в массиве teams, чей сейчас ход. */
   currentTeamIndex?: number;
+  /**
+   * Кого хост выгнал из комнаты. Без этого списка выгнанный просто
+   * переподключается тем же токеном. Живёт в снапшоте Redis, поэтому
+   * пересоздание комнаты бан снимает — так же устроено в Мафии.
+   */
+  banned?: string[];
 }
 
 export interface CreateRoomResponse {

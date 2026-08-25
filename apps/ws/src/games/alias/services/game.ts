@@ -197,10 +197,3 @@ export async function finalizeRound(args: {
   };
 }
 
-/** При gameFinished — переводим Room в FINISHED. */
-export async function finalizeRoom(roomId: string): Promise<void> {
-  await prisma.room.update({
-    where: { id: roomId },
-    data: { status: "FINISHED", endedAt: new Date() },
-  });
-}

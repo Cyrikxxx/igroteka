@@ -25,11 +25,8 @@ import { load, mutate, remove } from "./snapshot";
 import { broadcastStateNow, mafiaRoom } from "./broadcast";
 import { startTimer, clearTimer, hasTimer } from "./services/scheduler";
 import { checkWinner } from "./services/win";
-import {
-  persistFinishedGame,
-  reopenRoom,
-  markRoomFinished,
-} from "./services/persist";
+import { persistFinishedGame } from "./services/persist";
+import { reopenRoom, closeRoom as closeRoomRecord } from "../../services/room-lifecycle";
 import type { MafiaNamespace } from "./io-types";
 
 const MORNING_MS = 5000;
@@ -362,7 +359,7 @@ export async function closeRoom(
 ): Promise<void> {
   clearTimer(code);
   await remove(code);
-  await markRoomFinished(code);
+  await closeRoomRecord(code);
 
   const sockets = await ns.in(mafiaRoom(code)).fetchSockets();
   for (const s of sockets) {

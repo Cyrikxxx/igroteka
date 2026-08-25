@@ -34,11 +34,8 @@ import {
   type WordSeen,
 } from "../services/roundState";
 import { startTimer, stopTimer } from "../services/timer";
-import {
-  createGameFromSnapshot,
-  finalizeRound,
-  finalizeRoom,
-} from "../services/game";
+import { createGameFromSnapshot, finalizeRound } from "../services/game";
+import { closeRoom } from "../../../services/room-lifecycle";
 import type { AppSocket, AppNamespace } from "../io-types";
 
 const BETWEEN_ROUNDS_MS = 4000;
@@ -567,12 +564,8 @@ async function handleReviewConfirm(
   broadcastPhase(ns, code, committed);
 
   if (result.gameFinished) {
-    // Закрываем комнату в Postgres (status=FINISHED).
-    const room = await prisma.room.findUnique({
-      where: { code },
-      select: { id: true },
-    });
-    if (room) await finalizeRoom(room.id);
+    // Комната в Postgres переходит в FINISHED — код освобождается.
+    await closeRoom(code);
     return { ok: true };
   }
 
@@ -612,11 +605,7 @@ async function endGame(
     broadcastState(ns, code, snap);
     broadcastPhase(ns, code, snap);
   }
-  const room = await prisma.room.findUnique({
-    where: { code },
-    select: { id: true },
-  });
-  if (room) await finalizeRoom(room.id);
+  await closeRoom(code);
 }
 
 // ─── Регистрация обработчиков на каждый сокет ────────────────────────────
