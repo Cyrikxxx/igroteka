@@ -200,5 +200,6 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
     events: seeAll ? (snap.events ?? []) : undefined,
     timer: timerView(snap),
     spotlight,
+    banned: you.isHost ? (snap.banned ?? []) : undefined,
   };
 }

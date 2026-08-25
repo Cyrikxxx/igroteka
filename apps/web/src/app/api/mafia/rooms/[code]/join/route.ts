@@ -63,7 +63,7 @@ export async function POST(request: NextRequest, { params }: Ctx) {
         snapshot.players.some((p) => p.userId === userId) ||
         snapshot.spectators.some((p) => p.userId === userId);
       if (!known) {
-        if (snapshot.banned?.includes(userId)) {
+        if (snapshot.banned?.some((b) => b.userId === userId)) {
           return NextResponse.json(
             { error: "Хост удалил вас из этой комнаты" },
             { status: 403 },

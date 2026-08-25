@@ -92,7 +92,7 @@ export function registerMafiaLobbyHandlers(
     if (!known) {
       // Выгнанный хостом не должен возвращаться: токен у него остался
       // рабочим, и без этой проверки кик ничего бы не значил.
-      if (before.banned?.includes(userId)) return ack?.({ error: "kicked" });
+      if (before.banned?.some((b) => b.userId === userId)) return ack?.({ error: "kicked" });
       // Лобби заполнено. Пускать сверх лимита нельзя — старт всё равно
       // отказал бы, и хосту пришлось бы вычищать лишних руками.
       if (before.phase === "LOBBY" && before.players.length >= MAX_MAFIA_PLAYERS) {
@@ -187,6 +187,22 @@ export function registerMafiaLobbyHandlers(
     scheduleStateBroadcast(ns, roomCode);
   });
 
+  // ─── mafia:unban ─── host
+  socket.on("mafia:unban", async (payload, ack) => {
+    if (typeof payload?.userId !== "string") return ack?.({ error: "invalid_payload" });
+    const target = payload.userId;
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
+
+    const snap = await mutate(roomCode, (s) => {
+      s.banned = (s.banned ?? []).filter((b) => b.userId !== target);
+    });
+    if (!snap) return ack?.({ error: "room_not_found" });
+    ack?.({ ok: true });
+    scheduleStateBroadcast(ns, roomCode);
+  });
+
   // ─── mafia:transfer_host ─── host
   // До этого хост менялся только сам, когда прежний уходил из комнаты.
   socket.on("mafia:transfer_host", async (payload, ack) => {
@@ -220,11 +236,17 @@ export function registerMafiaLobbyHandlers(
     if (current.hostId !== userId) return ack?.({ error: "forbidden" });
     if (current.phase !== "LOBBY") return ack?.({ error: "game_in_progress" });
     const snap = await mutate(roomCode, (s) => {
+      const gone =
+        s.players.find((p) => p.userId === target) ??
+        s.spectators.find((p) => p.userId === target);
       s.players = s.players.filter((p) => p.userId !== target);
       s.spectators = s.spectators.filter((p) => p.userId !== target);
       s.players.forEach((p, i) => (p.order = i));
       // Помним, кого выгнали: иначе он просто переподключится тем же токеном.
-      s.banned = [...(s.banned ?? []), target];
+      // Имя нужно, чтобы хост видел, кого возвращает через mafia:unban.
+      if (gone) {
+        s.banned = [...(s.banned ?? []), { userId: target, displayName: gone.displayName }];
+      }
     });
     if (!snap) return ack?.({ error: "room_not_found" });
     // Отключаем сокеты кикнутого.

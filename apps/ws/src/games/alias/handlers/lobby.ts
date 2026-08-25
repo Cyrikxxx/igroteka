@@ -65,7 +65,7 @@ export function registerLobbyHandlers(
   socket.on("room:hello", async (_payload, ack) => {
     // Выгнанный переподключился бы тем же токеном — проверяем до мутации.
     const before = await load(roomCode);
-    if (before?.banned?.includes(userId)) {
+    if (before?.banned?.some((b) => b.userId === userId)) {
       ack?.({ error: "kicked" });
       socket.emit("room:closed", { reason: "kicked" });
       socket.disconnect(true);
@@ -355,8 +355,11 @@ export function registerLobbyHandlers(
     if (current.phase !== "LOBBY") return ack?.({ error: "game_in_progress" });
 
     const snap = await mutate(roomCode, (s) => {
-      removePlayer(s, target);
-      s.banned = [...(s.banned ?? []), target];
+      // Имя запоминаем вместе с id: хост должен видеть, кого возвращает.
+      const gone = removePlayer(s, target);
+      if (gone) {
+        s.banned = [...(s.banned ?? []), { userId: target, displayName: gone.displayName }];
+      }
     });
     if (!snap) return ack?.({ error: "room_not_found" });
 
@@ -367,6 +370,23 @@ export function registerLobbyHandlers(
         sock.disconnect(true);
       }
     }
+    ack?.({ ok: true });
+    await broadcastState(ns, roomCode, snap);
+  });
+
+  // ─── room:unban ─── (host only)
+  // Кик обратим: выгнали по ошибке — вернули, не пересоздавая комнату.
+  socket.on("room:unban", async (payload, ack) => {
+    if (typeof payload?.userId !== "string") return ack?.({ error: "invalid_payload" });
+    const target = payload.userId;
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
+
+    const snap = await mutate(roomCode, (s) => {
+      s.banned = (s.banned ?? []).filter((b) => b.userId !== target);
+    });
+    if (!snap) return ack?.({ error: "room_not_found" });
     ack?.({ ok: true });
     await broadcastState(ns, roomCode, snap);
   });

@@ -61,7 +61,7 @@ export async function POST(request: NextRequest, { params }: Ctx) {
     // создания Participant: иначе на него завелись бы строки в Postgres,
     // хотя в комнату он всё равно не попадёт.
     const banCheck = await loadRoomSnapshot(code);
-    if (banCheck?.banned?.includes(userId)) {
+    if (banCheck?.banned?.some((b) => b.userId === userId)) {
       return NextResponse.json(
         { error: "Хост удалил вас из этой комнаты" },
         { status: 403 },

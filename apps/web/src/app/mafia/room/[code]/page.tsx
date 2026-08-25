@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Copy, Crown, DoorOpen, LogOut, Settings2, Share2, VenetianMask, X, Check } from "lucide-react";
+import { Copy, Crown, DoorOpen, LogOut, RotateCcw, Settings2, Share2, VenetianMask, X, Check } from "lucide-react";
 import {
   MIN_MAFIA_PLAYERS,
   MAX_MAFIA_PLAYERS,
@@ -77,9 +77,10 @@ export default function MafiaLobbyPage() {
 
   const start = () => socket?.emit("mafia:start", {}, () => {});
   const kick = (userId: string, name: string) => {
-    if (!window.confirm(`Выгнать ${name}? Вернуться по этому коду он уже не сможет.`)) return;
+    if (!window.confirm(`Выгнать ${name}? Вернуть его можно будет здесь же, в списке выгнанных.`)) return;
     socket?.emit("mafia:kick", { userId }, () => {});
   };
+  const unban = (userId: string) => socket?.emit("mafia:unban", { userId }, () => {});
   const makeHost = (userId: string, name: string) => {
     if (!window.confirm(`Передать комнату — ${name}? Ты перестанешь быть хостом.`)) return;
     socket?.emit("mafia:transfer_host", { userId }, () => {});
@@ -226,6 +227,43 @@ export default function MafiaLobbyPage() {
           ))}
         </div>
       </div>
+
+      {/* Выгнанные — только хосту: кик обратим, комнату пересоздавать не надо */}
+      {isHost && (view?.banned?.length ?? 0) > 0 ? (
+        <div style={{ padding: "4px 20px 0" }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--mf-text-faint)", marginBottom: 8 }}>
+            Выгнанные ({view?.banned?.length}) · видно только тебе
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {view?.banned?.map((b) => (
+              <div
+                key={b.userId}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  background: "var(--mf-surface)",
+                  border: "1px solid var(--mf-border)",
+                  borderRadius: "var(--r-btn)",
+                  padding: "8px 12px",
+                }}
+              >
+                <span style={{ flex: 1, fontWeight: 700, fontSize: 15, color: "var(--mf-text-dim)" }}>
+                  {b.displayName}
+                </span>
+                <button
+                  type="button"
+                  className="mf-btn mf-btn-ghost"
+                  style={{ minHeight: 36, padding: "0 14px", fontSize: 14 }}
+                  onClick={() => unban(b.userId)}
+                >
+                  <RotateCcw size={15} /> Вернуть
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {/* Состав + действия */}
       <div style={{ padding: "12px 20px 22px", display: "flex", flexDirection: "column", gap: 12 }}>

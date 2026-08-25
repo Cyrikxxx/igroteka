@@ -207,6 +207,19 @@ async function main() {
   if (rejoin.status !== 403) throw new Error(`выгнанный вошёл обратно: ${rejoin.status}`);
   console.log(`[kick] room:closed(${closed.reason}), повторный вход → ${rejoin.status}`);
 
+  // ── 7c. Кик обратим: хост снимает бан, и человек заходит обратно
+  const unban = await emitAck<{ ok: true } | { error: string }>(host.sock, "room:unban", {
+    userId: joined.user.id,
+  });
+  if (!("ok" in unban)) throw new Error(`unban failed: ${JSON.stringify(unban)}`);
+  const backIn = await fetch(`${WEB}/api/rooms/${created.room.code}/join`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", cookie: playerJar.header() },
+    body: JSON.stringify({ displayName: "PlayerAlice" }),
+  });
+  if (!backIn.ok) throw new Error(`после разбана вход не открылся: ${backIn.status}`);
+  console.log(`[unban] бан снят, вход по коду → ${backIn.status}`);
+
   // ── 8. Выгнанного больше нет в составе
   await new Promise((r) => setTimeout(r, 200));
   const afterDisc = await new Promise<RoomSnapshot>((resolve) => {
@@ -215,8 +228,8 @@ async function main() {
   const aliceInSnap = afterDisc.teams
     .flatMap((t) => t.players)
     .find((p) => p.displayName === "PlayerAlice");
-  if (aliceInSnap) throw new Error("выгнанный остался в составе команды");
-  console.log(`[state] выгнанного нет ни в одной команде`);
+  if (aliceInSnap) throw new Error("вернувшийся сразу попал в команду, а не в зрители");
+  console.log(`[state] вернувшийся ждёт в зрителях, место в команде занимает сам`);
 
   host.sock.disconnect();
 

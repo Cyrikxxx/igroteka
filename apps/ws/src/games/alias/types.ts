@@ -51,6 +51,8 @@ export interface ClientToServerEvents {
   "room:leave": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
   /** Хост выгоняет игрока из лобби. Выгнанный попадает в snapshot.banned. */
   "room:kick": (payload: { userId: string }, ack?: Ack<OkErr>) => void;
+  /** Хост снимает бан: выгнанный снова может войти по коду. */
+  "room:unban": (payload: { userId: string }, ack?: Ack<OkErr>) => void;
   /** Хост отдаёт комнату другому участнику. */
   "room:transfer_host": (payload: { userId: string }, ack?: Ack<OkErr>) => void;
   /** Сыграть ещё раз тем же составом: комната возвращается в лобби. */

@@ -52,6 +52,11 @@ export type TeamIdMap = Record<number, number>;
  * клиентам событием `room:state`. Слово, видимое explainer'у, в снимок
  * НЕ входит — оно уходит приватным emit'ом только его сокету.
  */
+export interface BannedPlayer {
+  userId: string;
+  displayName: string;
+}
+
 export interface RoomSnapshot {
   code: string;
   title: string | null;
@@ -77,11 +82,12 @@ export interface RoomSnapshot {
   /** Индекс команды в массиве teams, чей сейчас ход. */
   currentTeamIndex?: number;
   /**
-   * Кого хост выгнал из комнаты. Без этого списка выгнанный просто
-   * переподключается тем же токеном. Живёт в снапшоте Redis, поэтому
-   * пересоздание комнаты бан снимает — так же устроено в Мафии.
+   * Кого хост выгнал из комнаты. Без этого списка выгнанный вернулся бы сам:
+   * WS-токен живёт час, а креды лежат в sessionStorage — достаточно нажать
+   * F5. Имя храним, чтобы хост видел, кого возвращает по room:unban.
+   * Живёт в снапшоте Redis: пересоздание комнаты бан снимает.
    */
-  banned?: string[];
+  banned?: BannedPlayer[];
 }
 
 export interface CreateRoomResponse {

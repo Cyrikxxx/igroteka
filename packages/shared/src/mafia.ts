@@ -281,7 +281,7 @@ export interface MafiaSnapshot {
    * Кого выгнал хост. Без этого списка кик бесполезен: токен у выгнанного
    * остаётся рабочим, и он тут же вернулся бы по mafia:hello.
    */
-  banned?: string[];
+  banned?: { userId: string; displayName: string }[];
 }
 
 export function emptyNightState(): MafiaNightState {
@@ -386,6 +386,11 @@ export interface MafiaView {
    * маньяком за ночь легко гибнут двое, и второго нельзя терять.
    */
   spotlight?: MafiaSpotlightEntry[];
+  /**
+   * Кого хост выгнал. Отдаём только хосту: остальным знать этот список
+   * незачем, а хосту он нужен, чтобы вернуть выгнанного по ошибке.
+   */
+  banned?: { userId: string; displayName: string }[];
 }
 
 // ─────────── Приватные/широковещательные события ───────────

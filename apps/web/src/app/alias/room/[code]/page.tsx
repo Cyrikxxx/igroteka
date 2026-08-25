@@ -19,6 +19,7 @@ import {
   Trash2,
   Crown,
   UserX,
+  RotateCcw,
 } from "lucide-react";
 import {
   MAX_TEAMS,
@@ -138,9 +139,10 @@ export default function LobbyPage() {
   const removeTeam = (teamId: number) => socket?.emit("team:remove", { teamId }, () => {});
   const joinTeam = (teamId: number | null) => socket?.emit("team:join", { teamId }, () => {});
   const kickPlayer = (userId: string, name: string) => {
-    if (!window.confirm(`Выгнать ${name}? Вернуться по этому коду он уже не сможет.`)) return;
+    if (!window.confirm(`Выгнать ${name}? Вернуть его можно будет здесь же, в списке выгнанных.`)) return;
     socket?.emit("room:kick", { userId }, () => {});
   };
+  const unban = (userId: string) => socket?.emit("room:unban", { userId }, () => {});
   const makeHost = (userId: string, name: string) => {
     if (!window.confirm(`Передать комнату — ${name}? Ты перестанешь быть хостом.`)) return;
     socket?.emit("room:transfer_host", { userId }, () => {});
@@ -265,6 +267,33 @@ export default function LobbyPage() {
                   onMakeHost={makeHost}
                 />
               ))}
+            </div>
+          )}
+
+          {isHost && (snapshot?.banned?.length ?? 0) > 0 && (
+            <div className="card" style={{ marginTop: "var(--gap)" }}>
+              <div className="row-between" style={{ marginBottom: 12 }}>
+                <h3 className="h-title" style={{ fontSize: 16 }}>
+                  Выгнанные ({snapshot?.banned?.length})
+                </h3>
+                <span className="muted" style={{ fontSize: 12 }}>видно только тебе</span>
+              </div>
+              <div className="stack" style={{ gap: 8 }}>
+                {snapshot?.banned?.map((b) => (
+                  <div key={b.userId} className="lobby-player">
+                    <Avatar name={b.displayName} size={30} />
+                    <span className="lp-name">{b.displayName}</span>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      style={{ marginLeft: "auto", flex: "none" }}
+                      onClick={() => unban(b.userId)}
+                    >
+                      <RotateCcw size={15} /> Вернуть
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
