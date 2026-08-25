@@ -113,7 +113,7 @@ export default function FinaleScreen({
           </div>
         )}
         <button type="button" className="mf-btn mf-btn-ghost" style={{ width: "100%" }} onClick={onHome}>
-          <Home size={18} /> На главную
+          <Home size={18} /> {isHost ? "Закрыть комнату" : "Выйти"}
         </button>
       </div>
     </div>

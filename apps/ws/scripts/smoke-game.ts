@@ -103,7 +103,7 @@ async function main() {
     body: JSON.stringify({
       hostName: "Host",
       title: "SmokeGame",
-      settings: { roundTime: 10, winScore: 25, penaltySkip: false, categoryIds: [1, 2] },
+      settings: { roundTime: 10, winScore: 1, penaltySkip: false, categoryIds: [1, 2] },
     }),
   });
   hostJar.read(r1);
@@ -266,6 +266,77 @@ async function main() {
   } else {
     console.log(`[!] expected ROUND_REVIEW, got ${snapAfterTimer.phase}`);
   }
+
+  // 12a. Победа считается только в конце круга команд (checkWinner срабатывает
+  //      при nextTeamIndex === 0), поэтому доигрываем раунд второй команды.
+  //      Её раунд стартует сам через 4 с после BETWEEN_ROUNDS.
+  const snapshotNow = () =>
+    new Promise<RoomSnapshot>((resolve) =>
+      host.sock.emit("room:hello", {}, (r: unknown) => resolve(r as RoomSnapshot)),
+    );
+  const waitPhase = async (want: string, ms = 12000) => {
+    const until = Date.now() + ms;
+    for (;;) {
+      const snap = await snapshotNow();
+      if (snap.phase === want) return snap;
+      if (Date.now() > until) throw new Error(`ждал ${want}, застряли на ${snap.phase}`);
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  };
+
+  const socketOf = (userId: string): Socket => {
+    if (userId === created.user.id) return host.sock;
+    const i = players.findIndex((p) => p.user.id === userId);
+    if (i < 0) throw new Error(`нет сокета для ${userId}`);
+    return pSockets[i];
+  };
+
+  const active = await waitPhase("ROUND_ACTIVE");
+  // Хост завершает раунд досрочно — доигрывать его до таймера смысла нет.
+  await emitAck<{ ok: true } | { error: string }>(host.sock, "round:end", { confirm: true });
+  await waitPhase("ROUND_REVIEW");
+  // Подтвердить итоги может только объясняющий — у хоста прав на это нет.
+  const confirm2 = await emitAck<{ ok: true } | { error: string }>(
+    socketOf(active.currentPlayerId!),
+    "round:review_confirm",
+    {},
+  );
+  if (!("ok" in confirm2)) throw new Error(`review_confirm → ${JSON.stringify(confirm2)}`);
+  await waitPhase("FINISHED");
+  console.log("[finish] круг команд доигран, партия завершена");
+
+  // 12b. Партия доиграна — «сыграть ещё» должно вернуть комнату в лобби
+  //      тем же составом и снова открыть её для входа по коду.
+  const finished = await snapshotNow();
+  const rosterBefore = finished.teams.map((t) => t.players.length).join(",");
+
+  const restart = await emitAck<{ ok: true } | { error: string }>(
+    host.sock,
+    "room:restart",
+    {},
+  );
+  if (!("ok" in restart)) throw new Error(`room:restart → ${JSON.stringify(restart)}`);
+  await new Promise((r) => setTimeout(r, 250));
+
+  const back = await snapshotNow();
+  if (back.phase !== "LOBBY") throw new Error(`после рестарта фаза ${back.phase}`);
+  if (back.teams.some((t) => t.score !== 0)) throw new Error("счёт не обнулился");
+  if (back.gameId !== null) throw new Error("gameId не сброшен");
+  if (back.teams.map((t) => t.players.length).join(",") !== rosterBefore) {
+    throw new Error("состав команд не сохранился");
+  }
+
+  // Комнату при финале пометили FINISHED — reopenRoom обязан её открыть,
+  // иначе позвать нового человека по коду уже не выйдет.
+  const newcomer = jar();
+  await primeCookie(newcomer);
+  const rejoin = await fetch(`${WEB}/api/rooms/${created.room.code}/join`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", cookie: newcomer.header() },
+    body: JSON.stringify({ displayName: "Опоздавший" }),
+  });
+  if (!rejoin.ok) throw new Error(`комната не открылась заново: ${rejoin.status}`);
+  console.log(`[restart] LOBBY, счёт 0, состав ${rosterBefore}, вход по коду → ${rejoin.status}`);
 
   // 13. Cleanup: закрываем
   host.sock.disconnect();

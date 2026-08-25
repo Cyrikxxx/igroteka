@@ -22,7 +22,8 @@ import {
   MIN_TEAMS,
   MAX_PLAYERS_PER_TEAM,
 } from "@alias/shared/constants";
-import { mutate, load } from "../snapshot";
+import { mutate, load, remove } from "../snapshot";
+import { reopenRoom, closeRoom } from "../../../services/room-lifecycle";
 import type {
   AppSocket,
   AppNamespace,
@@ -288,6 +289,58 @@ export function registerLobbyHandlers(
   });
 
   // ─── room:leave ─── (любой)
+  // ─── room:restart ─── (host only, только из FINISHED)
+  // Зеркало restartToLobby у Мафии: собираем состав внутри mutate под
+  // локом, а не читаем его заранее — иначе тот, кто вышел, пока хост жал
+  // кнопку, вернулся бы в лобби.
+  socket.on("room:restart", async (_payload, ack) => {
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
+    if (current.phase !== "FINISHED") return ack?.({ error: "not_finished" });
+
+    const snap = await mutate(roomCode, (s) => {
+      s.teams.forEach((t) => {
+        t.score = 0;
+        t.playerCursor = 0;
+      });
+      s.phase = "LOBBY";
+      s.status = "LOBBY";
+      s.currentTeamId = null;
+      s.currentPlayerId = null;
+      s.currentTeamIndex = 0;
+      s.currentRoundNumber = 1;
+      s.timer = null;
+      s.scoreboard = null;
+      // Новая партия — новая строка Game; старая остаётся в истории.
+      s.gameId = null;
+      s.teamIdMap = undefined;
+    });
+    if (!snap) return ack?.({ error: "room_not_found" });
+
+    // Партия доигралась — комнату пометили FINISHED. Без этого REST-вход
+    // отвечал бы новым игрокам 410, хотя идёт сбор на следующую.
+    await reopenRoom(roomCode);
+    ack?.({ ok: true });
+    await broadcastState(ns, roomCode, snap);
+  });
+
+  // ─── room:close ─── (host only) — комната закрывается для всех
+  socket.on("room:close", async (_payload, ack) => {
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
+
+    ack?.({ ok: true });
+    await remove(roomCode);
+    await closeRoom(roomCode);
+    const sockets = await ns.in(`room:${roomCode}`).fetchSockets();
+    for (const sock of sockets) {
+      sock.emit("room:closed", { reason: "closed_by_host" });
+      sock.disconnect(true);
+    }
+  });
+
   // ─── room:kick ─── (host only, только в лобби)
   // Посреди партии не даём: у команды есть очередь объясняющих
   // (playerCursor), и выдёргивание игрока её сломает. Для отвалившихся

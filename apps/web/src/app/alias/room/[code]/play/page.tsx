@@ -6,8 +6,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Check, Clock, EyeOff, LogOut, Pause, SkipForward, Users, X } from "lucide-react";
-import { loadRoomCreds } from "@/lib/room-session";
+import { ArrowLeft, Check, Clock, DoorClosed, EyeOff, LogOut, Pause, RefreshCw, SkipForward, Users, X } from "lucide-react";
+import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
 import { useRoom } from "@/hooks/useRoom";
 import { pluralize, WORDS } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
@@ -15,6 +15,8 @@ import Avatar from "@/components/common/Avatar";
 import Modal from "@/components/common/Modal";
 import RoomClosedOverlay from "@/components/alias/room/RoomClosedOverlay";
 import TimerRing from "@/components/alias/game/TimerRing";
+import VictoryView from "@/components/alias/game/VictoryView";
+import type { GameFromAPI } from "@/types";
 
 interface Creds {
   code: string;
@@ -53,14 +55,33 @@ export default function PlayPage() {
     if (!snapshot || !creds) return;
     if (snapshot.phase === "LOBBY") {
       router.replace(`/alias/room/${creds.code}`);
-    } else if (snapshot.phase === "FINISHED" && snapshot.gameId) {
-      router.replace(`/alias/results/${snapshot.gameId}`);
     }
-  }, [snapshot?.phase, snapshot?.gameId, creds, router]);
+  }, [snapshot?.phase, creds, router]);
 
   // ВНИМАНИЕ: все хуки должны быть до любых ранних return.
   const [pauseModalOpen, setPauseModalOpen] = useState(false);
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
+
+  // Итоги финала: снапшот комнаты знает только счёт, а подиуму нужны
+  // составы команд — берём готовую Game по её id.
+  const [finalGame, setFinalGame] = useState<GameFromAPI | null>(null);
+  const finishedGameId = snapshot?.phase === "FINISHED" ? snapshot.gameId : null;
+  useEffect(() => {
+    if (!finishedGameId) {
+      setFinalGame(null);
+      return;
+    }
+    let alive = true;
+    fetch(`/api/games/${finishedGameId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((g: GameFromAPI | null) => {
+        if (alive) setFinalGame(g);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [finishedGameId]);
 
   const prevPausedRef = useRef(false);
   useEffect(() => {
@@ -114,6 +135,19 @@ export default function PlayPage() {
   const onLeave = () => {
     if (!window.confirm("Выйти из комнаты? Вернуться можно будет по тому же коду.")) return;
     socket?.emit("room:leave", {}, () => {});
+    router.push("/alias");
+  };
+
+  // После партии выход означает разное: хост закрывает комнату для всех,
+  // игрок уходит один. Это же правило действует и в Мафии.
+  const onLeaveAfterGame = () => {
+    if (creds.userId === snapshot.hostId) {
+      if (!window.confirm("Закрыть комнату? Все выйдут из неё.")) return;
+      socket?.emit("room:close", {}, () => {});
+    } else {
+      socket?.emit("room:leave", {}, () => {});
+    }
+    clearRoomCreds(creds.code);
     router.push("/alias");
   };
 
@@ -367,15 +401,46 @@ export default function PlayPage() {
   }
 
   // ─── FINISHED ───
+  // Раньше отсюда уводило на /alias/results/[gameId] — статическую страницу
+  // без сокета. К моменту, когда человек видел счёт, комнаты для него уже не
+  // было, и собрать всех на новую партию было не из чего.
+  const isRoomHost = creds.userId === snapshot.hostId;
   return (
     <>
-      <AppShell centered>
-        <div style={{ textAlign: "center" }}>
-          <h1 className="h-title" style={{ marginBottom: 8 }}>
-            Игра окончена
-          </h1>
-          <p className="muted">Переходим к результатам…</p>
-        </div>
+      <AppShell centered className="screen-anim">
+        {finalGame ? (
+          <VictoryView
+            game={finalGame}
+            actions={
+              <>
+                <button type="button" className="btn btn-secondary btn-lg" onClick={onLeaveAfterGame}>
+                  {isRoomHost ? <DoorClosed /> : <ArrowLeft />}
+                  {isRoomHost ? "Закрыть комнату" : "Выйти"}
+                </button>
+                {isRoomHost ? (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-lg"
+                    onClick={() => socket?.emit("room:restart", {}, () => {})}
+                  >
+                    <RefreshCw /> Сыграть ещё
+                  </button>
+                ) : (
+                  <span className="muted" style={{ fontSize: 13, alignSelf: "center" }}>
+                    Хост может собрать всех на новую партию
+                  </span>
+                )}
+              </>
+            }
+          />
+        ) : (
+          <div style={{ textAlign: "center" }}>
+            <h1 className="h-title" style={{ marginBottom: 8 }}>
+              Игра окончена
+            </h1>
+            <p className="muted">Считаем итоги…</p>
+          </div>
+        )}
       </AppShell>
       {modals}
     </>

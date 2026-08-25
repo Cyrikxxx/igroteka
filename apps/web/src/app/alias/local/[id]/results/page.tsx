@@ -5,6 +5,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { GameFromAPI } from "@/types";
+import { ArrowLeft, RefreshCw } from "lucide-react";
+import { prepareLocalRematch } from "@/lib/rematch";
 import AppShell from "@/components/common/AppShell";
 import VictoryView from "@/components/alias/game/VictoryView";
 
@@ -46,9 +48,25 @@ export default function LocalResultsPage() {
     <AppShell centered className="screen-anim">
       <VictoryView
         game={game}
-        onHome={() => router.push("/alias")}
-        onRematch={() => router.push("/alias/local/new")}
-        rematchLabel="Новая игра"
+        actions={
+          <>
+            <button type="button" className="btn btn-secondary btn-lg" onClick={() => router.push("/alias")}>
+              <ArrowLeft /> К Алиасу
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-lg"
+              onClick={() => {
+                // Раньше «Новая игра» вела на пустой экран команд, и имена
+                // приходилось вбивать заново.
+                prepareLocalRematch(game);
+                router.push("/alias/local/new");
+              }}
+            >
+              <RefreshCw /> Ещё раз тем же составом
+            </button>
+          </>
+        }
       />
     </AppShell>
   );

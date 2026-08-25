@@ -53,6 +53,10 @@ export interface ClientToServerEvents {
   "room:kick": (payload: { userId: string }, ack?: Ack<OkErr>) => void;
   /** Хост отдаёт комнату другому участнику. */
   "room:transfer_host": (payload: { userId: string }, ack?: Ack<OkErr>) => void;
+  /** Сыграть ещё раз тем же составом: комната возвращается в лобби. */
+  "room:restart": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
+  /** Хост закрывает комнату для всех. */
+  "room:close": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
 
   // ─── Round (game cycle) ────────────────────────────────────────────
   "round:start_game": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;

@@ -1,16 +1,18 @@
 // Финальный экран партии. Дизайн — Victory из редизайна (подиум + таблица).
-// Используется и на /results/[gameId], и на /local/[id]/results.
+// Показывается в трёх местах — внутри онлайн-комнаты, в локальной игре и по
+// постоянной ссылке из Истории, — поэтому кнопки под таблицей приходят
+// снаружи: они везде разные.
 
-import { ArrowLeft, Crown, RefreshCw, Trophy } from "lucide-react";
+import type { ReactNode } from "react";
+import { Crown, Trophy } from "lucide-react";
 import type { GameFromAPI } from "@/types";
 import { teamColorVar } from "@/constants/game";
 import Avatar from "@/components/common/Avatar";
 
 interface VictoryViewProps {
   game: GameFromAPI;
-  onHome: () => void;
-  onRematch: () => void;
-  rematchLabel?: string;
+  /** Кнопки под таблицей результатов. */
+  actions?: ReactNode;
 }
 
 const HEIGHT_BY_PLACE: Record<number, string> = {
@@ -19,7 +21,7 @@ const HEIGHT_BY_PLACE: Record<number, string> = {
   3: "clamp(74px, 13vh, 116px)",
 };
 
-export function VictoryView({ game, onHome, onRematch, rematchLabel = "Реванш" }: VictoryViewProps) {
+export function VictoryView({ game, actions }: VictoryViewProps) {
   const sorted = [...game.teams].sort((a, b) => b.score - a.score);
   const winner = sorted[0];
   const winnerColor = teamColorVar(winner.order);
@@ -81,14 +83,7 @@ export function VictoryView({ game, onHome, onRematch, rematchLabel = "Рева�
         ))}
       </div>
 
-      <div className="victory-actions">
-        <button type="button" className="btn btn-secondary btn-lg" onClick={onHome}>
-          <ArrowLeft /> К Алиасу
-        </button>
-        <button type="button" className="btn btn-primary btn-lg" onClick={onRematch}>
-          <RefreshCw /> {rematchLabel}
-        </button>
-      </div>
+      {actions ? <div className="victory-actions">{actions}</div> : null}
     </div>
   );
 }

@@ -81,10 +81,11 @@ export default function LobbyPage() {
       snapshot.phase === "BETWEEN_ROUNDS"
     ) {
       router.replace(`/alias/room/${creds.code}/play`);
-    } else if (snapshot.phase === "FINISHED" && snapshot.gameId) {
-      router.replace(`/alias/results/${snapshot.gameId}`);
+    } else if (snapshot.phase === "FINISHED") {
+      // Финал живёт внутри комнаты: оттуда хост может собрать всех заново.
+      router.replace(`/alias/room/${creds.code}/play`);
     }
-  }, [snapshot?.phase, snapshot?.gameId, creds, router]);
+  }, [snapshot?.phase, creds, router]);
 
   if (!mounted || !creds) {
     return (

@@ -121,8 +121,16 @@ export default function MafiaPlayPage() {
             isHost={view.you.isHost}
             onRematch={() => socket?.emit("mafia:restart", {}, () => {})}
             onHome={() => {
+              // Раньше отсюда просто уходили со страницы: комната
+              // оставалась висеть в Redis до дворника, а игроки — в ней.
+              if (view.you.isHost) {
+                if (!window.confirm("Закрыть комнату? Все выйдут из неё.")) return;
+                socket?.emit("mafia:close", {}, () => {});
+              } else {
+                socket?.emit("mafia:leave", {}, () => {});
+              }
               clearRoomCreds(code);
-              router.push("/");
+              router.push("/mafia");
             }}
           />
         </MafiaShell>
