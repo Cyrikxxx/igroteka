@@ -76,7 +76,14 @@ export default function MafiaLobbyPage() {
   };
 
   const start = () => socket?.emit("mafia:start", {}, () => {});
-  const kick = (userId: string) => socket?.emit("mafia:kick", { userId }, () => {});
+  const kick = (userId: string, name: string) => {
+    if (!window.confirm(`Выгнать ${name}? Вернуться по этому коду он уже не сможет.`)) return;
+    socket?.emit("mafia:kick", { userId }, () => {});
+  };
+  const makeHost = (userId: string, name: string) => {
+    if (!window.confirm(`Передать комнату — ${name}? Ты перестанешь быть хостом.`)) return;
+    socket?.emit("mafia:transfer_host", { userId }, () => {});
+  };
   const leave = () => {
     socket?.emit("mafia:leave", {}, () => {});
     clearRoomCreds(code);
@@ -194,14 +201,26 @@ export default function MafiaLobbyPage() {
                 {p.isHost ? <Crown size={16} color="var(--mf-gold)" /> : null}
               </div>
               {isHost && !p.isHost ? (
-                <button
-                  type="button"
-                  aria-label="Удалить"
-                  onClick={() => kick(p.userId)}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--mf-text-faint)", display: "flex", padding: 6 }}
-                >
-                  <X size={17} />
-                </button>
+                <div style={{ display: "flex", gap: 2 }}>
+                  <button
+                    type="button"
+                    aria-label={`Передать комнату — ${p.displayName}`}
+                    title="Сделать хостом"
+                    onClick={() => makeHost(p.userId, p.displayName)}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--mf-text-faint)", display: "flex", padding: 6 }}
+                  >
+                    <Crown size={17} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Выгнать ${p.displayName}`}
+                    title="Выгнать"
+                    onClick={() => kick(p.userId, p.displayName)}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--mf-text-faint)", display: "flex", padding: 6 }}
+                  >
+                    <X size={17} />
+                  </button>
+                </div>
               ) : null}
             </div>
           ))}

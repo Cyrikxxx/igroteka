@@ -187,6 +187,29 @@ export function registerMafiaLobbyHandlers(
     scheduleStateBroadcast(ns, roomCode);
   });
 
+  // ─── mafia:transfer_host ─── host
+  // До этого хост менялся только сам, когда прежний уходил из комнаты.
+  socket.on("mafia:transfer_host", async (payload, ack) => {
+    if (typeof payload?.userId !== "string") return ack?.({ error: "invalid_payload" });
+    const target = payload.userId;
+    if (target === userId) return ack?.({ error: "already_host" });
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
+    const inRoom = [...current.players, ...current.spectators].some(
+      (p) => p.userId === target,
+    );
+    if (!inRoom) return ack?.({ error: "not_in_room" });
+
+    const snap = await mutate(roomCode, (s) => {
+      s.hostId = target;
+      s.players.forEach((p) => (p.isHost = p.userId === target));
+    });
+    if (!snap) return ack?.({ error: "room_not_found" });
+    ack?.({ ok: true });
+    scheduleStateBroadcast(ns, roomCode);
+  });
+
   // ─── mafia:kick ─── host, только LOBBY
   socket.on("mafia:kick", async (payload, ack) => {
     if (typeof payload?.userId !== "string") return ack?.({ error: "invalid_payload" });
