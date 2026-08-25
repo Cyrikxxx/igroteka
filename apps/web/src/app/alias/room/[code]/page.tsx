@@ -17,6 +17,8 @@ import {
   Settings,
   Share2,
   Trash2,
+  Crown,
+  UserX,
 } from "lucide-react";
 import {
   MAX_TEAMS,
@@ -32,6 +34,7 @@ import Avatar from "@/components/common/Avatar";
 import RoomCode from "@/components/common/RoomCode";
 import QrCode from "@/components/common/QrCode";
 import Modal from "@/components/common/Modal";
+import RoomClosedOverlay from "@/components/alias/room/RoomClosedOverlay";
 import RoomSettingsModal from "@/components/alias/room/RoomSettingsModal";
 
 interface Creds {
@@ -133,6 +136,14 @@ export default function LobbyPage() {
     socket?.emit("team:rename", { teamId, name }, () => {});
   const removeTeam = (teamId: number) => socket?.emit("team:remove", { teamId }, () => {});
   const joinTeam = (teamId: number | null) => socket?.emit("team:join", { teamId }, () => {});
+  const kickPlayer = (userId: string, name: string) => {
+    if (!window.confirm(`Выгнать ${name}? Вернуться по этому коду он уже не сможет.`)) return;
+    socket?.emit("room:kick", { userId }, () => {});
+  };
+  const makeHost = (userId: string, name: string) => {
+    if (!window.confirm(`Передать комнату — ${name}? Ты перестанешь быть хостом.`)) return;
+    socket?.emit("room:transfer_host", { userId }, () => {});
+  };
 
   const myTeam = snapshot?.teams.find((t) => t.players.some((p) => p.userId === creds.userId));
   const playersTotal = snapshot?.teams.reduce((s, t) => s + t.players.length, 0) ?? 0;
@@ -249,6 +260,8 @@ export default function LobbyPage() {
                   onRename={(name) => renameTeam(team.id, name)}
                   onRemove={() => removeTeam(team.id)}
                   onJoin={() => joinTeam(team.id)}
+                  onKick={kickPlayer}
+                  onMakeHost={makeHost}
                 />
               ))}
             </div>
@@ -346,6 +359,8 @@ export default function LobbyPage() {
         />
       )}
 
+      <RoomClosedOverlay open={status === "closed"} reason={error} code={creds.code} />
+
       {/* Reconnect overlay */}
       <Modal isOpen={status === "reconnecting" || (status === "error" && !!error)} fullscreen>
         <div style={{ textAlign: "center" }}>
@@ -385,6 +400,8 @@ function TeamCard({
   onRename,
   onRemove,
   onJoin,
+  onKick,
+  onMakeHost,
 }: {
   team: RoomSnapshotTeam;
   currentUserId: string;
@@ -393,6 +410,8 @@ function TeamCard({
   onRename: (name: string) => void;
   onRemove: () => void;
   onJoin: () => void;
+  onKick: (userId: string, name: string) => void;
+  onMakeHost: (userId: string, name: string) => void;
 }) {
   const meIsHere = team.players.some((p) => p.userId === currentUserId);
   const canJoin = !meIsHere && team.players.length < MAX_PLAYERS_PER_TEAM;
@@ -463,6 +482,28 @@ function TeamCard({
                   {isMe && <em> · ты</em>}
                 </span>
                 {isCrown && <span className="pill pill-mono pill-accent">хост</span>}
+                {isHost && !isMe && (
+                  <div className="lobby-player-actions">
+                    <button
+                      type="button"
+                      className="slot-x"
+                      onClick={() => onMakeHost(p.userId, p.displayName)}
+                      aria-label={`Передать комнату — ${p.displayName}`}
+                      title="Сделать хостом"
+                    >
+                      <Crown size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      className="slot-x"
+                      onClick={() => onKick(p.userId, p.displayName)}
+                      aria-label={`Выгнать ${p.displayName}`}
+                      title="Выгнать"
+                    >
+                      <UserX size={15} />
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })

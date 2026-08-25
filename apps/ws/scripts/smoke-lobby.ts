@@ -149,8 +149,65 @@ async function main() {
     spectators: finalState.spectators.map((s) => s.displayName),
   });
 
-  // ── 8. Disconnect: проверим online=false
-  player.sock.disconnect();
+  // ── 7a. Передача хоста: права должны идти за снапшотом, а не за
+  //        ролью из WS-токена (токен выдаётся один раз и после передачи
+  //        соврал бы в обе стороны).
+  const closedByKick = new Promise<{ reason: string }>((resolve) =>
+    player.sock.once("room:closed", resolve),
+  );
+
+  const give = await emitAck<{ ok: true } | { error: string }>(
+    host.sock,
+    "room:transfer_host",
+    { userId: joined.user.id },
+  );
+  if (!("ok" in give)) throw new Error(`transfer_host failed: ${JSON.stringify(give)}`);
+  await new Promise((r) => setTimeout(r, 150));
+
+  const afterGive = await new Promise<RoomSnapshot>((resolve) => {
+    player.sock.emit("room:hello", {}, (resp: unknown) => resolve(resp as RoomSnapshot));
+  });
+  if (afterGive.hostId !== joined.user.id) {
+    throw new Error(`hostId не переехал: ${afterGive.hostId}`);
+  }
+  const oldHostTry = await emitAck<{ ok: true } | { error: string }>(
+    host.sock,
+    "team:create",
+    { name: "Не должно получиться" },
+  );
+  if (!("error" in oldHostTry)) throw new Error("прежний хост сохранил права");
+  console.log(`[transfer] хост переехал к игроку, у прежнего team:create →`, oldHostTry);
+
+  // Возвращаем комнату обратно — теперь это делает новый хост.
+  const giveBack = await emitAck<{ ok: true } | { error: string }>(
+    player.sock,
+    "room:transfer_host",
+    { userId: created.user.id },
+  );
+  if (!("ok" in giveBack)) throw new Error(`возврат хоста: ${JSON.stringify(giveBack)}`);
+  await new Promise((r) => setTimeout(r, 150));
+
+  // ── 7b. Кик: игрока выкидывает из комнаты и обратно он не входит
+  const kick = await emitAck<{ ok: true } | { error: string }>(host.sock, "room:kick", {
+    userId: joined.user.id,
+  });
+  if (!("ok" in kick)) throw new Error(`kick failed: ${JSON.stringify(kick)}`);
+  const closed = await Promise.race([
+    closedByKick,
+    new Promise<null>((r) => setTimeout(() => r(null), 2000)),
+  ]);
+  if (!closed || closed.reason !== "kicked") {
+    throw new Error(`выгнанный не получил room:closed, пришло: ${JSON.stringify(closed)}`);
+  }
+  const rejoin = await fetch(`${WEB}/api/rooms/${created.room.code}/join`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", cookie: playerJar.header() },
+    body: JSON.stringify({ displayName: "PlayerAlice" }),
+  });
+  if (rejoin.status !== 403) throw new Error(`выгнанный вошёл обратно: ${rejoin.status}`);
+  console.log(`[kick] room:closed(${closed.reason}), повторный вход → ${rejoin.status}`);
+
+  // ── 8. Выгнанного больше нет в составе
   await new Promise((r) => setTimeout(r, 200));
   const afterDisc = await new Promise<RoomSnapshot>((resolve) => {
     host.sock.emit("room:hello", {}, (resp: unknown) => resolve(resp as RoomSnapshot));
@@ -158,7 +215,8 @@ async function main() {
   const aliceInSnap = afterDisc.teams
     .flatMap((t) => t.players)
     .find((p) => p.displayName === "PlayerAlice");
-  console.log(`[disconnect] Alice.online =`, aliceInSnap?.online ?? "<not found>");
+  if (aliceInSnap) throw new Error("выгнанный остался в составе команды");
+  console.log(`[state] выгнанного нет ни в одной команде`);
 
   host.sock.disconnect();
 

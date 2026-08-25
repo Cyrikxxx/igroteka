@@ -42,8 +42,15 @@ const BETWEEN_ROUNDS_MS = 4000;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
-function isHost(socket: AppSocket): boolean {
-  return socket.data.role === "host";
+/**
+ * Права хоста проверяем по снапшоту, а не по роли из WS-токена. Токен
+ * выдаётся один раз при входе в комнату, поэтому после передачи хоста он
+ * соврал бы в обе стороны: прежний владелец остался бы «host» и сохранил
+ * все кнопки, а новый их не получил бы.
+ */
+async function isHost(code: string, userId: string): Promise<boolean> {
+  const snap = await load(code);
+  return snap?.hostId === userId;
 }
 
 async function findExplainerSocket(
@@ -325,7 +332,7 @@ async function handlePause(
   const rs = await loadRoundState(code);
   if (!rs) return { error: "no_active_round" };
   // Pause: только хост или explainer
-  if (rs.explainerUserId !== userId && socket.data.role !== "host") {
+  if (rs.explainerUserId !== userId && !(await isHost(code, userId))) {
     return { error: "forbidden" };
   }
   if (rs.pausedAt !== null) return { ok: true };
@@ -344,7 +351,7 @@ async function handleResume(
   const userId = socket.data.userId;
   const rs = await loadRoundState(code);
   if (!rs) return { error: "no_active_round" };
-  if (rs.explainerUserId !== userId && socket.data.role !== "host") {
+  if (rs.explainerUserId !== userId && !(await isHost(code, userId))) {
     return { error: "forbidden" };
   }
   if (rs.pausedAt === null) return { ok: true };
@@ -367,7 +374,7 @@ async function handleEnd(
   const userId = socket.data.userId;
   const rs = await loadRoundState(code);
   if (!rs) return { error: "no_active_round" };
-  if (rs.explainerUserId !== userId && socket.data.role !== "host") {
+  if (rs.explainerUserId !== userId && !(await isHost(code, userId))) {
     return { error: "forbidden" };
   }
   stopTimer(code);

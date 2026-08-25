@@ -13,6 +13,7 @@ import { pluralize, WORDS } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
 import Avatar from "@/components/common/Avatar";
 import Modal from "@/components/common/Modal";
+import RoomClosedOverlay from "@/components/alias/room/RoomClosedOverlay";
 import TimerRing from "@/components/alias/game/TimerRing";
 
 interface Creds {
@@ -133,6 +134,8 @@ export default function PlayPage() {
 
   const modals = (
     <>
+      <RoomClosedOverlay open={status === "closed"} reason={error} code={creds.code} />
+
       <Modal isOpen={pauseModalOpen && canControlRound} title="Пауза" onClose={onResume}>
         <p className="muted" style={{ marginBottom: 18 }}>
           Раунд приостановлен. Таймер не идёт, пока модалка открыта.

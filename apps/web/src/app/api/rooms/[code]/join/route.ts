@@ -57,6 +57,17 @@ export async function POST(request: NextRequest, { params }: Ctx) {
       return NextResponse.json({ error: "Room is finished" }, { status: 410 });
     }
 
+    // Выгнанного хостом не пускаем обратно. Проверяем до ensureUser и до
+    // создания Participant: иначе на него завелись бы строки в Postgres,
+    // хотя в комнату он всё равно не попадёт.
+    const banCheck = await loadRoomSnapshot(code);
+    if (banCheck?.banned?.includes(userId)) {
+      return NextResponse.json(
+        { error: "Хост удалил вас из этой комнаты" },
+        { status: 403 },
+      );
+    }
+
     await ensureUser(userId, trimmed);
 
     const isHost = room.hostId === userId;

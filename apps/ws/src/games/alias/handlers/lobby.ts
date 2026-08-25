@@ -15,6 +15,7 @@ import {
   nextUnusedTeamColor,
   nextUnusedTeamName,
   reassignHostIfNeeded,
+  everyoneIn,
 } from "@alias/shared/snapshot-builders";
 import {
   MAX_TEAMS,
@@ -29,8 +30,15 @@ import type {
 import { maybeRehydrateExplainer } from "./round";
 import { scheduleStateBroadcast, broadcastStateNow } from "../broadcast";
 
-function isHost(socket: AppSocket): boolean {
-  return socket.data.role === "host";
+/**
+ * Права хоста проверяем по снапшоту, а не по роли из WS-токена. Токен
+ * выдаётся один раз при входе в комнату, поэтому после передачи хоста он
+ * соврал бы в обе стороны: прежний владелец остался бы «host» и сохранил
+ * все кнопки, а новый их не получил бы.
+ */
+async function isHost(code: string, userId: string): Promise<boolean> {
+  const snap = await load(code);
+  return snap?.hostId === userId;
 }
 
 function room(socket: AppSocket): string {
@@ -54,6 +62,14 @@ export function registerLobbyHandlers(
 
   // ─── room:hello ─── (любой клиент, после connect) → отдаём snapshot
   socket.on("room:hello", async (_payload, ack) => {
+    // Выгнанный переподключился бы тем же токеном — проверяем до мутации.
+    const before = await load(roomCode);
+    if (before?.banned?.includes(userId)) {
+      ack?.({ error: "kicked" });
+      socket.emit("room:closed", { reason: "kicked" });
+      socket.disconnect(true);
+      return;
+    }
     const snap = await mutate(roomCode, (s) => {
       // Помечаем игрока online; если его нет в snapshot — добавляем как
       // зрителя (на случай переподключения после редкого race).
@@ -81,7 +97,7 @@ export function registerLobbyHandlers(
 
   // ─── team:create ─── (host only)
   socket.on("team:create", async (payload, ack) => {
-    if (!isHost(socket)) {
+    if (!(await isHost(roomCode, userId))) {
       ack?.({ error: "forbidden" });
       return;
     }
@@ -116,7 +132,7 @@ export function registerLobbyHandlers(
 
   // ─── team:rename ─── (host only)
   socket.on("team:rename", async (payload, ack) => {
-    if (!isHost(socket)) return ack?.({ error: "forbidden" });
+    if (!(await isHost(roomCode, userId))) return ack?.({ error: "forbidden" });
     if (
       typeof payload?.teamId !== "number" ||
       typeof payload?.name !== "string" ||
@@ -137,7 +153,7 @@ export function registerLobbyHandlers(
 
   // ─── team:remove ─── (host only) → игроки уезжают в зрители
   socket.on("team:remove", async (payload, ack) => {
-    if (!isHost(socket)) return ack?.({ error: "forbidden" });
+    if (!(await isHost(roomCode, userId))) return ack?.({ error: "forbidden" });
     if (typeof payload?.teamId !== "number") {
       return ack?.({ error: "invalid_payload" });
     }
@@ -221,7 +237,7 @@ export function registerLobbyHandlers(
 
   // ─── room:rename ─── (host only)
   socket.on("room:rename", async (payload, ack) => {
-    if (!isHost(socket)) return ack?.({ error: "forbidden" });
+    if (!(await isHost(roomCode, userId))) return ack?.({ error: "forbidden" });
     if (typeof payload?.title !== "string") {
       return ack?.({ error: "invalid_payload" });
     }
@@ -236,7 +252,7 @@ export function registerLobbyHandlers(
 
   // ─── room:settings ─── (host only, только в LOBBY) → правила партии
   socket.on("room:settings", async (payload, ack) => {
-    if (!isHost(socket)) return ack?.({ error: "forbidden" });
+    if (!(await isHost(roomCode, userId))) return ack?.({ error: "forbidden" });
     const current = await load(roomCode);
     if (!current) return ack?.({ error: "room_not_found" });
     if (current.phase !== "LOBBY") return ack?.({ error: "game_in_progress" });
@@ -272,6 +288,56 @@ export function registerLobbyHandlers(
   });
 
   // ─── room:leave ─── (любой)
+  // ─── room:kick ─── (host only, только в лобби)
+  // Посреди партии не даём: у команды есть очередь объясняющих
+  // (playerCursor), и выдёргивание игрока её сломает. Для отвалившихся
+  // в игре есть баннер «отключился → завершить раунд».
+  socket.on("room:kick", async (payload, ack) => {
+    if (typeof payload?.userId !== "string") return ack?.({ error: "invalid_payload" });
+    const target = payload.userId;
+    if (target === userId) return ack?.({ error: "cant_kick_self" });
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
+    if (current.phase !== "LOBBY") return ack?.({ error: "game_in_progress" });
+
+    const snap = await mutate(roomCode, (s) => {
+      removePlayer(s, target);
+      s.banned = [...(s.banned ?? []), target];
+    });
+    if (!snap) return ack?.({ error: "room_not_found" });
+
+    const sockets = await ns.in(`room:${roomCode}`).fetchSockets();
+    for (const sock of sockets) {
+      if ((sock as unknown as { data: { userId: string } }).data.userId === target) {
+        sock.emit("room:closed", { reason: "kicked" });
+        sock.disconnect(true);
+      }
+    }
+    ack?.({ ok: true });
+    await broadcastState(ns, roomCode, snap);
+  });
+
+  // ─── room:transfer_host ─── (host only)
+  socket.on("room:transfer_host", async (payload, ack) => {
+    if (typeof payload?.userId !== "string") return ack?.({ error: "invalid_payload" });
+    const target = payload.userId;
+    if (target === userId) return ack?.({ error: "already_host" });
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
+    if (!everyoneIn(current).some((p) => p.userId === target)) {
+      return ack?.({ error: "not_in_room" });
+    }
+
+    const snap = await mutate(roomCode, (s) => {
+      s.hostId = target;
+    });
+    if (!snap) return ack?.({ error: "room_not_found" });
+    ack?.({ ok: true });
+    await broadcastState(ns, roomCode, snap);
+  });
+
   socket.on("room:leave", async (_payload, ack) => {
     const snap = await mutate(roomCode, (s) => {
       removePlayer(s, userId);

@@ -49,6 +49,10 @@ export interface ClientToServerEvents {
     ack?: Ack<OkErr>,
   ) => void;
   "room:leave": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
+  /** Хост выгоняет игрока из лобби. Выгнанный попадает в snapshot.banned. */
+  "room:kick": (payload: { userId: string }, ack?: Ack<OkErr>) => void;
+  /** Хост отдаёт комнату другому участнику. */
+  "room:transfer_host": (payload: { userId: string }, ack?: Ack<OkErr>) => void;
 
   // ─── Round (game cycle) ────────────────────────────────────────────
   "round:start_game": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;

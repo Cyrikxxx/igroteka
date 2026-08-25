@@ -124,9 +124,15 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
         setStatus("reconnecting");
       }
     };
+    // Причина приходит кодом — переводим её в текст, который не стыдно
+    // показать: раньше на экран уезжало «Комната закрыта (kicked)».
+    const CLOSED_REASON: Record<string, string> = {
+      kicked: "Хост удалил тебя из комнаты.",
+      closed_by_host: "Хост закрыл комнату.",
+    };
     const onClosed = (payload: { reason: string }) => {
       setStatus("closed");
-      setError(`Комната закрыта (${payload.reason})`);
+      setError(CLOSED_REASON[payload.reason] ?? "Комната закрыта.");
     };
 
     sock.on("connect", onConnect);

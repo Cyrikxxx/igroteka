@@ -774,7 +774,12 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .lobby-team .lt-name { font-weight: 800; font-size: clamp(17px, 1.3vw, 22px); letter-spacing: -0.02em; color: var(--tc); }
   .lobby-team .lt-count { font-size: 12px; color: var(--fg-2); }
   .lobby-player { display: flex; align-items: center; gap: 11px; padding: 9px 12px; background: color-mix(in srgb, var(--bg-2) 80%, transparent); border: 1px solid var(--line); border-radius: var(--r-sm); }
-  .lobby-player .lp-name { font-weight: 700; font-size: 14.5px; flex: 1; }
+  /* Действия хоста над участником: короной передать комнату, крестиком
+     выгнать. Прижаты вправо, поэтому имя выше растягивается само. */
+  .lobby-player-actions { display: flex; gap: 2px; margin-left: auto; flex: none; }
+  .lobby-player-actions .slot-x:hover { color: var(--accent); background: var(--accent-soft); }
+  .lobby-player-actions .slot-x:last-child:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+  .lobby-player .lp-name { font-weight: 700; font-size: 14.5px; flex: 1; min-width: 0; }
   .lobby-player .lp-name em { color: var(--fg-3); font-style: normal; font-weight: 600; }
   .lobby-add { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: auto; padding: 11px; border: 1px dashed var(--line-strong); border-radius: var(--r-sm); background: none; color: var(--fg-3); font-size: 13px; font-weight: 600; cursor: pointer; transition: color .15s, border-color .15s; }
   .lobby-add:hover { color: var(--fg-1); border-color: var(--accent-line); }
