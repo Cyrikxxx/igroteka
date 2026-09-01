@@ -4,6 +4,13 @@
 export type GameMode = "LOCAL" | "ONLINE";
 export type GameStatus = "IN_PROGRESS" | "FINISHED";
 
+/**
+ * Формат партии. TEAMS — как было всегда: команды по два и больше человека.
+ * TRIO — трое играют парами по кругу, каждая «команда» из одного человека,
+ * очки за раунд идут обоим игрокам пары. Правила круга — в trio.ts.
+ */
+export type GameFormat = "TEAMS" | "TRIO";
+
 // ─── Онлайн-комнаты ──────────────────────────────────────────────────────
 
 export type RoomStatus = "LOBBY" | "IN_GAME" | "FINISHED";
@@ -71,6 +78,11 @@ export interface RoomSnapshot {
   phase: Phase;
   currentTeamId: number | null;
   currentPlayerId: string | null;
+  /**
+   * Кто угадывает. Заполняется только втроём: в обычном режиме угадывает вся
+   * команда объясняющего, и одного человека тут не назвать.
+   */
+  currentGuesserId?: string | null;
   currentRoundNumber: number;
   teams: RoomSnapshotTeam[];
   spectators: RoomSnapshotPlayer[];
@@ -81,6 +93,13 @@ export interface RoomSnapshot {
   teamIdMap?: TeamIdMap;
   /** Индекс команды в массиве teams, чей сейчас ход. */
   currentTeamIndex?: number;
+  /**
+   * Формат партии. Необязательное поле: у комнат, созданных до появления
+   * режима втроём, его нет — отсутствие читается как TEAMS.
+   */
+  format?: GameFormat;
+  /** Номер хода в круге, 0..5. Только втроём; см. trio.ts. */
+  trioTurn?: number;
   /**
    * Кого хост выгнал из комнаты. Без этого списка выгнанный вернулся бы сам:
    * WS-токен живёт час, а креды лежат в sessionStorage — достаточно нажать
@@ -123,6 +142,8 @@ export interface RoundPhasePayload {
   roundNumber: number;
   currentTeamId: number | null;
   currentPlayerId: string | null;
+  /** Только втроём — см. RoomSnapshot.currentGuesserId. */
+  currentGuesserId?: string | null;
   durationMs?: number;
 }
 
@@ -229,6 +250,8 @@ export interface RoundFromAPI {
   id: number;
   roundNumber: number;
   teamId: number;
+  /** Втроём — команда угадывавшего; в обычном режиме null. */
+  partnerTeamId: number | null;
   gameId: string;
   playerName: string;
   scoreEarned: number;
@@ -240,6 +263,9 @@ export interface RoundFromAPI {
 export interface GameFromAPI {
   id: string;
   mode: GameMode;
+  format: GameFormat;
+  /** Номер хода в круге, 0..5. Осмыслен только при format === "TRIO". */
+  trioTurn: number;
   status: GameStatus;
   ownerKey: string;
   roomId: string | null;
