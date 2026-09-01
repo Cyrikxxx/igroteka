@@ -186,6 +186,14 @@ model Game {
   currentRoundNumber Int     @default(1)
   usedWordIds        Int[]   @default([])
 
+  /// TEAMS — команды по два и больше. TRIO — трое играют парами по кругу,
+  /// каждая команда из одного человека, очки идут обоим игрокам пары.
+  format   GameFormat @default(TEAMS)
+  /// Номер хода в круге, 0..5. Осмыслен только при format = TRIO: из одного
+  /// currentTeamIndex вторую половину круга не восстановить, там те же пары
+  /// играют с обменом ролями. Правила — packages/shared/src/trio.ts.
+  trioTurn Int        @default(0)
+
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   finishedAt DateTime?
@@ -201,6 +209,11 @@ model Game {
 enum GameMode {
   LOCAL
   ONLINE
+}
+
+enum GameFormat {
+  TEAMS
+  TRIO
 }
 
 enum GameStatus {
@@ -249,14 +262,19 @@ model Player {
 }
 
 model Round {
-  id          Int       @id @default(autoincrement())
-  gameId      String
-  teamId      Int
-  roundNumber Int
-  playerName  String
-  scoreEarned Int       @default(0)
-  startedAt   DateTime  @default(now())
-  endedAt     DateTime?
+  id            Int       @id @default(autoincrement())
+  gameId        String
+  teamId        Int
+  /// Втроём — команда угадывавшего: очки за раунд получают оба. Обычным Int,
+  /// без внешнего ключа: вторая связь Round → Team заставила бы именовать обе
+  /// и заводить обратные поля, а команды и раунды всё равно уходят каскадом
+  /// вместе с партией, так что повиснуть значение не может.
+  partnerTeamId Int?
+  roundNumber   Int
+  playerName    String
+  scoreEarned   Int       @default(0)
+  startedAt     DateTime  @default(now())
+  endedAt       DateTime?
 
   game  Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
   team  Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
