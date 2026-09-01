@@ -9,6 +9,7 @@ import { ArrowRight, Check, EyeOff, LogOut, Pause, Play, SkipForward, X } from "
 import type { GameFromAPI, WordInRound } from "@/types";
 import { useTimer } from "@/hooks/useTimer";
 import { teamColorVar } from "@/constants/game";
+import { trioRoles } from "@alias/shared/trio";
 import { formatTime } from "@/lib/utils";
 import { pluralize, WORDS } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
@@ -172,6 +173,12 @@ export default function LocalRoundPage() {
 
   const team = game.teams.find((t) => t.order === game.currentTeamIndex)!;
   const colorVar = teamColorVar(team.order);
+  // Втроём объясняющий и угадывающий — два разных человека, и очки получают
+  // оба; в подписях экрана должны стоять оба имени, а не название команды.
+  const trio = game.format === "TRIO";
+  const guesser = trio
+    ? (game.teams.find((t) => t.order === trioRoles(game.trioTurn).guesser) ?? null)
+    : null;
   const currentWord = words[currentIndex];
   const gotCount = words.filter((w) => w.guessed === true).length;
   const skipCount = words.filter((w) => w.guessed === false).length;
@@ -187,7 +194,10 @@ export default function LocalRoundPage() {
       <AppShell centered className="screen-anim">
         <div className="summary-wrap">
           <div className="summary-left">
-            <span className="eyebrow">итог раунда · команда «{team.name}»</span>
+            <span className="eyebrow">
+              итог раунда ·{" "}
+              {trio ? `${team.name} и ${guesser?.name ?? "?"}` : `команда «${team.name}»`}
+            </span>
             <h1 className="h-display" style={{ margin: "12px 0" }}>
               {score > 0 ? "Отличный раунд!" : "Раунд завершён"}
             </h1>
@@ -293,7 +303,9 @@ export default function LocalRoundPage() {
               <div>
                 <span className="gt-name">Твой ход</span>
                 <span className="gt-team mono">
-                  Команда «{team.name}» · раунд {game.currentRoundNumber}
+                  {trio
+                    ? `Угадывает ${guesser?.name ?? "?"} · круг ${game.currentRoundNumber}`
+                    : `Команда «${team.name}» · раунд ${game.currentRoundNumber}`}
                 </span>
               </div>
             </div>

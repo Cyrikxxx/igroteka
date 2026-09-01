@@ -811,6 +811,18 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .team-add-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 200px; border: 1px dashed var(--line-strong); border-radius: var(--r-lg); background: none; color: var(--fg-3); font-weight: 700; font-size: 15px; cursor: pointer; transition: color .15s, border-color .15s; }
   .team-add-card:hover { color: var(--fg); border-color: var(--accent-line); }
   .team-add-card .tac-ic { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: var(--bg-3); }
+  /* Состав режима «втроём»: три именных слота вместо сетки команд. Карточка
+     узкая — трёх строк на всю ширину экрана быть не должно. */
+  .trio-card { max-width: 560px; }
+  .trio-slot { border-left: 3px solid var(--tc); }
+  .trio-slot:focus-within { border-color: var(--tc); }
+  .trio-num { width: 20px; flex: none; text-align: center; font-size: 12px; font-weight: 700; color: var(--fg-3); }
+  .trio-slot ::selection { background: color-mix(in srgb, var(--tc) 30%, transparent); }
+  .trio-hint { margin-top: 18px; padding: 16px 18px; border-radius: var(--r-sm); background: var(--bg-2); border: 1px solid var(--line); }
+  .trio-hint b { display: block; font-size: 13px; letter-spacing: 0.02em; margin-bottom: 8px; }
+  .trio-hint p { margin: 0 0 8px; font-size: 13.5px; line-height: 1.55; color: var(--fg-2); }
+  .trio-hint p:last-child { margin-bottom: 0; }
+
   .setup-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: clamp(26px, 3.5vh, 46px); flex-wrap: wrap; }
   .settings-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: var(--gap); align-items: start; }
   .set-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
@@ -1062,6 +1074,8 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .pass-team { font-size: clamp(15px, 1.2vw, 20px); color: var(--fg-1); font-weight: 600; margin: 0; }
   .pass-players { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
   .pass-chip { padding: 6px 13px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--fg-1); }
+  /* Тот, кто пропускает ход: видно, что он не в деле. */
+  .pass-chip.is-out { background: none; color: var(--fg-3); border-style: dashed; }
   .pass-side { display: flex; flex-direction: column; gap: var(--gap); }
   .pass-score { display: flex; flex-direction: column; gap: 12px; }
   .pass-score-list { display: flex; flex-direction: column; gap: 8px; }

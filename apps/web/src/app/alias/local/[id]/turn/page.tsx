@@ -7,6 +7,7 @@ import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Crown, EyeOff, Play } from "lucide-react";
 import type { GameFromAPI } from "@/types";
 import { teamColorVar } from "@/constants/game";
+import { TRIO_TURNS, trioRoles } from "@alias/shared/trio";
 import AppShell from "@/components/common/AppShell";
 import Avatar from "@/components/common/Avatar";
 
@@ -55,6 +56,13 @@ export default function LocalTurnPage() {
   const colorVar = teamColorVar(team.order);
   const sorted = [...game.teams].sort((a, b) => b.score - a.score);
 
+  // Втроём «команда» — это один человек, а пара на ход задаётся номером хода
+  // в круге. Отдыхающего показываем явно: иначе непонятно, кто сейчас лишний.
+  const trio = game.format === "TRIO";
+  const roles = trio ? trioRoles(game.trioTurn) : null;
+  const guesser = roles ? game.teams.find((t) => t.order === roles.guesser) : null;
+  const resting = roles ? game.teams.find((t) => t.order === roles.resting) : null;
+
   return (
     <AppShell centered className="screen-anim">
       {/* Единственный выход с этого экрана. Партия уже сохранена и доступна
@@ -66,18 +74,36 @@ export default function LocalTurnPage() {
 
       <div className="pass-wrap" style={{ "--tc": `var(${colorVar})` } as React.CSSProperties}>
         <div className="pass-hero">
-          <span className="eyebrow">передай устройство · раунд {game.currentRoundNumber}</span>
+          <span className="eyebrow">
+            передай устройство · {trio ? "круг" : "раунд"} {game.currentRoundNumber}
+            {trio && ` · ход ${game.trioTurn + 1} из ${TRIO_TURNS}`}
+          </span>
           <div className="pass-avatar">
             <Avatar name={player.name} color={colorVar} size={92} />
           </div>
           <h1 className="pass-name">{player.name}</h1>
-          <p className="pass-team">объясняет за команду «{team.name}»</p>
+          <p className="pass-team">
+            {trio ? (
+              <>
+                объясняет — угадывает <b>{guesser?.name}</b>
+              </>
+            ) : (
+              <>объясняет за команду «{team.name}»</>
+            )}
+          </p>
           <div className="pass-players">
-            {team.players.map((p) => (
-              <span className="pass-chip mono" key={p.id}>
-                {p.name}
-              </span>
-            ))}
+            {trio ? (
+              <>
+                <span className="pass-chip mono">{guesser?.name} угадывает</span>
+                <span className="pass-chip mono is-out">{resting?.name} отдыхает</span>
+              </>
+            ) : (
+              team.players.map((p) => (
+                <span className="pass-chip mono" key={p.id}>
+                  {p.name}
+                </span>
+              ))
+            )}
           </div>
         </div>
 

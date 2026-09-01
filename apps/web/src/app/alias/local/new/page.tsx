@@ -16,12 +16,15 @@ import {
   MAX_TEAMS,
   MIN_PLAYERS_PER_TEAM,
   MAX_PLAYERS_PER_TEAM,
+  TRIO_TEAMS,
   teamColorVar,
 } from "@/constants/game";
+import { TRIO_TURNS } from "@alias/shared/trio";
 import { nextUnusedTeamName } from "@alias/shared/snapshot-builders";
 import { plural, pluralize, PLAYERS, TEAMS, TEAMS_IN } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
 import Stepper from "@/components/common/Stepper";
+import Chip from "@/components/common/Chip";
 import Avatar from "@/components/common/Avatar";
 
 export default function LocalNewPage() {
@@ -38,6 +41,16 @@ export default function LocalNewPage() {
   useEffect(() => {
     if (hydrated) saveLocalSetup(state);
   }, [state, hydrated]);
+
+  const trio = state.format === "TRIO";
+  const setFormat = (format: LocalSetupState["format"]) =>
+    setState((s) => ({ ...s, format }));
+
+  const updateTrioName = (idx: number, name: string) =>
+    setState((s) => ({
+      ...s,
+      trio: s.trio.map((p, i) => (i === idx ? { name } : p)),
+    }));
 
   const updateTeamName = (idx: number, name: string) =>
     setState((s) => ({ ...s, teams: s.teams.map((t, i) => (i === idx ? { ...t, name } : t)) }));
@@ -87,9 +100,14 @@ export default function LocalNewPage() {
       teams: s.teams.length > MIN_TEAMS ? s.teams.filter((_, i) => i !== idx) : s.teams,
     }));
 
-  const total = state.teams.reduce((sum, t) => sum + t.players.length, 0);
+  const total = trio
+    ? state.trio.length
+    : state.teams.reduce((sum, t) => sum + t.players.length, 0);
 
   const validate = (): string | null => {
+    if (trio) {
+      return state.trio.some((p) => !p.name.trim()) ? "Впишите три имени" : null;
+    }
     if (state.teams.length < MIN_TEAMS) return `Нужно минимум ${MIN_TEAMS} команды`;
     for (const team of state.teams) {
       if (!team.name.trim()) return "У всех команд должно быть название";
@@ -116,21 +134,47 @@ export default function LocalNewPage() {
         <div>
           <Stepper step={1} />
           <h1 className="h-display" style={{ marginTop: 14 }}>
-            Соберите команды
+            {trio ? "Кто играет" : "Соберите команды"}
           </h1>
           <p className="h-sub" style={{ marginTop: 8 }}>
-            От {MIN_TEAMS} до {MAX_TEAMS} команд по {MIN_PLAYERS_PER_TEAM}–{MAX_PLAYERS_PER_TEAM}{" "}
-            игроков. Имена можно менять в любой момент.
+            {trio ? (
+              <>
+                Трое играют парами по кругу. Круг — {TRIO_TURNS} ходов, за него каждый
+                расскажет обоим и поугадывает у обоих.
+              </>
+            ) : (
+              <>
+                От {MIN_TEAMS} до {MAX_TEAMS} команд по {MIN_PLAYERS_PER_TEAM}–
+                {MAX_PLAYERS_PER_TEAM} игроков. Имена можно менять в любой момент.
+              </>
+            )}
           </p>
+          <div className="chip-row" style={{ marginTop: 18 }}>
+            <Chip active={!trio} onClick={() => setFormat("TEAMS")}>
+              Командами
+            </Chip>
+            <Chip active={trio} onClick={() => setFormat("TRIO")}>
+              Втроём
+            </Chip>
+          </div>
         </div>
         <div className="setup-counter">
           <span className="sc-v mono">{total}</span>
           <span className="sc-l">
-            {plural(total, PLAYERS)} · {pluralize(state.teams.length, TEAMS)}
+            {trio ? (
+              plural(total, PLAYERS)
+            ) : (
+              <>
+                {plural(total, PLAYERS)} · {pluralize(state.teams.length, TEAMS)}
+              </>
+            )}
           </span>
         </div>
       </div>
 
+      {trio ? (
+        <TrioComposer players={state.trio} onRename={updateTrioName} />
+      ) : (
       <div className="teams-grid">
         {state.teams.map((team, teamIdx) => {
           const colorVar = teamColorVar(teamIdx);
@@ -204,6 +248,7 @@ export default function LocalNewPage() {
           </button>
         )}
       </div>
+      )}
 
       {error && (
         <div className="notice notice-danger" style={{ marginTop: 16 }}>
@@ -215,12 +260,67 @@ export default function LocalNewPage() {
         {/* Причину, по которой ещё нельзя дальше, показываем сразу, а не
             после нажатия — кнопку при этом не блокируем. */}
         <span className="muted">
-          {validate() ?? `${pluralize(total, PLAYERS)} в ${pluralize(state.teams.length, TEAMS_IN)}`}
+          {validate() ??
+            (trio
+              ? `${pluralize(total, PLAYERS)} · круг из ${TRIO_TURNS} ходов`
+              : `${pluralize(total, PLAYERS)} в ${pluralize(state.teams.length, TEAMS_IN)}`)}
         </span>
         <button type="button" className="btn btn-primary btn-lg" onClick={onNext}>
           Далее · настройки <ArrowRight />
         </button>
       </div>
     </AppShell>
+  );
+}
+
+/**
+ * Состав режима «втроём». Ни команд, ни кнопок «добавить» — ровно три имени.
+ * Цвет у каждого свой и тот же, что будет на табло: втроём счёт личный.
+ */
+function TrioComposer({
+  players,
+  onRename,
+}: {
+  players: { name: string }[];
+  onRename: (idx: number, name: string) => void;
+}) {
+  return (
+    <div className="card trio-card">
+      <span className="eyebrow">состав</span>
+      <div className="stack" style={{ gap: 10, marginTop: 14 }}>
+        {players.map((player, idx) => {
+          const colorVar = teamColorVar(idx);
+          return (
+            <div
+              className="slot trio-slot"
+              key={idx}
+              style={{ "--tc": `var(${colorVar})` } as React.CSSProperties}
+            >
+              <span className="trio-num mono">{idx + 1}</span>
+              <Avatar name={player.name} color={colorVar} size={32} />
+              <input
+                className="slot-name"
+                style={{ background: "transparent", border: 0, outline: "none", color: "var(--fg)" }}
+                value={player.name}
+                onChange={(e) => onRename(idx, e.target.value.slice(0, 50))}
+                placeholder={`Игрок ${idx + 1}`}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="trio-hint">
+        <b>Как идёт круг</b>
+        <p>
+          Один объясняет, второй угадывает, третий пропускает ход. Очки за раунд
+          получают оба, кто играл.
+        </p>
+        <p>
+          За круг из {TRIO_TURNS} ходов каждый успеет рассказать обоим и поугадывать
+          у обоих — пары меняются сами.
+        </p>
+      </div>
+    </div>
   );
 }

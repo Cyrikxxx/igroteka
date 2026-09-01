@@ -3,7 +3,12 @@
 // логика живёт здесь, а не копируется по экранам.
 
 import type { GameFromAPI, CreateRoomResponse } from "@/types";
-import { saveLocalSetup, type LocalSetupState } from "@/lib/local-setup";
+import {
+  saveLocalSetup,
+  DEFAULT_LOCAL_SETUP,
+  EMPTY_TRIO,
+  type LocalSetupState,
+} from "@/lib/local-setup";
 import { loadDisplayName, saveRoomCreds } from "@/lib/room-session";
 
 /** Настройки партии в том виде, в каком их принимают /api/games и /api/rooms. */
@@ -21,11 +26,23 @@ function settingsOf(game: GameFromAPI) {
  * ведём на экран команд — до старта имена ещё можно поправить.
  */
 export function prepareLocalRematch(game: GameFromAPI): LocalSetupState {
+  // Втроём команда — это один человек, поэтому состав возвращается в trio, а
+  // не в teams: иначе «ещё раз тем же составом» открывало бы обычный режим с
+  // тремя командами по одному игроку.
+  const trio = game.format === "TRIO";
   const state: LocalSetupState = {
-    teams: game.teams.map((t) => ({
-      name: t.name,
-      players: t.players.map((p) => ({ name: p.name })),
-    })),
+    format: trio ? "TRIO" : "TEAMS",
+    teams: trio
+      ? DEFAULT_LOCAL_SETUP.teams
+      : game.teams.map((t) => ({
+          name: t.name,
+          players: t.players.map((p) => ({ name: p.name })),
+        })),
+    trio: trio
+      ? EMPTY_TRIO.map((slot, i) => ({
+          name: game.teams[i]?.players[0]?.name ?? slot.name,
+        }))
+      : DEFAULT_LOCAL_SETUP.trio,
     settings: settingsOf(game),
   };
   saveLocalSetup(state);

@@ -3,7 +3,7 @@
 // Карточка одной игры в истории. Дизайн — .hist-card из редизайна.
 
 import Link from "next/link";
-import { Check, Crown, Play, Smartphone, Trash2, Trophy, Wifi } from "lucide-react";
+import { Check, Crown, Play, Smartphone, Trash2, Trophy, Users2, Wifi } from "lucide-react";
 import type { GameFromAPI } from "@/types";
 import { formatDateRu } from "@/lib/utils";
 
@@ -39,6 +39,11 @@ export function HistoryRow({ game, onDelete, deleting }: HistoryRowProps) {
             {isLocal ? <Smartphone size={13} /> : <Wifi size={13} />}
             {isLocal ? "локально" : "онлайн"}
           </span>
+          {game.format === "TRIO" && (
+            <span className="pill pill-mono">
+              <Users2 size={13} /> втроём
+            </span>
+          )}
         </div>
         <span className="hist-date mono">{formatDateRu(game.createdAt)}</span>
       </div>

@@ -22,6 +22,9 @@ const HEIGHT_BY_PLACE: Record<number, string> = {
 };
 
 export function VictoryView({ game, actions }: VictoryViewProps) {
+  // Втроём команда — один человек, и её «состав» дословно повторял бы имя в
+  // соседней колонке.
+  const trio = game.format === "TRIO";
   const sorted = [...game.teams].sort((a, b) => b.score - a.score);
   const winner = sorted[0];
   const winnerColor = teamColorVar(winner.order);
@@ -77,7 +80,9 @@ export function VictoryView({ game, actions }: VictoryViewProps) {
             <span className="vt-rank mono">{i + 1}</span>
             <span className="vt-dot" />
             <span className="vt-name">{t.name}</span>
-            <span className="vt-players muted">{t.players.map((p) => p.name).join(", ")}</span>
+            {!trio && (
+              <span className="vt-players muted">{t.players.map((p) => p.name).join(", ")}</span>
+            )}
             <span className="vt-score mono">{t.score}</span>
           </div>
         ))}

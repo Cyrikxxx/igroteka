@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireUserId } from "@/lib/identity";
+import { nextTrioTurn, trioRoles, scoredTeamIndexes } from "@alias/shared/trio";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -51,23 +52,46 @@ export async function POST(request: NextRequest, { params }: Ctx) {
     const team = game.teams.find((t) => t.id === teamId);
     if (!team) return NextResponse.json({ error: "Team not found" }, { status: 404 });
 
+    const trio = game.format === "TRIO";
+    const byOrder = (idx: number) => game.teams.find((t) => t.order === idx) ?? null;
+
     const guessedCount = words.filter((w) => w.guessed).length;
     const skippedCount = words.filter((w) => !w.guessed).length;
     const scoreEarned = guessedCount - (game.penaltySkip ? skippedCount : 0);
-    const newTeamScore = Math.max(0, team.score + scoreEarned);
 
+    // Кому засчитать раунд. Втроём это оба игрока пары: и тот, кто объяснял,
+    // и тот, кто угадывал. Отдыхающий не получает ничего.
+    const scored = scoredTeamIndexes(game.format, game.trioTurn, game.currentTeamIndex)
+      .map(byOrder)
+      .filter((t) => t !== null)
+      .map((t) => ({ id: t.id, score: Math.max(0, t.score + scoreEarned) }));
+    const newTeamScore = scored.find((s) => s.id === teamId)?.score ?? team.score;
+    const partnerTeamId = trio
+      ? (byOrder(trioRoles(game.trioTurn).guesser)?.id ?? null)
+      : null;
+
+    // Ход. Втроём круг из шести ходов: сначала три пары, потом те же три с
+    // обменом ролями, — поэтому крутится trioTurn, а currentTeamIndex просто
+    // следует за тем, кто объясняет.
     const numTeams = game.teams.length;
-    const nextTeamIndex = (game.currentTeamIndex + 1) % numTeams;
-    const nextRoundNumber =
-      nextTeamIndex === 0 ? game.currentRoundNumber + 1 : game.currentRoundNumber;
+    const nextTrio = trio ? nextTrioTurn(game.trioTurn) : game.trioTurn;
+    const nextTeamIndex = trio
+      ? trioRoles(nextTrio).explainer
+      : (game.currentTeamIndex + 1) % numTeams;
+    // Конец круга — момент, когда у всех было поровну ходов.
+    const circleDone = trio ? nextTrio === 0 : nextTeamIndex === 0;
+    const nextRoundNumber = circleDone
+      ? game.currentRoundNumber + 1
+      : game.currentRoundNumber;
 
-    // Проверка победы — только в конце цикла команд (как в v1).
+    // Проверка победы — только в конце круга (как в v1).
     let gameFinished = false;
     let winnerId: number | undefined;
-    if (game.winScore > 0 && nextTeamIndex === 0) {
-      const futureScores = game.teams.map((t) =>
-        t.id === teamId ? { ...t, score: newTeamScore } : t,
-      );
+    if (game.winScore > 0 && circleDone) {
+      const futureScores = game.teams.map((t) => {
+        const hit = scored.find((s) => s.id === t.id);
+        return hit ? { ...t, score: hit.score } : t;
+      });
       const qualified = futureScores.filter((t) => t.score >= game.winScore);
       if (qualified.length > 0) {
         const winner = qualified.reduce((best, t) => (t.score > best.score ? t : best));
@@ -83,6 +107,7 @@ export async function POST(request: NextRequest, { params }: Ctx) {
         data: {
           gameId: id,
           teamId,
+          partnerTeamId,
           roundNumber: game.currentRoundNumber,
           playerName,
           scoreEarned,
@@ -98,13 +123,17 @@ export async function POST(request: NextRequest, { params }: Ctx) {
         select: { id: true, roundNumber: true, scoreEarned: true },
       });
 
-      await tx.team.update({
-        where: { id: teamId },
-        data: {
-          score: newTeamScore,
-          currentPlayerIndex: (team.currentPlayerIndex + 1) % team.players.length,
-        },
-      });
+      // Втроём тут две команды: очки идут и объяснявшему, и угадывавшему.
+      for (const s of scored) {
+        const t = game.teams.find((x) => x.id === s.id)!;
+        await tx.team.update({
+          where: { id: s.id },
+          data: {
+            score: s.score,
+            currentPlayerIndex: (t.currentPlayerIndex + 1) % t.players.length,
+          },
+        });
+      }
 
       await tx.game.update({
         where: { id },
@@ -113,6 +142,7 @@ export async function POST(request: NextRequest, { params }: Ctx) {
           currentRoundNumber: gameFinished
             ? game.currentRoundNumber
             : nextRoundNumber,
+          trioTurn: gameFinished ? game.trioTurn : nextTrio,
           status: gameFinished ? "FINISHED" : "IN_PROGRESS",
           finishedAt: gameFinished ? new Date() : null,
           usedWordIds: { push: newUsedWordIds },
@@ -125,7 +155,9 @@ export async function POST(request: NextRequest, { params }: Ctx) {
     return NextResponse.json({
       round: result,
       teamScore: newTeamScore,
+      scores: scored,
       nextTeamIndex,
+      nextTrioTurn: nextTrio,
       nextRoundNumber,
       gameFinished,
       winnerId,

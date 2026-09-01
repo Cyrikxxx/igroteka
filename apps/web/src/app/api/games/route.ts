@@ -9,11 +9,14 @@ import {
   MAX_TEAMS,
   MIN_PLAYERS_PER_TEAM,
   MAX_PLAYERS_PER_TEAM,
+  TRIO_TEAMS,
+  TRIO_PLAYERS_PER_TEAM,
   teamColorVar,
   ROUND_TIME_DEFAULT,
   WIN_SCORE_DEFAULT,
   PENALTY_SKIP_DEFAULT,
 } from "@/constants/game";
+import type { GameFormat } from "@/types";
 
 // GET /api/games — история игр устройства (по cookie aid): локальные +
 // онлайн-партии, которые пользователь хостил (Game.ownerKey = hostId).
@@ -49,6 +52,14 @@ export async function POST(request: NextRequest) {
     const userId = await requireUserId();
     const body = await request.json();
     const { settings, teams, displayName } = body ?? {};
+    // Втроём приходят те же три «команды» по одному человеку — меняются
+    // только границы проверки состава.
+    const format: GameFormat = body?.format === "TRIO" ? "TRIO" : "TEAMS";
+    const trio = format === "TRIO";
+    const minTeams = trio ? TRIO_TEAMS : MIN_TEAMS;
+    const maxTeams = trio ? TRIO_TEAMS : MAX_TEAMS;
+    const minPlayers = trio ? TRIO_PLAYERS_PER_TEAM : MIN_PLAYERS_PER_TEAM;
+    const maxPlayers = trio ? TRIO_PLAYERS_PER_TEAM : MAX_PLAYERS_PER_TEAM;
 
     // Валидация settings
     if (!settings || typeof settings !== "object") {
@@ -73,9 +84,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Валидация teams
-    if (!Array.isArray(teams) || teams.length < MIN_TEAMS || teams.length > MAX_TEAMS) {
+    if (!Array.isArray(teams) || teams.length < minTeams || teams.length > maxTeams) {
       return NextResponse.json(
-        { error: `teams: ${MIN_TEAMS}..${MAX_TEAMS} required` },
+        { error: `teams: ${minTeams}..${maxTeams} required` },
         { status: 400 },
       );
     }
@@ -85,11 +96,11 @@ export async function POST(request: NextRequest) {
       }
       if (
         !Array.isArray(team.players) ||
-        team.players.length < MIN_PLAYERS_PER_TEAM ||
-        team.players.length > MAX_PLAYERS_PER_TEAM
+        team.players.length < minPlayers ||
+        team.players.length > maxPlayers
       ) {
         return NextResponse.json(
-          { error: `players: ${MIN_PLAYERS_PER_TEAM}..${MAX_PLAYERS_PER_TEAM} required per team` },
+          { error: `players: ${minPlayers}..${maxPlayers} required per team` },
           { status: 400 },
         );
       }
@@ -116,6 +127,7 @@ export async function POST(request: NextRequest) {
     const game = await prisma.game.create({
       data: {
         mode: "LOCAL",
+        format,
         ownerKey: userId,
         roundTime,
         winScore,

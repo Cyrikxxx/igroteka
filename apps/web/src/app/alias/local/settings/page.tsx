@@ -10,6 +10,7 @@ import {
   loadLocalSetup,
   saveLocalSetup,
   clearLocalSetup,
+  teamsForRequest,
   DEFAULT_LOCAL_SETUP,
   type LocalSetupState,
 } from "@/lib/local-setup";
@@ -65,7 +66,12 @@ export default function LocalSettingsPage() {
       const res = await fetch("/api/games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ settings: state.settings, teams: state.teams }),
+        body: JSON.stringify({
+          format: state.format,
+          settings: state.settings,
+          // Втроём каждый едет отдельной командой из одного человека.
+          teams: teamsForRequest(state),
+        }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
