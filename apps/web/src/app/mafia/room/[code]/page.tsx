@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Copy, Crown, DoorOpen, LogOut, RotateCcw, Settings2, Share2, VenetianMask, X, Check } from "lucide-react";
+import { Copy, Crown, DoorOpen, Link2, LogOut, RotateCcw, Settings2, VenetianMask, X, Check } from "lucide-react";
 import {
   MIN_MAFIA_PLAYERS,
   MAX_MAFIA_PLAYERS,
@@ -36,6 +36,7 @@ export default function MafiaLobbyPage() {
 
   const { socket, view, error } = useMafiaRoom(opts);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [draft, setDraft] = useState<MafiaSettings | null>(null);
 
@@ -63,16 +64,21 @@ export default function MafiaLobbyPage() {
   const inviteUrl =
     typeof window === "undefined" ? "" : `${window.location.origin}/mafia/join?code=${code}`;
 
-  const copyCode = () => {
-    navigator.clipboard?.writeText(code).then(() => {
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1400);
-    });
+      setTimeout(() => setCopied(false), 1600);
+    } catch {}
   };
-  const shareLink = () => {
-    if (navigator.share)
-      navigator.share({ title: "Мафия", text: "Заходи в комнату", url: inviteUrl }).catch(() => {});
-    else navigator.clipboard?.writeText(inviteUrl);
+  // Как в лобби Алиаса: просто кладём ссылку в буфер. Системная шторка
+  // «Поделиться» перекрывала лобби, а на десктопе всё равно сводилась к буферу.
+  const shareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1600);
+    } catch {}
   };
 
   const start = () => socket?.emit("mafia:start", {}, () => {});
@@ -133,11 +139,11 @@ export default function MafiaLobbyPage() {
         <div style={{ display: "flex", gap: 8 }}>
           <button type="button" className="mf-chip" style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 13, color: "var(--mf-text)" }} onClick={copyCode}>
             {copied ? <Check size={15} /> : <Copy size={15} />}
-            {copied ? "Скопировано" : "Скопировать"}
+            {copied ? "Скопировано" : "Код"}
           </button>
           <button type="button" className="mf-chip" style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 13, color: "var(--mf-text)" }} onClick={shareLink}>
-            <Share2 size={15} />
-            Поделиться
+            {linkCopied ? <Check size={15} /> : <Link2 size={15} />}
+            {linkCopied ? "Скопировано" : "Ссылка"}
           </button>
         </div>
         {/* QR удобен, когда компания рядом: навёл камеру — и ты в комнате. */}
