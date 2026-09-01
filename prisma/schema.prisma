@@ -16,6 +16,21 @@ datasource db {
 
 // ─────────── Словарь ───────────
 
+/// Подборка тем — то, что игрок видит на экране выбора. Тема входит ровно
+/// в одну подборку, поэтому связь один-ко-многим, а не many-to-many:
+/// строгое разбиение делает состояние карточки однозначным.
+model Collection {
+  id          Int        @id @default(autoincrement())
+  slug        String     @unique
+  name        String
+  emoji       String
+  description String
+  order       Int        @default(0)
+  categories  Category[]
+
+  @@index([slug])
+}
+
 model Category {
   id        Int            @id @default(autoincrement())
   name      String         @unique
@@ -23,11 +38,25 @@ model Category {
   emoji     String?
   isPublic  Boolean        @default(true)
   createdAt DateTime       @default(now())
-  words     WordCategory[]
-  games     GameCategory[]
-  rooms     RoomCategory[]
+
+  /// THEME — обычная тема внутри подборки; LEVEL — уровень сложности.
+  /// Уровни стоят рядом с подборками: их можно выбрать, но не раскрыть,
+  /// поэтому collectionId у них пустой.
+  kind         String  @default("THEME")
+  collectionId Int?
+  collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  /// Порядок внутри подборки (у уровней — между собой).
+  order        Int     @default(0)
+  isPopular    Boolean @default(false)
+  /// newyear | halloween | summer — в свой месяц тема поднимается наверх.
+  season       String?
+
+  words WordCategory[]
+  games GameCategory[]
+  rooms RoomCategory[]
 
   @@index([slug])
+  @@index([collectionId])
 }
 
 model Word {
