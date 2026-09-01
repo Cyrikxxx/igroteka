@@ -8,7 +8,27 @@ import { io as ioClient } from "socket.io-client";
 const WEB = "http://localhost:3000";
 const WS = process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001";
 
+/**
+ * Id категорий по slug. Раньше скрипты писали categoryIds: [1, 2] — после
+ * пересборки каталога id другие, и партия оставалась вовсе без слов.
+ */
+async function categoryIdsBySlug(...slugs: string[]): Promise<number[]> {
+  const res = await fetch(`${WEB}/api/categories`);
+  if (!res.ok) throw new Error(`categories: ${res.status}`);
+  const catalog = (await res.json()) as {
+    levels: { id: number; slug: string }[];
+    collections: { categories: { id: number; slug: string }[] }[];
+  };
+  const all = [...catalog.levels, ...catalog.collections.flatMap((c) => c.categories)];
+  return slugs.map((slug) => {
+    const found = all.find((c) => c.slug === slug);
+    if (!found) throw new Error(`нет категории «${slug}»`);
+    return found.id;
+  });
+}
+
 async function main() {
+  const categoryIds = await categoryIdsBySlug("animals", "food", "jobs");
   // 1. prime cookie + create room
   const jar = new Map<string, string>();
   function readCookies(res: Response) {
@@ -35,7 +55,7 @@ async function main() {
         roundTime: 60,
         winScore: 50,
         penaltySkip: false,
-        categoryIds: [1, 2, 3],
+        categoryIds,
       },
     }),
   });

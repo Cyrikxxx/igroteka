@@ -63,7 +63,27 @@ function emitAck<T>(sock: Socket, event: string, payload: unknown): Promise<T> {
   return new Promise((resolve) => sock.emit(event, payload, resolve as (r: T) => void));
 }
 
+/**
+ * Id категорий по slug. Раньше скрипты писали categoryIds: [1, 2] — после
+ * пересборки каталога id другие, и партия оставалась вовсе без слов.
+ */
+async function categoryIdsBySlug(...slugs: string[]): Promise<number[]> {
+  const res = await fetch(`${WEB}/api/categories`);
+  if (!res.ok) throw new Error(`categories: ${res.status}`);
+  const catalog = (await res.json()) as {
+    levels: { id: number; slug: string }[];
+    collections: { categories: { id: number; slug: string }[] }[];
+  };
+  const all = [...catalog.levels, ...catalog.collections.flatMap((c) => c.categories)];
+  return slugs.map((slug) => {
+    const found = all.find((c) => c.slug === slug);
+    if (!found) throw new Error(`нет категории «${slug}»`);
+    return found.id;
+  });
+}
+
 async function main() {
+  const categoryIds = await categoryIdsBySlug("animals", "food");
   // ── 1. Host создаёт комнату через REST
   const hostJar = jar();
   await primeCookie(hostJar);
@@ -73,7 +93,7 @@ async function main() {
     body: JSON.stringify({
       hostName: "HostBob",
       title: "SmokeLobby",
-      settings: { roundTime: 60, winScore: 50, penaltySkip: false, categoryIds: [1, 2] },
+      settings: { roundTime: 60, winScore: 50, penaltySkip: false, categoryIds },
     }),
   });
   hostJar.read(r1);

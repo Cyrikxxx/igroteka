@@ -10,7 +10,18 @@ export interface WordItem {
   text: string;
 }
 
-/** Достаёт N неиспользованных слов для игры, ORDER BY random(). */
+/**
+ * Достаёт N неиспользованных слов для игры.
+ *
+ * Отбор целиком в SQL. Раньше запрос тянул ВСЕ подходящие слова в память и
+ * тасовал их в JS: на тестовом словаре в 629 слов это было незаметно, но
+ * теперь в базе 8134 слова, и при выборе всего каталога каждый пакет из
+ * пятидесяти означал бы вычитку восьми тысяч строк — и так каждый раунд.
+ *
+ * EXISTS вместо IN по связям: слово возвращается один раз независимо от
+ * того, сколько выбранных категорий его содержат. Именно поэтому пересечение
+ * уровней сложности с темами не даёт повторов.
+ */
 export async function fetchWordsBatch(
   gameId: string,
   n: number = WORDS_BATCH_SIZE,
@@ -24,21 +35,21 @@ export async function fetchWordsBatch(
   const categoryIds = game.gameCategories.map((gc) => gc.categoryId);
   if (categoryIds.length === 0) return [];
 
-  // NOT EXISTS — быстрее чем notIn для больших словарей.
-  const rows = await prisma.word.findMany({
-    where: {
-      categories: { some: { categoryId: { in: categoryIds } } },
-      NOT: { roundWords: { some: { round: { gameId } } } },
-    },
-    select: { id: true, text: true },
-  });
-
-  // Shuffle (Fisher-Yates) и режем до n.
-  for (let i = rows.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [rows[i], rows[j]] = [rows[j], rows[i]];
-  }
-  return rows.slice(0, n);
+  return prisma.$queryRaw<WordItem[]>`
+    SELECT w.id, w.text
+    FROM "Word" w
+    WHERE EXISTS (
+      SELECT 1 FROM "WordCategory" wc
+      WHERE wc."wordId" = w.id AND wc."categoryId" = ANY(${categoryIds})
+    )
+    AND NOT EXISTS (
+      SELECT 1 FROM "RoundWord" rw
+      JOIN "Round" r ON r.id = rw."roundId"
+      WHERE rw."wordId" = w.id AND r."gameId" = ${gameId}
+    )
+    ORDER BY random()
+    LIMIT ${n}
+  `;
 }
 
 /** Кладёт слова в Redis-очередь раунда (FIFO через RPUSH). */

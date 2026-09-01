@@ -3,7 +3,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireUserId } from "@/lib/identity";
-import { shuffleArray } from "@/lib/utils";
 import { WORDS_BATCH_SIZE } from "@/constants/game";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -26,16 +25,29 @@ export async function GET(_request: NextRequest, { params }: Ctx) {
     const categoryIds = game.gameCategories.map((gc) => gc.categoryId);
     if (categoryIds.length === 0) return NextResponse.json([]);
 
-    // Слова текущих категорий, ещё не использованные ни в одном раунде этой игры.
-    const words = await prisma.word.findMany({
-      where: {
-        categories: { some: { categoryId: { in: categoryIds } } },
-        NOT: { roundWords: { some: { round: { gameId: id } } } },
-      },
-      select: { id: true, text: true },
-    });
-
-    const batch = shuffleArray(words).slice(0, WORDS_BATCH_SIZE);
+    // Слова текущих категорий, ещё не сыгранные в этой партии. Отбор целиком
+    // в SQL: раньше запрос тянул все подходящие слова в память и тасовал их
+    // в JS, а в базе теперь 8134 слова — при выборе всего каталога это была
+    // бы вычитка восьми тысяч строк на каждый пакет из пятидесяти.
+    //
+    // EXISTS, а не IN по связям: слово возвращается один раз независимо от
+    // того, сколько выбранных категорий его содержат. Поэтому пересечение
+    // уровней сложности с темами не даёт повторов.
+    const batch = await prisma.$queryRaw<{ id: number; text: string }[]>`
+      SELECT w.id, w.text
+      FROM "Word" w
+      WHERE EXISTS (
+        SELECT 1 FROM "WordCategory" wc
+        WHERE wc."wordId" = w.id AND wc."categoryId" = ANY(${categoryIds})
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM "RoundWord" rw
+        JOIN "Round" r ON r.id = rw."roundId"
+        WHERE rw."wordId" = w.id AND r."gameId" = ${id}
+      )
+      ORDER BY random()
+      LIMIT ${WORDS_BATCH_SIZE}
+    `;
     return NextResponse.json(batch);
   } catch (e) {
     if ((e as Error).message === "NO_AID_COOKIE") {

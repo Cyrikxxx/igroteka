@@ -2,15 +2,6 @@ export function cn(...classes: (string | boolean | undefined | null)[]): string 
   return classes.filter(Boolean).join(" ");
 }
 
-export function shuffleArray<T>(array: T[]): T[] {
-  const out = [...array];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
-
 export function formatDateRu(date: string | Date): string {
   return new Date(date).toLocaleDateString("ru-RU", {
     day: "numeric",
