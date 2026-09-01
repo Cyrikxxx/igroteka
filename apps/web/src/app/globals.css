@@ -834,37 +834,89 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .picker-levels { grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); }
 
   .picker-collections { display: flex; flex-direction: column; gap: 10px; }
-  .pick-col { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--bg-1); overflow: hidden; transition: border-color .15s; }
-  .pick-col.open { border-color: var(--line-strong); }
-  .pick-col-head { display: flex; align-items: stretch; }
-  /* Подборка выбрана целиком — зелёная рамка; выбрана частично — приглушённая.
-     Раз тема входит ровно в одну подборку, состояние считается сравнением
-     счётчиков и никогда не бывает противоречивым. */
-  .pick-col-head.all { background: color-mix(in srgb, var(--accent) 12%, var(--bg-1)); box-shadow: inset 0 0 0 1px var(--accent-line); }
-  .pick-col-head.some { background: color-mix(in srgb, var(--accent) 5%, var(--bg-1)); }
 
-  .pick-col-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: none; border: 0; cursor: pointer; text-align: left; color: inherit; font: inherit; }
-  .pick-col-emoji { font-size: 26px; line-height: 1; flex: none; }
+  /* Карточка подборки. Выделяется ровно как .cat-card: тот же зелёный фон,
+     та же рамка и то же свечение — раньше рамка оставалась серой, и
+     выбранная подборка выглядела чужой рядом с карточками сложности. */
+  .pick-col {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    transition: border-color .15s, background .15s, box-shadow .2s;
+  }
+  .pick-col:hover { border-color: var(--line-strong); }
+  .pick-col.some { background: color-mix(in srgb, var(--accent) 8%, var(--bg-2)); border-color: color-mix(in srgb, var(--accent) 24%, var(--line)); }
+  .pick-col.all {
+    background: color-mix(in srgb, var(--accent) 22%, var(--bg-2));
+    border-color: var(--accent-line);
+    box-shadow: 0 0 24px rgba(34, 197, 94, 0.16);
+  }
+
+  .pick-col-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+  .pick-col-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; padding: 0; background: none; border: 0; cursor: pointer; text-align: left; color: inherit; font: inherit; }
+
+  /* Иконка в круге — тот же приём, что у наборов слов на лендинге
+     (.al-pack-ic) и у ролей Мафии (.mf-role-icon). */
+  .pick-col-ic {
+    position: relative;
+    flex: none;
+    width: 44px; height: 44px;
+    display: grid; place-items: center;
+    font-size: 22px; line-height: 1;
+    border-radius: 50%;
+    background: var(--bg-3);
+    border: 1px solid var(--line);
+    transition: background .15s, border-color .15s;
+  }
+  .pick-col.all .pick-col-ic { background: var(--accent-soft); border-color: var(--accent-line); }
+  /* Галочка на иконке — как .cat-check у карточки темы, только на кружке. */
+  .pick-col-check {
+    position: absolute; right: -3px; bottom: -3px;
+    width: 20px; height: 20px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--accent); color: var(--accent-fg);
+    border: 2px solid var(--bg-2);
+    opacity: 0; transform: scale(0.6); transition: .15s;
+  }
+  .pick-col.all .pick-col-check { opacity: 1; transform: scale(1); }
+
   .pick-col-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
-  .pick-col-name { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: clamp(15px, 1.05vw, 17px); letter-spacing: -0.01em; }
+  .pick-col-name { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: clamp(15px, 1.05vw, 18px); letter-spacing: -0.01em; }
   .pick-col-season { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
   .pick-col-desc { font-size: 13px; color: var(--fg-2); line-height: 1.4; text-wrap: pretty; }
-  .pick-col-count { flex: none; font-size: 12px; color: var(--fg-2); letter-spacing: 0.06em; }
-  .pick-col-head.all .pick-col-count { color: var(--accent); }
+  .pick-col-count { flex: none; font-family: var(--font-mono); font-size: 12px; color: var(--fg-2); letter-spacing: 0.06em; }
+  .pick-col.all .pick-col-count { color: var(--accent); }
 
-  .pick-col-toggle { flex: none; width: 52px; display: grid; place-items: center; background: none; border: 0; border-left: 1px solid var(--line); color: var(--fg-3); cursor: pointer; transition: color .15s, background .15s; }
-  .pick-col-toggle:hover { color: var(--fg); background: var(--bg-2); }
-  .pick-col-toggle svg { transition: transform .18s; }
+  /* Кнопка «Темы» — обычная кнопка сайта, а не голая стрелка на разделителе. */
+  .pick-col-toggle {
+    flex: none;
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 38px; padding: 0 13px;
+    border-radius: var(--r-sm);
+    background: var(--bg-1);
+    border: 1px solid var(--line-strong);
+    color: var(--fg-1);
+    font: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  .pick-col-toggle:hover { color: var(--fg); border-color: var(--accent-line); background: var(--bg-2); }
+  .pick-col-toggle svg { transition: transform .2s; }
+  .pick-col.open .pick-col-toggle { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
   .pick-col.open .pick-col-toggle svg { transform: rotate(180deg); }
-  .pick-col-body { padding: 4px 16px 16px; border-top: 1px solid var(--line); }
+  /* На узком экране от кнопки остаётся одна стрелка. */
+  @media (max-width: 620px) { .pick-col-toggle-label { display: none; } .pick-col-toggle { width: 38px; padding: 0; justify-content: center; } }
+
+  .pick-col-body { padding: 12px 14px 14px; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--bg-1) 55%, transparent); }
 
   .picker-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 4px; }
 
   @media (max-width: 560px) {
-    .pick-col-main { padding: 12px 13px; gap: 11px; }
-    .pick-col-emoji { font-size: 22px; }
+    .pick-col-head { padding: 11px 12px; }
+    .pick-col-main { gap: 11px; }
+    .pick-col-ic { width: 38px; height: 38px; font-size: 19px; }
     .pick-col-desc { display: none; }
-    .pick-col-toggle { width: 44px; }
   }
   @media (max-width: 920px) { .settings-grid { grid-template-columns: 1fr; } .summary-stats { grid-template-columns: repeat(4, 1fr); } }
 

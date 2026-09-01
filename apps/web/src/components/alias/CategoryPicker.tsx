@@ -60,7 +60,16 @@ function Card({
 }
 
 export default function CategoryPicker({ catalog, selected, onChange, onWordCount }: CategoryPickerProps) {
-  const [open, setOpen] = useState<string | null>(null);
+  // Раскрытых подборок может быть сколько угодно: человек сравнивает темы
+  // из разных, и захлопывать предыдущую при открытии следующей — мешать ему.
+  const [open, setOpen] = useState<Set<string>>(() => new Set());
+  const toggleOpen = (slug: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
   const [wordCount, setWordCount] = useState<number | null>(null);
 
   // Через ref, а не напрямую в зависимостях эффекта: если экран передаст
@@ -159,7 +168,7 @@ export default function CategoryPicker({ catalog, selected, onChange, onWordCoun
           const ids = col.categories.map((c) => c.id);
           const inside = ids.filter((id) => chosen.has(id)).length;
           const all = inside === ids.length;
-          const expanded = open === col.slug;
+          const expanded = open.has(col.slug);
           const seasonNow = col.categories.some((c) => isInSeason(c.season, month));
 
           // Темы внутри: сезонная — первой.
@@ -168,15 +177,27 @@ export default function CategoryPicker({ catalog, selected, onChange, onWordCoun
           );
 
           return (
-            <div key={col.slug} className={"pick-col" + (expanded ? " open" : "")}>
-              <div className={"pick-col-head" + (all ? " all" : inside > 0 ? " some" : "")}>
+            <div
+              key={col.slug}
+              className={
+                "pick-col" +
+                (all ? " all" : inside > 0 ? " some" : "") +
+                (expanded ? " open" : "")
+              }
+            >
+              <div className="pick-col-head">
                 <button
                   type="button"
                   className="pick-col-main"
                   onClick={() => setMany(ids, !all)}
                   aria-pressed={all}
                 >
-                  <span className="pick-col-emoji">{col.emoji}</span>
+                  <span className="pick-col-ic">
+                    <span aria-hidden="true">{col.emoji}</span>
+                    <span className="pick-col-check">
+                      <Check size={13} />
+                    </span>
+                  </span>
                   <span className="pick-col-text">
                     <span className="pick-col-name">
                       {col.name}
@@ -195,11 +216,14 @@ export default function CategoryPicker({ catalog, selected, onChange, onWordCoun
                 <button
                   type="button"
                   className="pick-col-toggle"
-                  onClick={() => setOpen(expanded ? null : col.slug)}
+                  onClick={() => toggleOpen(col.slug)}
                   aria-expanded={expanded}
                   aria-label={expanded ? `Свернуть «${col.name}»` : `Раскрыть «${col.name}»`}
                 >
-                  <ChevronDown size={18} />
+                  <span className="pick-col-toggle-label">
+                    {expanded ? "Свернуть" : "Темы"}
+                  </span>
+                  <ChevronDown size={17} />
                 </button>
               </div>
 
