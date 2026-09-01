@@ -5,10 +5,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Clock, Minus, Sparkles, Target, Wifi } from "lucide-react";
+import { ArrowLeft, Clock, Minus, Sparkles, Target, Wifi } from "lucide-react";
 import AppShell from "@/components/common/AppShell";
 import Chip from "@/components/common/Chip";
 import Toggle from "@/components/common/Toggle";
+import CategoryPicker from "@/components/alias/CategoryPicker";
 import {
   ROUND_TIME_OPTIONS,
   WIN_SCORE_OPTIONS,
@@ -16,7 +17,7 @@ import {
   WIN_SCORE_DEFAULT,
   PENALTY_SKIP_DEFAULT,
 } from "@/constants/game";
-import type { CategoryFromAPI, CreateRoomResponse } from "@/types";
+import type { CatalogFromAPI, CreateRoomResponse } from "@/types";
 import { loadDisplayName, saveDisplayName, saveRoomCreds } from "@/lib/room-session";
 import { plural, pluralize, CATEGORIES, WORDS } from "@/lib/plural";
 
@@ -27,7 +28,7 @@ export default function RoomNewPage() {
   const [roundTime, setRoundTime] = useState<number>(ROUND_TIME_DEFAULT);
   const [winScore, setWinScore] = useState<number>(WIN_SCORE_DEFAULT);
   const [penaltySkip, setPenaltySkip] = useState<boolean>(PENALTY_SKIP_DEFAULT);
-  const [categories, setCategories] = useState<CategoryFromAPI[]>([]);
+  const [catalog, setCatalog] = useState<CatalogFromAPI | null>(null);
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,16 +37,13 @@ export default function RoomNewPage() {
     setHostName(loadDisplayName());
     fetch("/api/categories")
       .then((r) => r.json())
-      .then((data: CategoryFromAPI[]) => setCategories(data))
+      .then((data: CatalogFromAPI) => setCatalog(data))
       .catch(() => {});
   }, []);
 
-  const totalWordsInBank = categories
-    .filter((c) => categoryIds.includes(c.id))
-    .reduce((sum, c) => sum + (c._count?.words ?? 0), 0);
-
-  const toggleCategory = (id: number) =>
-    setCategoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  // Считает пикер: сложить счётчики выбранных категорий нельзя, уровни
+  // намеренно пересекаются с темами.
+  const [wordsInGame, setWordsInGame] = useState<number | null>(0);
 
   const roomTitle =
     title.trim() || (hostName.trim() ? `Комната ${hostName.trim()}` : "Комната хоста");
@@ -107,9 +105,9 @@ export default function RoomNewPage() {
           </p>
         </div>
         <div className="setup-counter">
-          <span className="sc-v mono">{categoryIds.length ? totalWordsInBank : 0}</span>
+          <span className="sc-v mono">{wordsInGame ?? "…"}</span>
           <span className="sc-l">
-            {plural(totalWordsInBank, WORDS)} · {pluralize(categoryIds.length, CATEGORIES)}
+            {plural(wordsInGame ?? 0, WORDS)} · {pluralize(categoryIds.length, CATEGORIES)}
           </span>
         </div>
       </div>
@@ -182,34 +180,17 @@ export default function RoomNewPage() {
           </div>
         </div>
 
-        {/* Категории */}
+        {/* Во что играем */}
         <div className="card">
-          <div className="row-between" style={{ marginBottom: 16 }}>
-            <h2 className="h-title">Категории слов</h2>
-            <span className="pill pill-mono">
-              {categoryIds.length} / {categories.length}
-            </span>
-          </div>
-          <div className="cats-grid">
-            {categories.map((cat) => {
-              const active = categoryIds.includes(cat.id);
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  className={"cat-card" + (active ? " on" : "")}
-                  onClick={() => toggleCategory(cat.id)}
-                >
-                  <span className="cat-check">
-                    <Check size={14} />
-                  </span>
-                  <span className="cat-emoji">{cat.emoji}</span>
-                  <span className="cat-name">{cat.name}</span>
-                  <span className="cat-count">{cat._count?.words ?? 0} слов</span>
-                </button>
-              );
-            })}
-          </div>
+          <h2 className="h-title" style={{ marginBottom: 4 }}>
+            Во что играем
+          </h2>
+          <CategoryPicker
+            catalog={catalog}
+            selected={categoryIds}
+            onChange={setCategoryIds}
+            onWordCount={setWordsInGame}
+          />
         </div>
       </div>
 

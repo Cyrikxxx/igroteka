@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Clock, Minus, Play, Target } from "lucide-react";
+import { ArrowLeft, Clock, Minus, Play, Target } from "lucide-react";
 import {
   loadLocalSetup,
   saveLocalSetup,
@@ -15,16 +15,17 @@ import {
 } from "@/lib/local-setup";
 import { ROUND_TIME_OPTIONS, WIN_SCORE_OPTIONS } from "@/constants/game";
 import { pluralize, WORDS, CATEGORIES } from "@/lib/plural";
-import { CategoryFromAPI, GameFromAPI } from "@/types";
+import type { CatalogFromAPI, GameFromAPI } from "@/types";
 import AppShell from "@/components/common/AppShell";
 import Stepper from "@/components/common/Stepper";
 import Chip from "@/components/common/Chip";
 import Toggle from "@/components/common/Toggle";
+import CategoryPicker from "@/components/alias/CategoryPicker";
 
 export default function LocalSettingsPage() {
   const router = useRouter();
   const [state, setState] = useState<LocalSetupState>(DEFAULT_LOCAL_SETUP);
-  const [categories, setCategories] = useState<CategoryFromAPI[]>([]);
+  const [catalog, setCatalog] = useState<CatalogFromAPI | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export default function LocalSettingsPage() {
     setHydrated(true);
     fetch("/api/categories")
       .then((r) => r.json())
-      .then((data: CategoryFromAPI[]) => setCategories(data))
+      .then((data: CatalogFromAPI) => setCatalog(data))
       .catch((e) => console.error(e));
   }, []);
 
@@ -48,28 +49,13 @@ export default function LocalSettingsPage() {
     setState((s) => ({ ...s, settings: { ...s.settings, winScore: v } }));
   const setPenaltySkip = (v: boolean) =>
     setState((s) => ({ ...s, settings: { ...s.settings, penaltySkip: v } }));
-  const toggleCategory = (id: number) =>
-    setState((s) => {
-      const has = s.settings.categoryIds.includes(id);
-      return {
-        ...s,
-        settings: {
-          ...s.settings,
-          categoryIds: has
-            ? s.settings.categoryIds.filter((x) => x !== id)
-            : [...s.settings.categoryIds, id],
-        },
-      };
-    });
-  const selectAll = () =>
-    setState((s) => ({ ...s, settings: { ...s.settings, categoryIds: categories.map((c) => c.id) } }));
-  const clearAll = () =>
-    setState((s) => ({ ...s, settings: { ...s.settings, categoryIds: [] } }));
+  const setCategoryIds = (ids: number[]) =>
+    setState((s) => ({ ...s, settings: { ...s.settings, categoryIds: ids } }));
 
   const cats = state.settings.categoryIds;
-  const totalWordsInBank = categories
-    .filter((c) => cats.includes(c.id))
-    .reduce((sum, c) => sum + (c._count?.words ?? 0), 0);
+  // Считает пикер: сложить счётчики выбранных категорий нельзя, уровни
+  // намеренно пересекаются с темами.
+  const [wordsInGame, setWordsInGame] = useState<number | null>(0);
 
   const onStart = async () => {
     if (cats.length === 0) return setError("Выберите хотя бы одну категорию.");
@@ -161,7 +147,7 @@ export default function LocalSettingsPage() {
                 <span>категорий</span>
               </div>
               <div>
-                <b className="mono">{totalWordsInBank}</b>
+                <b className="mono">{wordsInGame ?? "…"}</b>
                 <span>слов в игре</span>
               </div>
               <div>
@@ -177,40 +163,15 @@ export default function LocalSettingsPage() {
         </div>
 
         <div className="card">
-          <div className="row-between" style={{ marginBottom: 16 }}>
-            <h2 className="h-title">Категории слов</h2>
-            <div className="row" style={{ gap: 10 }}>
-              <button type="button" className="link-btn link-btn-accent" onClick={selectAll}>
-                Все
-              </button>
-              <button type="button" className="link-btn" onClick={clearAll}>
-                Очистить
-              </button>
-              <span className="pill pill-mono">
-                {cats.length} / {categories.length}
-              </span>
-            </div>
-          </div>
-          <div className="cats-grid">
-            {categories.map((cat) => {
-              const active = cats.includes(cat.id);
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  className={"cat-card" + (active ? " on" : "")}
-                  onClick={() => toggleCategory(cat.id)}
-                >
-                  <span className="cat-check">
-                    <Check size={14} />
-                  </span>
-                  <span className="cat-emoji">{cat.emoji}</span>
-                  <span className="cat-name">{cat.name}</span>
-                  <span className="cat-count">{cat._count?.words ?? 0} слов</span>
-                </button>
-              );
-            })}
-          </div>
+          <h2 className="h-title" style={{ marginBottom: 4 }}>
+            Во что играем
+          </h2>
+          <CategoryPicker
+            catalog={catalog}
+            selected={cats}
+            onChange={setCategoryIds}
+            onWordCount={setWordsInGame}
+          />
         </div>
       </div>
 
@@ -224,7 +185,7 @@ export default function LocalSettingsPage() {
         <span className="muted">
           {cats.length === 0
             ? "Выберите хотя бы одну категорию"
-            : `${pluralize(totalWordsInBank, WORDS)} · выбрано ${pluralize(cats.length, CATEGORIES)}`}
+            : `${wordsInGame === null ? "…" : pluralize(wordsInGame, WORDS)} · выбрано ${pluralize(cats.length, CATEGORIES)}`}
         </span>
         <button
           type="button"

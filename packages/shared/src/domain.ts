@@ -268,5 +268,29 @@ export interface CategoryFromAPI {
   slug: string;
   emoji: string | null;
   isPublic: boolean;
+  /** THEME — тема внутри подборки, LEVEL — уровень сложности. */
+  kind: "THEME" | "LEVEL";
+  /** newyear | halloween | summer — в свой месяц тема поднимается наверх. */
+  season: string | null;
+  isPopular: boolean;
   _count?: { words: number };
+}
+
+/** Подборка тем со своим содержимым — то, что рисует экран выбора. */
+export interface CollectionFromAPI {
+  id: number;
+  slug: string;
+  name: string;
+  emoji: string;
+  description: string;
+  categories: CategoryFromAPI[];
+}
+
+/**
+ * Весь каталог одним ответом: уровни сложности отдельно, темы — внутри
+ * своих подборок. Экранов выбора три, и каждому нужно одно и то же.
+ */
+export interface CatalogFromAPI {
+  levels: CategoryFromAPI[];
+  collections: CollectionFromAPI[];
 }

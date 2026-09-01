@@ -4,9 +4,10 @@
 // Меняет правила партии до старта; сохранение → socket emit "room:settings".
 
 import { useEffect, useState } from "react";
-import { Check, Clock, Minus, Target } from "lucide-react";
+import { Clock, Minus, Target } from "lucide-react";
 import { ROUND_TIME_OPTIONS, WIN_SCORE_OPTIONS } from "@/constants/game";
-import type { CategoryFromAPI } from "@/types";
+import type { CatalogFromAPI } from "@/types";
+import CategoryPicker from "@/components/alias/CategoryPicker";
 import Modal from "@/components/common/Modal";
 import Chip from "@/components/common/Chip";
 import Toggle from "@/components/common/Toggle";
@@ -30,7 +31,7 @@ export function RoomSettingsModal({ open, settings, onClose, onSave }: RoomSetti
   const [winScore, setWinScore] = useState(settings.winScore);
   const [penaltySkip, setPenaltySkip] = useState(settings.penaltySkip);
   const [categoryIds, setCategoryIds] = useState<number[]>(settings.categoryIds);
-  const [categories, setCategories] = useState<CategoryFromAPI[]>([]);
+  const [catalog, setCatalog] = useState<CatalogFromAPI | null>(null);
 
   // Сбрасываем форму к текущим настройкам при каждом открытии.
   useEffect(() => {
@@ -42,16 +43,13 @@ export function RoomSettingsModal({ open, settings, onClose, onSave }: RoomSetti
   }, [open, settings]);
 
   useEffect(() => {
-    if (open && categories.length === 0) {
+    if (open && !catalog) {
       fetch("/api/categories")
         .then((r) => r.json())
-        .then((data: CategoryFromAPI[]) => setCategories(data))
+        .then((data: CatalogFromAPI) => setCatalog(data))
         .catch(() => {});
     }
-  }, [open, categories.length]);
-
-  const toggleCat = (id: number) =>
-    setCategoryIds((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  }, [open, catalog]);
 
   const save = () => {
     if (categoryIds.length === 0) return;
@@ -95,34 +93,10 @@ export function RoomSettingsModal({ open, settings, onClose, onSave }: RoomSetti
         </div>
 
         <div>
-          <div className="row-between" style={{ marginBottom: 10 }}>
-            <span className="field-label" style={{ margin: 0 }}>
-              Категории слов
-            </span>
-            <span className="pill pill-mono">
-              {categoryIds.length} / {categories.length || 10}
-            </span>
-          </div>
-          <div className="cats-grid">
-            {categories.map((cat) => {
-              const on = categoryIds.includes(cat.id);
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  className={"cat-card" + (on ? " on" : "")}
-                  onClick={() => toggleCat(cat.id)}
-                >
-                  <span className="cat-check">
-                    <Check size={14} />
-                  </span>
-                  <span className="cat-emoji">{cat.emoji}</span>
-                  <span className="cat-name">{cat.name}</span>
-                  <span className="cat-count">{cat._count?.words ?? 0} слов</span>
-                </button>
-              );
-            })}
-          </div>
+          <span className="field-label" style={{ margin: 0 }}>
+            Во что играем
+          </span>
+          <CategoryPicker catalog={catalog} selected={categoryIds} onChange={setCategoryIds} />
         </div>
       </div>
 

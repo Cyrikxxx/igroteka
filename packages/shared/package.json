@@ -18,7 +18,8 @@
     "./mafia-snapshot-builders": "./src/mafia-snapshot-builders.ts",
     "./server/prisma": "./src/server/prisma.ts",
     "./server/redis": "./src/server/redis.ts",
-    "./server/snapshot-store": "./src/server/snapshot-store.ts"
+    "./server/snapshot-store": "./src/server/snapshot-store.ts",
+    "./season": "./src/season.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
