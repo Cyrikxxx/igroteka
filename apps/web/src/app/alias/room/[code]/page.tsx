@@ -15,7 +15,7 @@ import {
   Plus,
   RefreshCw,
   Settings,
-  Share2,
+  Link2,
   Trash2,
   Crown,
   UserX,
@@ -111,17 +111,9 @@ export default function LobbyPage() {
       setTimeout(() => setCopied(false), 1600);
     } catch {}
   };
-  // Как в лобби Мафии: на телефоне отдаём ссылку в системный «Поделиться»,
-  // на десктопе просто кладём в буфер.
+  // Просто кладём ссылку в буфер. Системная шторка «Поделиться» здесь только
+  // мешала: она перекрывает лобби, а на десктопе всё равно сводится к буферу.
   const handleShareLink = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Алиас", text: "Заходи в комнату", url: inviteUrl });
-        return;
-      } catch {
-        // пользователь закрыл шторку — падаем в буфер
-      }
-    }
     try {
       await navigator.clipboard.writeText(inviteUrl);
       setLinkCopied(true);
@@ -199,7 +191,7 @@ export default function LobbyPage() {
                 {copied ? <Check /> : <Copy />} {copied ? "Скопировано" : "Код"}
               </button>
               <button type="button" className="btn btn-secondary btn-sm" onClick={handleShareLink}>
-                {linkCopied ? <Check /> : <Share2 />} {linkCopied ? "Скопировано" : "Ссылка"}
+                {linkCopied ? <Check /> : <Link2 />} {linkCopied ? "Скопировано" : "Ссылка"}
               </button>
             </div>
             <div className="dotted" style={{ margin: "22px 0" }} />
