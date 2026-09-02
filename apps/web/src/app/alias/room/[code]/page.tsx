@@ -13,7 +13,6 @@ import {
   Copy,
   Play,
   Plus,
-  RefreshCw,
   Settings,
   Link2,
   Trash2,
@@ -453,7 +452,7 @@ export default function LobbyPage() {
                 Зрители ({spectatorsTotal})
               </h3>
               {myTeam && (
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => joinTeam(null)}>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => joinTeam(null)}>
                   В зрители
                 </button>
               )}
@@ -510,7 +509,7 @@ export default function LobbyPage() {
                   : `Нужно ≥${MIN_TEAMS} команды, в каждой ≥${MIN_PLAYERS_PER_TEAM} игрока онлайн`}
             </span>
             <div className="row" style={{ gap: 10 }}>
-              <button type="button" className="btn btn-ghost" onClick={() => setSettingsOpen(true)}>
+              <button type="button" className="btn btn-secondary" onClick={() => setSettingsOpen(true)}>
                 <Settings /> Настройки
               </button>
               <button
@@ -534,12 +533,11 @@ export default function LobbyPage() {
             <span className="muted">
               {myTeam ? `Ты в команде «${myTeam.name}»` : "Ты в зрителях"}
             </span>
+            {/* Кнопки «Сменить команду» тут больше нет: она звала команду
+                поменять, а на деле уводила в зрители. Перейти в другую
+                команду можно нажатием на саму команду, выйти из своей —
+                кнопкой «В зрители» над списком. */}
             <div className="row" style={{ gap: 10 }}>
-              {myTeam && (
-                <button type="button" className="btn btn-secondary" onClick={() => joinTeam(null)}>
-                  <RefreshCw /> Сменить команду
-                </button>
-              )}
               <span className="pill">
                 <Clock /> Ждём старта…
               </span>
