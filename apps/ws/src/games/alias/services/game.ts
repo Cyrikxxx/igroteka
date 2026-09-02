@@ -2,7 +2,8 @@
 // фиксация раунда при review_confirm.
 
 import { prisma } from "../../../prisma";
-import type { RoomSnapshot } from "@alias/shared/domain";
+import type { GameFormat, RoomSnapshot } from "@alias/shared/domain";
+import { nextTrioTurn, trioRoles, scoredTeamIndexes } from "@alias/shared/trio";
 import type { RoundState } from "./roundState";
 import { scoreRound, checkWinner } from "./score";
 import { nextTurn, nextPlayerIndex } from "./turn";
@@ -17,9 +18,11 @@ export async function createGameFromSnapshot(
   snapshot: RoomSnapshot,
   roomId: string,
 ): Promise<{ gameId: string; teamIdMap: Record<number, number> }> {
+  const trio = snapshot.format === "TRIO";
   const game = await prisma.game.create({
     data: {
       mode: "ONLINE",
+      format: trio ? "TRIO" : "TEAMS",
       ownerKey: snapshot.hostId,
       roomId,
       roundTime: snapshot.settings.roundTime,
@@ -34,7 +37,9 @@ export async function createGameFromSnapshot(
       },
       teams: {
         create: snapshot.teams.map((team, idx) => ({
-          name: team.name,
+          // Втроём команда — это один человек, и на табло должно стоять его
+          // имя, а не «Место 2».
+          name: trio ? (team.players[0]?.displayName ?? team.name) : team.name,
           color: team.color,
           order: idx,
           players: {
@@ -82,18 +87,27 @@ export async function finalizeRound(args: {
   teamScoreBefore: number;
   penaltySkip: boolean;
   winScore: number;
-  /** Команды из snapshot'а — нужны для проверки победы (с обновлённым счётом). */
+  /**
+   * Команды из snapshot'а в порядке order — нужны и для проверки победы, и
+   * чтобы втроём найти вторую команду пары по индексу.
+   */
   teamsAfterUpdate: { snapshotId: number; dbId: number; scoreAfter: number }[];
   currentTeamIndex: number;
   currentRoundNumber: number;
   teamsCount: number;
   currentPlayerIndex: number;
   teamPlayersCount: number;
+  format: GameFormat;
+  /** Номер хода в круге; осмыслен только втроём. */
+  trioTurn: number;
 }): Promise<{
   scoreEarned: number;
   newTeamScore: number;
+  /** Кому и сколько начислено: втроём здесь две команды, иначе одна. */
+  scored: { snapshotId: number; score: number }[];
   nextTeamIndex: number;
   nextRoundNumber: number;
+  nextTrioTurn: number;
   nextPlayerIndex: number;
   gameFinished: boolean;
   winnerSnapshotTeamId?: number;
@@ -103,27 +117,58 @@ export async function finalizeRound(args: {
   const guessedCount = answered.filter((w) => w.guessed === true).length;
   const skippedCount = answered.filter((w) => w.guessed === false).length;
 
-  const { scoreEarned, newTeamScore } = scoreRound({
+  const trio = args.format === "TRIO";
+
+  const { scoreEarned } = scoreRound({
     guessed: guessedCount,
     skipped: skippedCount,
     penaltySkip: args.penaltySkip,
     currentTeamScore: args.teamScoreBefore,
   });
 
-  const { nextTeamIndex, nextRoundNumber } = nextTurn({
-    currentTeamIndex: args.currentTeamIndex,
-    currentRoundNumber: args.currentRoundNumber,
-    teamsCount: args.teamsCount,
-  });
+  // Кому засчитать раунд. Втроём это оба игрока пары: и объяснявший, и
+  // угадывавший. Отдыхающий не получает ничего.
+  const scored = scoredTeamIndexes(args.format, args.trioTurn, args.currentTeamIndex)
+    .map((i) => args.teamsAfterUpdate[i])
+    .filter((t) => t !== undefined)
+    .map((t) => ({
+      snapshotId: t.snapshotId,
+      dbId: t.dbId,
+      score: Math.max(0, t.scoreAfter + scoreEarned),
+    }));
+  const newTeamScore =
+    scored.find((s) => s.snapshotId === args.snapshotTeamId)?.score ??
+    Math.max(0, args.teamScoreBefore + scoreEarned);
+  const partnerDbTeamId = trio
+    ? (args.teamsAfterUpdate[trioRoles(args.trioTurn).guesser]?.dbId ?? null)
+    : null;
 
-  const teamsForCheck = args.teamsAfterUpdate.map((t) => ({
-    id: t.snapshotId,
-    score: t.snapshotId === args.snapshotTeamId ? newTeamScore : t.scoreAfter,
-  }));
+  // Ход. Втроём круг — шесть ходов: сначала три пары, потом те же три с
+  // обменом ролями, — поэтому крутится trioTurn, а currentTeamIndex следует
+  // за тем, кто объясняет.
+  const nextTrio = trio ? nextTrioTurn(args.trioTurn) : args.trioTurn;
+  const { nextTeamIndex, nextRoundNumber } = trio
+    ? {
+        nextTeamIndex: trioRoles(nextTrio).explainer,
+        nextRoundNumber:
+          nextTrio === 0 ? args.currentRoundNumber + 1 : args.currentRoundNumber,
+      }
+    : nextTurn({
+        currentTeamIndex: args.currentTeamIndex,
+        currentRoundNumber: args.currentRoundNumber,
+        teamsCount: args.teamsCount,
+      });
+  // Конец круга — момент, когда у всех было поровну ходов.
+  const circleDone = trio ? nextTrio === 0 : nextTeamIndex === 0;
+
+  const teamsForCheck = args.teamsAfterUpdate.map((t) => {
+    const hit = scored.find((s) => s.snapshotId === t.snapshotId);
+    return { id: t.snapshotId, score: hit ? hit.score : t.scoreAfter };
+  });
   const { gameFinished, winnerTeamId: winnerSnapshotTeamId } = checkWinner({
     teams: teamsForCheck,
     winScore: args.winScore,
-    nextTeamIndex,
+    circleDone,
   });
 
   const newPlayerIndex = nextPlayerIndex(
@@ -138,6 +183,7 @@ export async function finalizeRound(args: {
       data: {
         gameId: args.gameId,
         teamId: args.dbTeamId,
+        partnerTeamId: partnerDbTeamId,
         roundNumber: args.currentRoundNumber,
         playerName: args.round.playerName,
         scoreEarned,
@@ -153,13 +199,17 @@ export async function finalizeRound(args: {
       },
     });
 
-    await tx.team.update({
-      where: { id: args.dbTeamId },
-      data: {
-        score: newTeamScore,
-        currentPlayerIndex: newPlayerIndex,
-      },
-    });
+    // Втроём тут две команды: очки идут и объяснявшему, и угадывавшему.
+    // Курсор игрока двигается только у той, что объясняла.
+    for (const s of scored) {
+      await tx.team.update({
+        where: { id: s.dbId },
+        data: {
+          score: s.score,
+          ...(s.dbId === args.dbTeamId ? { currentPlayerIndex: newPlayerIndex } : {}),
+        },
+      });
+    }
 
     await tx.game.update({
       where: { id: args.gameId },
@@ -170,6 +220,7 @@ export async function finalizeRound(args: {
         currentRoundNumber: gameFinished
           ? args.currentRoundNumber
           : nextRoundNumber,
+        trioTurn: gameFinished ? args.trioTurn : nextTrio,
         status: gameFinished ? "FINISHED" : "IN_PROGRESS",
         finishedAt: gameFinished ? new Date() : null,
         usedWordIds: { push: newUsedWordIds },
@@ -188,8 +239,10 @@ export async function finalizeRound(args: {
   return {
     scoreEarned,
     newTeamScore,
+    scored: scored.map((s) => ({ snapshotId: s.snapshotId, score: s.score })),
     nextTeamIndex,
     nextRoundNumber,
+    nextTrioTurn: nextTrio,
     nextPlayerIndex: newPlayerIndex,
     gameFinished,
     winnerSnapshotTeamId,

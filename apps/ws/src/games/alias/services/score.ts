@@ -19,14 +19,19 @@ export function scoreRound(input: ScoreInput): ScoreResult {
   return { scoreEarned, newTeamScore };
 }
 
-/** Победа считается только в конце цикла команд (nextTeamIndex === 0). */
+/**
+ * Победа считается только в конце круга, когда у всех было поровну ходов.
+ * В обычном режиме круг — это проход по всем командам; втроём — шесть ходов,
+ * за которые каждый успевает рассказать каждому. Момент передаётся флагом, а
+ * не сравнением индекса: у двух режимов он считается по-разному.
+ */
 export function checkWinner(args: {
   teams: { id: number; score: number }[];
   winScore: number;
-  nextTeamIndex: number;
+  circleDone: boolean;
 }): { gameFinished: boolean; winnerTeamId?: number } {
   if (args.winScore <= 0) return { gameFinished: false };
-  if (args.nextTeamIndex !== 0) return { gameFinished: false };
+  if (!args.circleDone) return { gameFinished: false };
   const qualified = args.teams.filter((t) => t.score >= args.winScore);
   if (qualified.length === 0) return { gameFinished: false };
   const winner = qualified.reduce((best, t) =>

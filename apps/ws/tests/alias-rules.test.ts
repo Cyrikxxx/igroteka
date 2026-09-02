@@ -29,8 +29,8 @@ describe("checkWinner", () => {
   ];
 
   it("победа засчитывается только в конце круга команд", () => {
-    expect(checkWinner({ teams, winScore: 50, nextTeamIndex: 1 }).gameFinished).toBe(false);
-    expect(checkWinner({ teams, winScore: 50, nextTeamIndex: 0 })).toEqual({
+    expect(checkWinner({ teams, winScore: 50, circleDone: false }).gameFinished).toBe(false);
+    expect(checkWinner({ teams, winScore: 50, circleDone: true })).toEqual({
       gameFinished: true,
       winnerTeamId: 1,
     });
@@ -43,19 +43,19 @@ describe("checkWinner", () => {
         { id: 2, score: 61 },
       ],
       winScore: 50,
-      nextTeamIndex: 0,
+      circleDone: true,
     });
     expect(res.winnerTeamId).toBe(2);
   });
 
   it("никто не дошёл — игра продолжается", () => {
     expect(
-      checkWinner({ teams: [{ id: 1, score: 10 }], winScore: 50, nextTeamIndex: 0 }).gameFinished,
+      checkWinner({ teams: [{ id: 1, score: 10 }], winScore: 50, circleDone: true }).gameFinished,
     ).toBe(false);
   });
 
   it("winScore=0 отключает победу по очкам", () => {
-    expect(checkWinner({ teams, winScore: 0, nextTeamIndex: 0 }).gameFinished).toBe(false);
+    expect(checkWinner({ teams, winScore: 0, circleDone: true }).gameFinished).toBe(false);
   });
 });
 

@@ -773,6 +773,24 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .lobby-team .lt-title { display: flex; flex-direction: column; gap: 3px; }
   .lobby-team .lt-name { font-weight: 800; font-size: clamp(17px, 1.3vw, 22px); letter-spacing: -0.02em; color: var(--tc); }
   .lobby-team .lt-count { font-size: 12px; color: var(--fg-2); }
+  /* Места режима «втроём». Не карточки команд: место — это одна строка на
+     одного человека, поэтому список, а не сетка. */
+  .lobby-seats { display: flex; flex-direction: column; gap: 10px; }
+  .seat-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: clamp(11px, 0.9vw, 15px) clamp(13px, 1vw, 18px);
+    background: var(--bg-2); border: 1px solid var(--line);
+    border-left: 3px solid var(--line-strong); border-radius: var(--r-sm);
+    transition: border-color .15s, background .15s;
+  }
+  .seat-card.taken { border-left-color: var(--tc); background: color-mix(in srgb, var(--tc) 7%, var(--bg-2)); }
+  .seat-num { width: 20px; flex: none; text-align: center; font-size: 12px; font-weight: 700; color: var(--fg-3); }
+  .seat-card .lp-name { font-weight: 700; font-size: 14.5px; flex: 1; min-width: 0; }
+  .seat-card .lp-name em { color: var(--fg-3); font-style: normal; font-weight: 600; }
+  .seat-free { flex: 1; color: var(--fg-3); font-size: 14px; font-weight: 600; }
+  .seat-take { flex: none; }
+  .seat-note { font-size: 13px; line-height: 1.55; margin: 4px 0 0; }
+
   .lobby-player { display: flex; align-items: center; gap: 11px; padding: 9px 12px; background: color-mix(in srgb, var(--bg-2) 80%, transparent); border: 1px solid var(--line); border-radius: var(--r-sm); }
   /* Действия хоста над участником: короной передать комнату, крестиком
      выгнать. Прижаты вправо, поэтому имя выше растягивается само. */

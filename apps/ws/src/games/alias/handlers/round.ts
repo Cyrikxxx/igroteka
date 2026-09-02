@@ -15,7 +15,9 @@ import type {
 import {
   MIN_TEAMS,
   MIN_PLAYERS_PER_TEAM,
+  TRIO_TEAMS,
 } from "@alias/shared/constants";
+import { trioRoles } from "@alias/shared/trio";
 import { findPlayer, removePlayer } from "@alias/shared/snapshot-builders";
 import { mutate, load, save } from "../snapshot";
 import { prisma } from "../../../prisma";
@@ -78,12 +80,22 @@ function broadcastPhase(
     roundNumber: snap.currentRoundNumber,
     currentTeamId: snap.currentTeamId,
     currentPlayerId: snap.currentPlayerId,
+    currentGuesserId: snap.currentGuesserId ?? null,
     durationMs,
   });
 }
 
 function teamByIndex(snap: RoomSnapshot, idx: number): RoomSnapshotTeam | null {
   return snap.teams[idx] ?? null;
+}
+
+/**
+ * Кто угадывает на ходу `turn`. Только втроём: в обычном режиме угадывает
+ * вся команда объясняющего, и одного человека тут не назвать.
+ */
+function guesserIdFor(snap: RoomSnapshot, turn: number): string | null {
+  if ((snap.format ?? "TEAMS") !== "TRIO") return null;
+  return snap.teams[trioRoles(turn).guesser]?.players[0]?.userId ?? null;
 }
 
 // ─── Game start: LOBBY → PRE_ROUND ────────────────────────────────────────
@@ -100,14 +112,26 @@ async function startGame(
     return { error: "already_started" };
   }
 
-  // Валидация: ≥2 команды, ≥2 онлайн-игрока в каждой; offline → в зрители.
-  if (initial.teams.length < MIN_TEAMS) {
-    return { error: `need_min_${MIN_TEAMS}_teams` };
-  }
-  for (const team of initial.teams) {
-    const onlineCount = team.players.filter((p) => p.online).length;
-    if (onlineCount < MIN_PLAYERS_PER_TEAM) {
-      return { error: `need_min_${MIN_PLAYERS_PER_TEAM}_online_per_team` };
+  const trio = (initial.format ?? "TEAMS") === "TRIO";
+  if (trio) {
+    // Втроём мест ровно три и все должны быть заняты: пара на каждый ход
+    // задана правилами круга, подставить вместо выбывшего некого.
+    const occupied = initial.teams.filter((t) =>
+      t.players.some((p) => p.online),
+    ).length;
+    if (initial.teams.length !== TRIO_TEAMS || occupied !== TRIO_TEAMS) {
+      return { error: `need_${TRIO_TEAMS}_online_players` };
+    }
+  } else {
+    // Валидация: ≥2 команды, ≥2 онлайн-игрока в каждой; offline → в зрители.
+    if (initial.teams.length < MIN_TEAMS) {
+      return { error: `need_min_${MIN_TEAMS}_teams` };
+    }
+    for (const team of initial.teams) {
+      const onlineCount = team.players.filter((p) => p.online).length;
+      if (onlineCount < MIN_PLAYERS_PER_TEAM) {
+        return { error: `need_min_${MIN_PLAYERS_PER_TEAM}_online_per_team` };
+      }
     }
   }
 
@@ -127,6 +151,16 @@ async function startGame(
   });
   if (!prepped) return { error: "snapshot_lost" };
 
+  // Между проверкой и переносом offline в зрители игрок мог отвалиться, и
+  // команда осталась бы пустой. Втроём это особенно вероятно: на месте всего
+  // один человек. Проверяем до записи в Postgres, чтобы не оставить висячую
+  // партию.
+  const firstTeam = prepped.teams[0];
+  const firstExplainer = firstTeam?.players[0]; // playerCursor=0 после префа.
+  if (!firstTeam || !firstExplainer || prepped.teams.some((t) => t.players.length === 0)) {
+    return { error: "player_left_before_start" };
+  }
+
   // Postgres: создаём Game/Team/Player. Нужен roomId — берём из Postgres
   // (snapshot хранит только code).
   const room = await prisma.room.findUnique({
@@ -138,16 +172,16 @@ async function startGame(
   const { gameId, teamIdMap } = await createGameFromSnapshot(prepped, room.id);
 
   // Обновляем snapshot: фаза PRE_ROUND, currentTeamIndex=0, gameId, teamIdMap.
-  const firstTeam = prepped.teams[0];
-  const firstExplainer = firstTeam.players[0]; // playerCursor=0 после префа.
   const updated = await mutate(code, (s) => {
     s.status = "IN_GAME";
     s.phase = "PRE_ROUND";
     s.gameId = gameId;
     s.teamIdMap = teamIdMap;
     s.currentTeamIndex = 0;
+    s.trioTurn = 0;
     s.currentTeamId = firstTeam.id;
     s.currentPlayerId = firstExplainer.userId;
+    s.currentGuesserId = guesserIdFor(s, 0);
     s.currentRoundNumber = 1;
     s.scoreboard = { teamId: firstTeam.id, got: 0, skip: 0 };
   });
@@ -514,6 +548,8 @@ async function handleReviewConfirm(
     teamsCount: snap.teams.length,
     currentPlayerIndex,
     teamPlayersCount,
+    format: snap.format ?? "TEAMS",
+    trioTurn: snap.trioTurn ?? 0,
   });
 
   // Обновляем snapshot: счёт команды, playerCursor этой команды,
@@ -523,11 +559,14 @@ async function handleReviewConfirm(
   const nextExplainer = nextTeam?.players[nextPlayerCursor];
 
   const committed = await mutate(code, (s) => {
-    const t = s.teams.find((x) => x.id === rs.teamId);
-    if (t) {
-      t.score = result.newTeamScore;
-      t.playerCursor = result.nextPlayerIndex;
+    // Втроём очки получают оба игрока пары, поэтому счёт обновляем по списку,
+    // а курсор игрока двигаем только у того, кто объяснял.
+    for (const scored of result.scored) {
+      const team = s.teams.find((x) => x.id === scored.snapshotId);
+      if (team) team.score = scored.score;
     }
+    const t = s.teams.find((x) => x.id === rs.teamId);
+    if (t) t.playerCursor = result.nextPlayerIndex;
     if (result.gameFinished) {
       s.phase = "FINISHED";
       s.status = "FINISHED";
@@ -536,8 +575,10 @@ async function handleReviewConfirm(
     } else {
       s.phase = "BETWEEN_ROUNDS";
       s.currentTeamIndex = result.nextTeamIndex;
+      s.trioTurn = result.nextTrioTurn;
       s.currentTeamId = nextTeam?.id ?? null;
       s.currentPlayerId = nextExplainer?.userId ?? null;
+      s.currentGuesserId = guesserIdFor(s, result.nextTrioTurn);
       s.currentRoundNumber = result.nextRoundNumber;
       s.timer = null;
       s.scoreboard = nextTeam

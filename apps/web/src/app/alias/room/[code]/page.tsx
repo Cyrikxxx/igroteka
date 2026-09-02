@@ -26,7 +26,11 @@ import {
   MAX_PLAYERS_PER_TEAM,
   MIN_TEAMS,
   MIN_PLAYERS_PER_TEAM,
+  TRIO_TEAMS,
 } from "@/constants/game";
+import { TRIO_TURNS } from "@alias/shared/trio";
+import type { GameFormat } from "@/types";
+import Chip from "@/components/common/Chip";
 import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
 import { useRoom } from "@/hooks/useRoom";
 import { pluralize, PLAYERS, SPECTATORS } from "@/lib/plural";
@@ -125,6 +129,12 @@ export default function LobbyPage() {
     clearRoomCreds(creds.code);
     router.push("/alias");
   };
+  const setFormat = (format: GameFormat) =>
+    socket?.emit("room:format", { format }, (resp: unknown) => {
+      if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
+        alert(`Не удалось сменить формат: ${(resp as { error: string }).error}`);
+      }
+    });
   const createTeam = () => socket?.emit("team:create", {}, () => {});
   const renameTeam = (teamId: number, name: string) =>
     socket?.emit("team:rename", { teamId, name }, () => {});
@@ -149,6 +159,16 @@ export default function LobbyPage() {
     (snapshot?.teams ?? []).every(
       (t) => t.players.filter((p) => p.online).length >= MIN_PLAYERS_PER_TEAM,
     );
+
+  // Втроём мест ровно три, и стартовать можно, только когда все заняты: пара
+  // на каждый ход задана правилами круга, подставить вместо пустого некого.
+  const trio = (snapshot?.format ?? "TEAMS") === "TRIO";
+  const seatsTaken = (snapshot?.teams ?? []).filter((t) =>
+    t.players.some((p) => p.online),
+  ).length;
+  const canStart = trio
+    ? teamsCount === TRIO_TEAMS && seatsTaken === TRIO_TEAMS
+    : allTeamsHaveEnoughOnline;
 
   const s = snapshot?.settings;
 
@@ -228,16 +248,48 @@ export default function LobbyPage() {
         <div className="lobby-teams-wrap">
           <div className="row-between lobby-teams-head">
             <h2 className="h-title">
-              Команды {teamsCount}/{MAX_TEAMS}
+              {trio ? `Места ${seatsTaken}/${TRIO_TEAMS}` : `Команды ${teamsCount}/${MAX_TEAMS}`}
             </h2>
-            {isHost && teamsCount < MAX_TEAMS && (
+            {isHost && !trio && teamsCount < MAX_TEAMS && (
               <button type="button" className="btn btn-secondary btn-sm" onClick={createTeam}>
                 <Plus /> Команда
               </button>
             )}
           </div>
 
-          {teamsCount === 0 ? (
+          {isHost && (
+            <div className="chip-row" style={{ marginBottom: "var(--gap)" }}>
+              <Chip active={!trio} onClick={() => setFormat("TEAMS")}>
+                Командами
+              </Chip>
+              <Chip active={trio} onClick={() => setFormat("TRIO")}>
+                Втроём
+              </Chip>
+            </div>
+          )}
+
+          {trio ? (
+            <div className="lobby-seats">
+              {snapshot?.teams.map((team, idx) => (
+                <SeatCard
+                  key={team.id}
+                  seat={idx + 1}
+                  team={team}
+                  currentUserId={creds.userId}
+                  hostId={snapshot.hostId}
+                  isHost={isHost}
+                  onTake={() => joinTeam(team.id)}
+                  onKick={kickPlayer}
+                  onMakeHost={makeHost}
+                />
+              ))}
+              <p className="muted seat-note">
+                Играют парами: один объясняет, второй угадывает, третий пропускает
+                ход — очки получают оба. За круг из {TRIO_TURNS} ходов каждый
+                расскажет обоим и поугадывает у обоих.
+              </p>
+            </div>
+          ) : teamsCount === 0 ? (
             <div className="card" style={{ border: "1px dashed var(--line-strong)", boxShadow: "none", textAlign: "center" }}>
               <p className="muted">
                 Команд пока нет. {isHost ? "Создайте первую." : "Подождите хоста."}
@@ -325,9 +377,11 @@ export default function LobbyPage() {
         {isHost ? (
           <>
             <span className="muted">
-              {allTeamsHaveEnoughOnline
+              {canStart
                 ? `${pluralize(playersTotal, PLAYERS)} · готово к старту`
-                : `Нужно ≥${MIN_TEAMS} команды, в каждой ≥${MIN_PLAYERS_PER_TEAM} игрока онлайн`}
+                : trio
+                  ? `Нужны все ${TRIO_TEAMS} места — занято ${seatsTaken}`
+                  : `Нужно ≥${MIN_TEAMS} команды, в каждой ≥${MIN_PLAYERS_PER_TEAM} игрока онлайн`}
             </span>
             <div className="row" style={{ gap: 10 }}>
               <button type="button" className="btn btn-ghost" onClick={() => setSettingsOpen(true)}>
@@ -336,7 +390,7 @@ export default function LobbyPage() {
               <button
                 type="button"
                 className="btn btn-primary btn-lg"
-                disabled={!allTeamsHaveEnoughOnline}
+                disabled={!canStart}
                 onClick={() => {
                   socket?.emit("round:start_game", {}, (resp: unknown) => {
                     if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
@@ -540,3 +594,78 @@ function TeamCard({
   );
 }
 
+
+/**
+ * Одно место в режиме «втроём». Команд тут нет: место рассчитано на одного,
+ * названия не редактируются и удалить его нельзя — мест всегда три.
+ */
+function SeatCard({
+  seat,
+  team,
+  currentUserId,
+  hostId,
+  isHost,
+  onTake,
+  onKick,
+  onMakeHost,
+}: {
+  seat: number;
+  team: RoomSnapshotTeam;
+  currentUserId: string;
+  hostId: string;
+  isHost: boolean;
+  onTake: () => void;
+  onKick: (userId: string, name: string) => void;
+  onMakeHost: (userId: string, name: string) => void;
+}) {
+  const player = team.players[0] ?? null;
+  const isMe = player?.userId === currentUserId;
+
+  return (
+    <div
+      className={"seat-card" + (player ? " taken" : "")}
+      style={{ "--tc": `var(${team.color})` } as React.CSSProperties}
+    >
+      <span className="seat-num mono">{seat}</span>
+      {player ? (
+        <>
+          <Avatar name={player.displayName} color={team.color} size={34} online={player.online} />
+          <span className="lp-name">
+            {player.displayName}
+            {isMe && <em> · ты</em>}
+          </span>
+          {player.userId === hostId && <span className="pill pill-mono pill-accent">хост</span>}
+          {isHost && !isMe && (
+            <div className="lobby-player-actions">
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => onMakeHost(player.userId, player.displayName)}
+                aria-label="Передать комнату"
+                title="Передать комнату"
+              >
+                <Crown size={15} />
+              </button>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => onKick(player.userId, player.displayName)}
+                aria-label="Выгнать"
+                title="Выгнать"
+              >
+                <UserX size={15} />
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <span className="seat-free">Свободно</span>
+          <button type="button" className="btn btn-secondary btn-sm seat-take" onClick={onTake}>
+            Занять
+          </button>
+        </>
+      )}
+    </div>
+  );
+}

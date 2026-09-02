@@ -14,6 +14,7 @@
     "smoke:flow": "tsx scripts/smoke-flow.ts",
     "smoke:game": "tsx scripts/smoke-game.ts",
     "smoke:trio": "tsx scripts/smoke-trio.ts",
+    "smoke:trio-online": "tsx scripts/smoke-trio-online.ts",
     "smoke:mafia": "tsx scripts/smoke-mafia.ts"
   },
   "dependencies": {

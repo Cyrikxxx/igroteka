@@ -1,6 +1,7 @@
 // Типы Socket.io для неймспейса /room (Алиас): события клиент↔сервер.
 
 import type {
+  GameFormat,
   RoomSnapshot,
   RoundPhasePayload,
   RoundTickPayload,
@@ -46,6 +47,14 @@ export interface ClientToServerEvents {
       penaltySkip?: boolean;
       categoryIds?: number[];
     },
+    ack?: Ack<OkErr>,
+  ) => void;
+  /**
+   * Формат партии. Втроём вместо команд — три места по одному человеку;
+   * состав при переключении уезжает в зрители.
+   */
+  "room:format": (
+    payload: { format: GameFormat },
     ack?: Ack<OkErr>,
   ) => void;
   "room:leave": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;

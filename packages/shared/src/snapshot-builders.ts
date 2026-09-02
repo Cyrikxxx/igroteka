@@ -2,8 +2,14 @@
 // Не зависят от Redis — каждая сторона (apps/web, apps/ws) использует
 // эти билдеры и сама записывает результат в свой ioredis-клиент.
 
-import type { RoomSnapshot, RoomSnapshotPlayer } from "./domain";
-import { teamColorVar, DEFAULT_TEAM_NAMES } from "./constants";
+import type { GameFormat, RoomSnapshot, RoomSnapshotPlayer } from "./domain";
+import {
+  teamColorVar,
+  DEFAULT_TEAM_NAMES,
+  MAX_PLAYERS_PER_TEAM,
+  TRIO_TEAMS,
+  TRIO_PLAYERS_PER_TEAM,
+} from "./constants";
 
 export function buildLobbySnapshot(args: {
   code: string;
@@ -35,6 +41,41 @@ export function buildLobbySnapshot(args: {
     scoreboard: null,
     gameId: null,
   };
+}
+
+/** Сколько человек влезает в одну команду при этом формате. */
+export function teamCapacity(format: GameFormat | undefined): number {
+  return format === "TRIO" ? TRIO_PLAYERS_PER_TEAM : MAX_PLAYERS_PER_TEAM;
+}
+
+/**
+ * Переключение формата комнаты. Втроём вместо команд — три места
+ * вместимостью в одного человека: так вход в команду, кик и переподключение
+ * работают ровно как раньше, меняются только вместимость и то, что мест
+ * всегда три и добавить свои нельзя.
+ *
+ * Состав при переключении уезжает в зрители: место и команда — разные вещи,
+ * и «перенести» человека из одной в другую было бы гаданием. Обратный
+ * переход оставляет комнату без команд — как у только что созданной.
+ */
+export function applyRoomFormat(snapshot: RoomSnapshot, format: GameFormat): void {
+  snapshot.format = format;
+  for (const team of snapshot.teams) {
+    for (const p of team.players) {
+      snapshot.spectators.push({ ...p, order: snapshot.spectators.length });
+    }
+  }
+  snapshot.teams =
+    format === "TRIO"
+      ? Array.from({ length: TRIO_TEAMS }, (_, i) => ({
+          id: i + 1,
+          name: `Место ${i + 1}`,
+          color: teamColorVar(i),
+          score: 0,
+          players: [],
+          playerCursor: 0,
+        }))
+      : [];
 }
 
 /** Находит игрока в любой команде или в spectators. Возвращает null, если нет. */

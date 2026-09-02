@@ -107,8 +107,23 @@ export default function PlayPage() {
   const activeTeam = snapshot.teams.find((t) => t.id === snapshot.currentTeamId);
   const isExplainer = snapshot.currentPlayerId === creds.userId;
   const isMyTeamActive = myTeam && myTeam.id === snapshot.currentTeamId;
-  const role: Role = isExplainer ? "explainer" : isMyTeamActive ? "guesser" : "spectator";
+  // Втроём угадывает один названный человек, а не «вся моя команда»: в
+  // активной команде и так один игрок, и третий должен видеть себя зрителем.
+  const trio = (snapshot.format ?? "TEAMS") === "TRIO";
+  const role: Role = isExplainer
+    ? "explainer"
+    : trio
+      ? snapshot.currentGuesserId === creds.userId
+        ? "guesser"
+        : "spectator"
+      : isMyTeamActive
+        ? "guesser"
+        : "spectator";
   const explainerPlayer = activeTeam?.players.find((p) => p.userId === snapshot.currentPlayerId);
+  const guesserName =
+    snapshot.teams
+      .flatMap((t) => t.players)
+      .find((p) => p.userId === snapshot.currentGuesserId)?.displayName ?? "?";
 
   const onGuess = (guessed: boolean) => {
     if (!currentWord) return;
@@ -160,6 +175,8 @@ export default function PlayPage() {
   const teamColor = activeTeam?.color ?? "--team-1";
   const teamName = activeTeam?.name ?? "—";
   const explainerName = explainerPlayer?.displayName ?? "?";
+  /** Чей это ход — словами. Втроём это пара, а не название команды. */
+  const pairName = trio ? `${explainerName} и ${guesserName}` : `команда «${teamName}»`;
   const roundTime = snapshot.settings.roundTime;
   const sec = Math.max(0, Math.ceil((tick?.msLeft ?? 0) / 1000));
   const danger = snapshot.phase === "ROUND_ACTIVE" && sec <= 10;
@@ -243,7 +260,9 @@ export default function PlayPage() {
             <div className="shell game-shell">
               <GameTop
                 role={role}
+                trio={trio}
                 explainerName={explainerName}
+                guesserName={guesserName}
                 teamName={teamName}
                 teamColor={teamColor}
                 roundNumber={snapshot.currentRoundNumber}
@@ -358,6 +377,8 @@ export default function PlayPage() {
       <>
         <AppShell centered className="screen-anim">
           <ReviewView
+            trio={trio}
+            pairName={pairName}
             role={role}
             review={review}
             penaltySkip={snapshot.settings.penaltySkip}
@@ -385,10 +406,19 @@ export default function PlayPage() {
               следующий ход
             </div>
             <h1 className="h-display" style={{ marginBottom: 8 }}>
-              Команда «{nextTeam?.name ?? "—"}»
+              {trio ? nextName : `Команда «${nextTeam?.name ?? "—"}»`}
             </h1>
             <p className="muted">
-              Объясняет <strong style={{ color: "var(--fg)" }}>{nextName}</strong>
+              {trio ? (
+                <>
+                  Объясняет <strong style={{ color: "var(--fg)" }}>{nextName}</strong> · угадывает{" "}
+                  <strong style={{ color: "var(--fg)" }}>{guesserName}</strong>
+                </>
+              ) : (
+                <>
+                  Объясняет <strong style={{ color: "var(--fg)" }}>{nextName}</strong>
+                </>
+              )}
             </p>
             <p className="muted" style={{ marginTop: 18, fontSize: 13 }}>
               Раунд начнётся через несколько секунд…
@@ -450,7 +480,9 @@ export default function PlayPage() {
 // ─── Game top bar ───
 function GameTop({
   role,
+  trio,
   explainerName,
+  guesserName,
   teamName,
   teamColor,
   roundNumber,
@@ -458,7 +490,9 @@ function GameTop({
   onPause,
 }: {
   role: Role;
+  trio: boolean;
   explainerName: string;
+  guesserName: string;
   teamName: string;
   teamColor: string;
   roundNumber: number;
@@ -475,9 +509,13 @@ function GameTop({
         <div>
           <span className="gt-name">{role === "explainer" ? "Твой ход" : `${explainerName} объясняет`}</span>
           <span className="gt-team mono">
-            {role === "spectator"
-              ? `наблюдаешь · «${teamName}»`
-              : `Команда «${teamName}» · раунд ${roundNumber}`}
+            {trio
+              ? role === "spectator"
+                ? `наблюдаешь · ${explainerName} → ${guesserName}`
+                : `Угадывает ${guesserName} · круг ${roundNumber}`
+              : role === "spectator"
+                ? `наблюдаешь · «${teamName}»`
+                : `Команда «${teamName}» · раунд ${roundNumber}`}
           </span>
         </div>
       </div>
@@ -505,6 +543,8 @@ function GameTop({
 // ─── Round review ───
 function ReviewView({
   role,
+  trio,
+  pairName,
   review,
   penaltySkip,
   teamName,
@@ -513,6 +553,9 @@ function ReviewView({
   isExplainer,
 }: {
   role: Role;
+  trio: boolean;
+  /** Чей ход словами: втроём — пара, иначе — команда. */
+  pairName: string;
   review: import("@alias/shared/domain").RoundReviewPayload | null;
   penaltySkip: boolean;
   teamName: string;
@@ -534,14 +577,16 @@ function ReviewView({
   return (
     <div className="summary-wrap">
       <div className="summary-left">
-        <span className="eyebrow">итог раунда · команда «{teamName}»</span>
+        <span className="eyebrow">итог раунда · {pairName}</span>
         <h1 className="h-display" style={{ margin: "12px 0" }}>
           {score > 0 ? "Отличный раунд!" : "Раунд завершён"}
         </h1>
         <p className="h-sub">
           {isExplainer
             ? "Тапни слово, чтобы переключить «угадано / пропуск», если где-то ошиблись."
-            : `Команда подтверждает итоги (ты — ${role === "guesser" ? "в команде" : "наблюдатель"}).`}
+            : trio
+              ? `Итоги подтверждает объясняющий (ты — ${role === "guesser" ? "угадывал" : "наблюдатель"}).`
+              : `Команда подтверждает итоги (ты — ${role === "guesser" ? "в команде" : "наблюдатель"}).`}
         </p>
 
         <div className="round-score">

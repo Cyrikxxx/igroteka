@@ -16,11 +16,12 @@ import {
   nextUnusedTeamName,
   reassignHostIfNeeded,
   everyoneIn,
+  applyRoomFormat,
+  teamCapacity,
 } from "@alias/shared/snapshot-builders";
 import {
   MAX_TEAMS,
   MIN_TEAMS,
-  MAX_PLAYERS_PER_TEAM,
 } from "@alias/shared/constants";
 import { mutate, load, remove } from "../snapshot";
 import { reopenRoom, closeRoom } from "../../../services/room-lifecycle";
@@ -96,10 +97,23 @@ export function registerLobbyHandlers(
     await maybeRehydrateExplainer(socket);
   });
 
+  /**
+   * Втроём набор команд задан: три места, свои добавлять и убирать нельзя.
+   * Возвращаем внятную ошибку, а не молча игнорируем.
+   */
+  async function trioLocked(): Promise<boolean> {
+    const snap = await load(roomCode);
+    return snap?.format === "TRIO";
+  }
+
   // ─── team:create ─── (host only)
   socket.on("team:create", async (payload, ack) => {
     if (!(await isHost(roomCode, userId))) {
       ack?.({ error: "forbidden" });
+      return;
+    }
+    if (await trioLocked()) {
+      ack?.({ error: "trio_locked" });
       return;
     }
     let teamId: number | null = null;
@@ -134,6 +148,7 @@ export function registerLobbyHandlers(
   // ─── team:rename ─── (host only)
   socket.on("team:rename", async (payload, ack) => {
     if (!(await isHost(roomCode, userId))) return ack?.({ error: "forbidden" });
+    if (await trioLocked()) return ack?.({ error: "trio_locked" });
     if (
       typeof payload?.teamId !== "number" ||
       typeof payload?.name !== "string" ||
@@ -155,6 +170,7 @@ export function registerLobbyHandlers(
   // ─── team:remove ─── (host only) → игроки уезжают в зрители
   socket.on("team:remove", async (payload, ack) => {
     if (!(await isHost(roomCode, userId))) return ack?.({ error: "forbidden" });
+    if (await trioLocked()) return ack?.({ error: "trio_locked" });
     if (typeof payload?.teamId !== "number") {
       return ack?.({ error: "invalid_payload" });
     }
@@ -214,7 +230,8 @@ export function registerLobbyHandlers(
         });
         return;
       }
-      if (team.players.length >= MAX_PLAYERS_PER_TEAM) {
+      // Втроём место рассчитано на одного — вместимость зависит от формата.
+      if (team.players.length >= teamCapacity(s.format)) {
         // переполнение — fallback в зрители
         s.spectators.push({
           userId,
@@ -230,6 +247,25 @@ export function registerLobbyHandlers(
         online: wasOnline,
         order: team.players.length,
       });
+    });
+    if (!snap) return ack?.({ error: "room_not_found" });
+    ack?.({ ok: true });
+    await broadcastState(ns, roomCode, snap);
+  });
+
+  // ─── room:format ─── (host only, только в LOBBY) → командами / втроём
+  socket.on("room:format", async (payload, ack) => {
+    if (!(await isHost(roomCode, userId))) return ack?.({ error: "forbidden" });
+    if (payload?.format !== "TEAMS" && payload?.format !== "TRIO") {
+      return ack?.({ error: "invalid_payload" });
+    }
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.phase !== "LOBBY") return ack?.({ error: "game_in_progress" });
+    if ((current.format ?? "TEAMS") === payload.format) return ack?.({ ok: true });
+
+    const snap = await mutate(roomCode, (s) => {
+      applyRoomFormat(s, payload.format);
     });
     if (!snap) return ack?.({ error: "room_not_found" });
     ack?.({ ok: true });
