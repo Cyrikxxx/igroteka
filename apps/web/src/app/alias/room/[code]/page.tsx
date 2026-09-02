@@ -97,6 +97,12 @@ export default function LobbyPage() {
     [creds],
   );
   const { socket, snapshot, status, error, closedReason } = useRoom(roomOpts);
+  // Вызываем до ранних return'ов: порядок хуков не должен зависеть от того,
+  // загрузились ли уже креды и снапшот.
+  const claim = useHostClaim(
+    snapshot?.hostOfflineSince,
+    !!creds && snapshot?.hostId === creds.userId,
+  );
 
   // Выгнали или комнату закрыли — уводим на главный экран Алиаса и объясняем
   // там, что случилось. Раньше поверх лобби висело окно, а сама комната
@@ -135,7 +141,6 @@ export default function LobbyPage() {
   }
 
   const isHost = snapshot?.hostId === creds.userId;
-  const claim = useHostClaim(snapshot?.hostOfflineSince, isHost);
   const inviteUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/alias/join?code=${creds.code}`

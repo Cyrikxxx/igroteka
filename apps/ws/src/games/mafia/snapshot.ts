@@ -5,8 +5,9 @@
 import { mafiaRoomKey } from "@alias/shared/redis-keys";
 import type { MafiaSnapshot } from "@alias/shared/mafia";
 import { createSnapshotStore } from "@alias/shared/server/snapshot-store";
+import { mafiaSnapshotTtl } from "@alias/shared/mafia-snapshot-builders";
 import { redis } from "../../redis";
 
-const store = createSnapshotStore<MafiaSnapshot>(redis, mafiaRoomKey);
+const store = createSnapshotStore<MafiaSnapshot>(redis, mafiaRoomKey, mafiaSnapshotTtl);
 
 export const { load, save, mutate, remove } = store;

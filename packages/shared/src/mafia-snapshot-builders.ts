@@ -8,6 +8,18 @@ import {
   type MafiaSnapshot,
   type MafiaPlayerFull,
 } from "./mafia";
+import { roomTtlSeconds } from "./host";
+
+/**
+ * Сколько жить ключу комнаты в Redis. Пустая комната держалась сутки: код
+ * занят, а зайти в неё некуда. Теперь такая живёт минуты, а вернувшийся
+ * человек сам продлевает срок обратно — TTL пересчитывается на каждой записи.
+ */
+export function mafiaSnapshotTtl(snapshot: MafiaSnapshot): number {
+  return roomTtlSeconds(
+    [...snapshot.players, ...snapshot.spectators].some((p) => p.online),
+  );
+}
 
 /** Стартовый снапшот только что созданной комнаты: в ней один хост. */
 export function buildMafiaLobbySnapshot(args: {

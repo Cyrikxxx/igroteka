@@ -10,7 +10,7 @@ import {
   TRIO_TEAMS,
   TRIO_PLAYERS_PER_TEAM,
 } from "./constants";
-import { pickHeir } from "./host";
+import { pickHeir, roomTtlSeconds } from "./host";
 
 export function buildLobbySnapshot(args: {
   code: string;
@@ -42,6 +42,15 @@ export function buildLobbySnapshot(args: {
     scoreboard: null,
     gameId: null,
   };
+}
+
+/**
+ * Сколько жить ключу комнаты в Redis. Пустая комната держалась сутки: код
+ * занят, а зайти в неё некуда. Теперь такая живёт минуты, а вернувшийся
+ * человек сам продлевает срок обратно — TTL пересчитывается на каждой записи.
+ */
+export function roomSnapshotTtl(snapshot: RoomSnapshot): number {
+  return roomTtlSeconds(everyoneIn(snapshot).some((p) => p.online));
 }
 
 /** Сколько человек влезает в одну команду при этом формате. */

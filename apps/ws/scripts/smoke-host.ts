@@ -229,9 +229,85 @@ async function aliasScenario() {
   guestSock.disconnect();
 }
 
+// ───────────────────── Пустая комната и зомби-код ─────────────────────
+
+async function emptyRoomScenario() {
+  console.log("\n[пустая комната]");
+  const catalog = (await (await fetch(`${WEB}/api/categories`)).json()) as {
+    levels: { id: number }[];
+  };
+  const hostTab = tab();
+  await hostTab.prime();
+  const created = (await (
+    await hostTab.post("/api/rooms", {
+      hostName: "Один",
+      title: "Empty",
+      settings: {
+        roundTime: 60,
+        winScore: 50,
+        penaltySkip: false,
+        categoryIds: [catalog.levels[0].id],
+      },
+    })
+  ).json()) as { room: { code: string }; wsToken: string };
+  const code = created.room.code;
+
+  const sock = await connect("/room", created.wsToken, code);
+  await emitAck(sock, "room:hello", {});
+
+  // Пока человек на связи — комната живёт сутки.
+  const ttlOnline = await redis.ttl(roomKey(code));
+  assert(ttlOnline > 3600, `с живым игроком комната живёт долго (ttl=${ttlOnline})`);
+
+  // Отвалился, но не выходил — комнате остаются минуты, а не сутки.
+  sock.disconnect();
+  await sleep(500);
+  const ttlOffline = await redis.ttl(roomKey(code));
+  assert(
+    ttlOffline > 0 && ttlOffline <= 600,
+    `без людей на связи комната живёт минуты (ttl=${ttlOffline})`,
+  );
+
+  // Вернулся — срок снова длинный.
+  const back = await connect("/room", created.wsToken, code);
+  await emitAck(back, "room:hello", {});
+  await sleep(300);
+  const ttlBack = await redis.ttl(roomKey(code));
+  assert(ttlBack > 3600, `вернувшийся продлевает жизнь комнаты (ttl=${ttlBack})`);
+
+  // Вышел кнопкой — последний, значит комнату закрываем сразу.
+  await emitAck(back, "room:leave", {});
+  await sleep(500);
+  const gone = await redis.get(roomKey(code));
+  assert(gone === null, "уход последнего закрывает комнату сразу");
+
+  const afterClose = await hostTab.post(`/api/rooms/${code}/join`, { displayName: "Кто-то" });
+  assert(afterClose.status === 410, "по коду закрытой комнаты больше не пускают");
+
+  // Зомби-код: строка комнаты в LOBBY, а снапшот протух.
+  const zombie = (await (
+    await hostTab.post("/api/rooms", {
+      hostName: "Зомби",
+      title: "Zombie",
+      settings: {
+        roundTime: 60,
+        winScore: 50,
+        penaltySkip: false,
+        categoryIds: [catalog.levels[0].id],
+      },
+    })
+  ).json()) as { room: { code: string } };
+  await redis.del(roomKey(zombie.room.code));
+  const zombieJoin = await hostTab.post(`/api/rooms/${zombie.room.code}/join`, {
+    displayName: "Кто-то",
+  });
+  assert(zombieJoin.status === 410, "по протухшему коду отвечаем «комната закрыта», а не 200");
+}
+
 async function main() {
   await mafiaScenario();
   await aliasScenario();
+  await emptyRoomScenario();
   console.log("\n[smoke-host] все проверки зелёные");
   process.exit(0);
 }

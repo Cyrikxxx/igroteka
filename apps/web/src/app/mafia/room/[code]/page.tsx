@@ -42,6 +42,9 @@ export default function MafiaLobbyPage() {
   );
 
   const { socket, view, error, closedReason } = useMafiaRoom(opts);
+  // Вызываем до ранних return'ов: порядок хуков не должен зависеть от того,
+  // загрузились ли уже креды и состояние комнаты.
+  const claim = useHostClaim(view?.hostOfflineSince, view?.you.isHost ?? false);
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -92,8 +95,6 @@ export default function MafiaLobbyPage() {
   const isHost = view?.you.isHost ?? false;
   const players = view?.players ?? [];
   const count = players.length;
-  const claim = useHostClaim(view?.hostOfflineSince, isHost);
-
   const claimHost = () =>
     socket?.emit("mafia:claim_host", {}, (resp: unknown) => {
       if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {

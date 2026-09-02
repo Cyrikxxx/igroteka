@@ -5,11 +5,12 @@
 import type { MafiaSnapshot } from "@alias/shared/mafia";
 import { mafiaRoomKey } from "@alias/shared/redis-keys";
 import { createSnapshotStore } from "@alias/shared/server/snapshot-store";
+import { mafiaSnapshotTtl } from "@alias/shared/mafia-snapshot-builders";
 import redis from "./redis";
 
 export { buildMafiaLobbySnapshot } from "@alias/shared/mafia-snapshot-builders";
 
-const store = createSnapshotStore<MafiaSnapshot>(redis, mafiaRoomKey);
+const store = createSnapshotStore<MafiaSnapshot>(redis, mafiaRoomKey, mafiaSnapshotTtl);
 
 export const saveMafiaSnapshot = store.save;
 export const loadMafiaSnapshot = store.load;

@@ -45,6 +45,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export function createSnapshotStore<T extends HasCode>(
   redis: Redis,
   keyFor: (code: string) => string,
+  /**
+   * Сколько секунд жить ключу. Считается на каждой записи, поэтому комната,
+   * из которой все ушли, доживает минуты, а вернувшийся человек сам продлевает
+   * её обратно до суток. Без этого «короткий TTL для пустой» не работал бы:
+   * любая следующая запись возвращала бы сутки.
+   */
+  ttlFor: (snapshot: T) => number = () => ROOM_TTL_SECONDS,
 ): SnapshotStore<T> {
   async function load(code: string): Promise<T | null> {
     const raw = await redis.get(keyFor(code));
@@ -61,7 +68,7 @@ export function createSnapshotStore<T extends HasCode>(
       keyFor(snapshot.code),
       JSON.stringify(snapshot),
       "EX",
-      ROOM_TTL_SECONDS,
+      ttlFor(snapshot),
     );
   }
 

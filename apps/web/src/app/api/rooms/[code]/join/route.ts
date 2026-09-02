@@ -59,6 +59,17 @@ export async function POST(request: NextRequest, { params }: Ctx) {
     // создания Participant: иначе на него завелись бы строки в Postgres,
     // хотя в комнату он всё равно не попадёт.
     const snapshot = await loadRoomSnapshot(code);
+
+    // Живое состояние комнаты протухло, а строка осталась в LOBBY — код стал
+    // зомби: сюда пускали с 200, а WS сразу отвечал «комнаты нет». Закрываем
+    // её честно и здесь же: отдельный дворник ради этого не нужен.
+    if (!snapshot) {
+      await prisma.room
+        .updateMany({ where: { code }, data: { status: "FINISHED", endedAt: new Date() } })
+        .catch(() => {});
+      return NextResponse.json({ error: "Room is finished" }, { status: 410 });
+    }
+
     const entry = snapshot
       ? (snapshot.teams.flatMap((t) => t.players).find((p) => p.userId === userId) ??
         snapshot.spectators.find((p) => p.userId === userId) ??

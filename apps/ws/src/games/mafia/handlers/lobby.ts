@@ -370,6 +370,13 @@ export function registerMafiaLobbyHandlers(
     socket.disconnect(true);
     if (!snap) return;
 
+    // Вышел последний — держать комнату незачем: ждать в ней больше некого,
+    // а код пусть освобождается сразу, не через таймер пустой комнаты.
+    if (snap.players.length === 0 && snap.spectators.length === 0) {
+      await closeRoom(ns, roomCode);
+      return;
+    }
+
     if (winner) {
       await finishGame(ns, roomCode, winner);
       return;

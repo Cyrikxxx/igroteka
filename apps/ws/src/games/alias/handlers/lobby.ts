@@ -521,9 +521,18 @@ export function registerLobbyHandlers(
       // того, кого в комнате уже нет, и начать игру не мог бы никто.
       reassignHostIfNeeded(s);
     });
-    if (snap) await broadcastState(ns, roomCode, snap);
     ack?.({ ok: true });
     socket.disconnect(true);
+    if (!snap) return;
+
+    // Вышел последний — держать комнату незачем: ждать в ней больше некого,
+    // а код пусть освобождается сразу, не через таймер пустой комнаты.
+    if (everyoneIn(snap).length === 0) {
+      await remove(roomCode);
+      await closeRoom(roomCode);
+      return;
+    }
+    await broadcastState(ns, roomCode, snap);
   });
 
   // На disconnect — помечаем offline только если у этого userId не
