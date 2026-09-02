@@ -9,6 +9,7 @@ import {
   type MafiaSnapshot,
   type MafiaWinner,
 } from "@alias/shared/mafia";
+import { pickHeir, nextHostOfflineSince, canClaimHost } from "@alias/shared/host";
 import { mutate, load } from "../snapshot";
 import { assignRoles } from "../roles";
 import {
@@ -23,13 +24,35 @@ import {
 import { eliminateLeaver } from "../engine-core";
 import { checkWinner } from "../services/win";
 
-/** Хост ушёл — передаём комнату первому, кто ещё на связи. */
+/**
+ * hostId и флаг isHost у игрока — две записи об одном и том же, и клиент
+ * читает вторую. Двигаем их только вместе, иначе комната остаётся без
+ * кнопок хоста при формально назначенном хосте.
+ */
+function setHost(s: MafiaSnapshot, userId: string): void {
+  s.hostId = userId;
+  s.players.forEach((p) => (p.isHost = p.userId === userId));
+  const host = s.players.find((p) => p.userId === userId);
+  s.hostOfflineSince = host && !host.online ? Date.now() : null;
+}
+
+/** Хост на связи? Отсюда берётся отсчёт «комната зависла». */
+function isHostOnline(s: MafiaSnapshot): boolean {
+  return s.players.find((p) => p.userId === s.hostId)?.online ?? false;
+}
+
+/**
+ * Хост ушёл САМ — комната достаётся тому, кто на связи. Обрыв связи сюда не
+ * ведёт: у человека мог моргнуть Wi-Fi, и отбирать за это комнату нечестно.
+ *
+ * Наследник ищется только среди игроков: клиент считает права по
+ * players[].isHost, и зритель-хост остался бы без кнопок.
+ */
 function transferHostIfNeeded(s: MafiaSnapshot, leavingUserId: string): void {
   if (s.hostId !== leavingUserId) return;
-  const heir = s.players.find((p) => p.online && p.userId !== leavingUserId);
+  const heir = pickHeir(s.players, leavingUserId);
   if (!heir) return;
-  s.hostId = heir.userId;
-  s.players.forEach((p) => (p.isHost = p.userId === heir.userId));
+  setHost(s, heir.userId);
 }
 import { buildView } from "../view";
 import {
@@ -143,10 +166,17 @@ export function registerMafiaLobbyHandlers(
     // Чиним при первом же появлении живого игрока.
     const withHost = await mutate(roomCode, (s) => {
       if (s.players.length === 0) return;
-      if (s.players.some((p) => p.userId === s.hostId)) return;
-      const heir = s.players.find((p) => p.online) ?? s.players[0];
-      s.hostId = heir.userId;
-      s.players.forEach((p) => (p.isHost = p.userId === heir.userId));
+      if (!s.players.some((p) => p.userId === s.hostId)) {
+        const heir = pickHeir(s.players);
+        if (heir) setHost(s, heir.userId);
+        return;
+      }
+      // Хост вернулся — отсчёт «комната зависла» снимаем, кнопка «взять
+      // комнату на себя» у остальных должна пропасть.
+      s.hostOfflineSince = nextHostOfflineSince({
+        hostOnline: isHostOnline(s),
+        current: s.hostOfflineSince,
+      });
     });
     if (!snap) {
       ack?.({ error: "room_not_found" });
@@ -242,10 +272,7 @@ export function registerMafiaLobbyHandlers(
     );
     if (!inRoom) return ack?.({ error: "not_in_room" });
 
-    const snap = await mutate(roomCode, (s) => {
-      s.hostId = target;
-      s.players.forEach((p) => (p.isHost = p.userId === target));
-    });
+    const snap = await mutate(roomCode, (s) => setHost(s, target));
     if (!snap) return ack?.({ error: "room_not_found" });
     ack?.({ ok: true });
     scheduleStateBroadcast(ns, roomCode);
@@ -435,7 +462,13 @@ export function registerMafiaLobbyHandlers(
         s.players.find((x) => x.userId === userId) ??
         s.spectators.find((x) => x.userId === userId);
       if (p) p.online = false;
-      transferHostIfNeeded(s, userId);
+      // Комнату у пропавшего хоста НЕ отбираем — раньше это делалось прямо
+      // здесь, и хост слетал от любого моргнувшего Wi-Fi. Вместо этого
+      // запускаем отсчёт: через минуту остальные смогут забрать её кнопкой.
+      s.hostOfflineSince = nextHostOfflineSince({
+        hostOnline: isHostOnline(s),
+        current: s.hostOfflineSince,
+      });
     });
     if (snap) scheduleStateBroadcast(ns, roomCode);
   });

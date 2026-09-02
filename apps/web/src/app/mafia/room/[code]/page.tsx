@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Check, Copy, Crown, DoorOpen, Link2, LogOut, Pencil, Settings2, Unlock, VenetianMask, X } from "lucide-react";
+import { Check, Copy, Crown, DoorClosed, DoorOpen, Link2, LogOut, Pencil, Settings2, Unlock, VenetianMask, X } from "lucide-react";
 import {
   MIN_MAFIA_PLAYERS,
   MAX_MAFIA_PLAYERS,
@@ -141,9 +141,9 @@ export default function MafiaLobbyPage() {
     clearRoomCreds(code);
     router.replace("/");
   };
-  // Хост уходит не один: комната без него всё равно никому не нужна, поэтому
-  // закрываем её для всех — и об этом единственном необратимом шаге
-  // спрашиваем.
+  // Закрытие комнаты — отдельное осознанное действие, а не побочный эффект
+  // выхода. Раньше кнопка выхода у хоста делала именно это: он уходил — и
+  // комната разваливалась под всеми остальными.
   const closeRoom = () => {
     socket?.emit("mafia:close", {}, () => {});
     clearRoomCreds(code);
@@ -161,15 +161,31 @@ export default function MafiaLobbyPage() {
           <DoorOpen size={21} color="var(--mf-crimson)" />
           <span>Лобби</span>
         </div>
-        <button
-          type="button"
-          onClick={() => (isHost ? setCloseAsk(true) : leave())}
-          style={{ background: "none", border: "none", color: "var(--mf-text-faint)", cursor: "pointer", display: "flex", padding: 4 }}
-          aria-label={isHost ? "Закрыть комнату" : "Выйти"}
-          title={isHost ? "Закрыть комнату" : "Выйти"}
-        >
-          <LogOut size={20} />
-        </button>
+        <div style={{ display: "flex", gap: 2 }}>
+          {/* Закрыть комнату для всех — только у хоста и только отдельной
+              кнопкой. Обычный выход комнату не рушит: она достаётся
+              следующему, кто на связи. */}
+          {isHost ? (
+            <button
+              type="button"
+              onClick={() => setCloseAsk(true)}
+              style={{ background: "none", border: "none", color: "var(--mf-text-faint)", cursor: "pointer", display: "flex", padding: 4 }}
+              aria-label="Закрыть комнату"
+              title="Закрыть комнату для всех"
+            >
+              <DoorClosed size={20} />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={leave}
+            style={{ background: "none", border: "none", color: "var(--mf-text-faint)", cursor: "pointer", display: "flex", padding: 4 }}
+            aria-label="Выйти"
+            title={isHost ? "Выйти — комната перейдёт другому" : "Выйти"}
+          >
+            <LogOut size={20} />
+          </button>
+        </div>
       </div>
 
       <div className="mf-lobby-grid">

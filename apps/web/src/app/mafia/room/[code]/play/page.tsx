@@ -111,9 +111,13 @@ export default function MafiaPlayPage() {
   }
 
   const me = view.players.find((p) => p.userId === view.you.userId);
-  // Хост закрывает комнату для всех, игрок уходит один.
+  // Уход хоста значит разное в зависимости от момента. Партия доиграна —
+  // комната больше не нужна, закрываем её для всех. Партия идёт — она не
+  // должна умирать из-за одного ушедшего: хост выбывает как при смерти, а
+  // права достаются тому, кто на связи.
   const leaveToHome = () => {
-    if (view.you.isHost) socket?.emit("mafia:close", {}, () => {});
+    const closesRoom = view.you.isHost && view.phase === "FINISHED";
+    if (closesRoom) socket?.emit("mafia:close", {}, () => {});
     else socket?.emit("mafia:leave", {}, () => {});
     clearRoomCreds(code);
     router.push("/mafia");
