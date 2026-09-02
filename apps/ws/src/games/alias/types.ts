@@ -40,6 +40,11 @@ export interface ClientToServerEvents {
     payload: { title: string },
     ack?: Ack<OkErr>,
   ) => void;
+  /** Игрок меняет собственный ник. Только в лобби. */
+  "room:set_name": (
+    payload: { displayName: string },
+    ack?: Ack<OkErr>,
+  ) => void;
   "room:settings": (
     payload: {
       roundTime?: number;

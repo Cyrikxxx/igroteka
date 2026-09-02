@@ -37,6 +37,12 @@ export interface UseRoomResult {
   snapshot: RoomSnapshot | null;
   status: ConnStatus;
   error: string | null;
+  /**
+   * Текст «почему комнаты больше нет» — заполняется только по событию
+   * room:closed. Обычный обрыв связи его не ставит: по нему выкидывать
+   * человека из комнаты нельзя, соединение ещё может вернуться.
+   */
+  closedReason: string | null;
   // Игровой цикл
   tick: RoundTickState | null;
   currentWord: RoundWordPayload | null;
@@ -49,6 +55,7 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
   const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null);
   const [status, setStatus] = useState<ConnStatus>("connecting");
   const [error, setError] = useState<string | null>(null);
+  const [closedReason, setClosedReason] = useState<string | null>(null);
   const [tick, setTick] = useState<RoundTickState | null>(null);
   const [currentWord, setCurrentWord] = useState<RoundWordPayload | null>(null);
   const [wordCount, setWordCount] = useState<{ got: number; skip: number } | null>(null);
@@ -131,8 +138,10 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
       closed_by_host: "Хост закрыл комнату.",
     };
     const onClosed = (payload: { reason: string }) => {
+      const text = CLOSED_REASON[payload.reason] ?? "Комната закрыта.";
       setStatus("closed");
-      setError(CLOSED_REASON[payload.reason] ?? "Комната закрыта.");
+      setError(text);
+      setClosedReason(text);
     };
 
     sock.on("connect", onConnect);
@@ -183,6 +192,7 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
     snapshot,
     status,
     error,
+    closedReason,
     tick,
     currentWord,
     wordCount,

@@ -7,7 +7,7 @@ import prisma from "@/lib/prisma";
 import { ensureUser, requireUserId } from "@/lib/identity";
 import { isValidRoomCode } from "@/lib/room-code";
 import { issueWsToken, wsConnectUrlFor } from "@/lib/ws-token";
-import { loadMafiaSnapshot } from "@/lib/mafia-snapshot";
+import { loadMafiaSnapshot, saveMafiaSnapshot } from "@/lib/mafia-snapshot";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { MAX_MAFIA_PLAYERS, type MafiaJoinRoomResponse } from "@alias/shared/mafia";
 
@@ -29,13 +29,11 @@ export async function POST(request: NextRequest, { params }: Ctx) {
       return NextResponse.json({ error: "Invalid room code" }, { status: 400 });
     }
 
+    // Имя обязательно только для нового человека. Тот, кто уже в комнате,
+    // возвращается без него: он узнаётся по куке `aid`, а имя у него уже есть.
     const body = await request.json().catch(() => ({}));
     const displayName =
-      typeof body.displayName === "string" ? body.displayName.trim() : "";
-    if (displayName.length === 0) {
-      return NextResponse.json({ error: "displayName required" }, { status: 400 });
-    }
-    const trimmed = displayName.slice(0, 50);
+      typeof body.displayName === "string" ? body.displayName.trim().slice(0, 50) : "";
 
     const room = await prisma.room.findUnique({
       where: { code },
@@ -58,26 +56,42 @@ export async function POST(request: NextRequest, { params }: Ctx) {
 
     // Снимок — источник истины по составу: там и бан-лист, и текущая фаза.
     const snapshot = await loadMafiaSnapshot(code);
-    if (snapshot) {
-      const known =
-        snapshot.players.some((p) => p.userId === userId) ||
-        snapshot.spectators.some((p) => p.userId === userId);
-      if (!known) {
-        if (snapshot.banned?.some((b) => b.userId === userId)) {
-          return NextResponse.json(
-            { error: "Хост удалил вас из этой комнаты" },
-            { status: 403 },
-          );
-        }
-        if (
-          snapshot.phase === "LOBBY" &&
-          snapshot.players.length >= MAX_MAFIA_PLAYERS
-        ) {
-          return NextResponse.json(
-            { error: `В комнате уже ${MAX_MAFIA_PLAYERS} игроков` },
-            { status: 409 },
-          );
-        }
+    const entry = snapshot
+      ? (snapshot.players.find((p) => p.userId === userId) ??
+        snapshot.spectators.find((p) => p.userId === userId) ??
+        null)
+      : null;
+
+    if (snapshot && !entry) {
+      if (snapshot.banned?.some((b) => b.userId === userId)) {
+        return NextResponse.json(
+          { error: "Хост заблокировал вам вход в эту комнату" },
+          { status: 403 },
+        );
+      }
+      if (
+        snapshot.phase === "LOBBY" &&
+        snapshot.players.length >= MAX_MAFIA_PLAYERS
+      ) {
+        return NextResponse.json(
+          { error: `В комнате уже ${MAX_MAFIA_PLAYERS} игроков` },
+          { status: 409 },
+        );
+      }
+    }
+
+    if (displayName.length === 0 && !entry) {
+      return NextResponse.json({ error: "displayName required" }, { status: 400 });
+    }
+    const trimmed = displayName || (entry?.displayName ?? "");
+
+    // Имя, введённое заново, должно применяться: раньше оно молча терялось, и
+    // в комнате оставалось то, под которым человек зашёл в первый раз. Меняем
+    // только в лобби — переименование посреди партии всех запутает.
+    if (snapshot && entry && displayName && displayName !== entry.displayName) {
+      if (snapshot.phase === "LOBBY") {
+        entry.displayName = displayName;
+        await saveMafiaSnapshot(snapshot);
       }
     }
 

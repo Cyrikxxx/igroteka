@@ -715,6 +715,27 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .notice { border-radius: var(--r-lg); padding: 14px 16px; font-weight: 600; }
   .notice-danger { background: color-mix(in srgb, var(--danger) 12%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--danger) 32%, transparent); color: var(--danger); }
   .notice-warn { background: color-mix(in srgb, var(--warn) 12%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--warn) 32%, transparent); }
+
+  /* Плашка «что случилось с комнатой» на главном экране игры. Закрывается
+     крестиком; у Мафии своя палитра, поэтому отдельный класс. */
+  .room-notice { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+  .mf-notice {
+    display: flex; align-items: center; gap: 10px;
+    margin: 0 0 16px; padding: 13px 15px;
+    border-radius: var(--r-btn);
+    background: rgba(225, 29, 72, 0.1);
+    border: 1px solid rgba(225, 29, 72, 0.3);
+    color: var(--mf-text);
+    font-size: 14px; font-weight: 700;
+  }
+  .mf-notice svg:first-child { color: var(--mf-crimson); }
+  .room-notice-x {
+    all: unset; flex: none; cursor: pointer;
+    display: grid; place-items: center;
+    width: 26px; height: 26px; border-radius: 7px;
+    opacity: 0.7;
+  }
+  .room-notice-x:hover { opacity: 1; background: color-mix(in srgb, currentColor 14%, transparent); }
   .slot-x, .st-name-input { all: unset; }
   /* flex: none — потому что `all: unset` выше вернул flex-shrink в 1, и
      крестик сам начинал сжиматься вместо того, чтобы держать размер. */

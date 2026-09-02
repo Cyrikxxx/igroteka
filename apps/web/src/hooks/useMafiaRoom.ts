@@ -49,6 +49,12 @@ export interface UseMafiaRoomResult {
   timer: MafiaTimerState | null;
   status: MafiaConnStatus;
   error: string | null;
+  /**
+   * Текст «почему комнаты больше нет» — заполняется только по событию
+   * mafia:closed. Обычный обрыв связи его не ставит: по нему выкидывать
+   * человека из комнаты нельзя, соединение ещё может вернуться.
+   */
+  closedReason: string | null;
 }
 
 export function useMafiaRoom(
@@ -58,6 +64,7 @@ export function useMafiaRoom(
   const [timer, setTimer] = useState<MafiaTimerState | null>(null);
   const [status, setStatus] = useState<MafiaConnStatus>("connecting");
   const [error, setError] = useState<string | null>(null);
+  const [closedReason, setClosedReason] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -112,8 +119,13 @@ export function useMafiaRoom(
       }
     };
     const onClosed = (payload: { reason: string }) => {
+      const text =
+        payload.reason === "kicked"
+          ? "Хост выгнал тебя из комнаты."
+          : "Хост закрыл комнату.";
       setStatus("closed");
-      setError(payload.reason === "kicked" ? "Тебя удалили из комнаты" : `Комната закрыта (${payload.reason})`);
+      setError(text);
+      setClosedReason(text);
     };
 
     sock.on("connect", onConnect);
@@ -158,5 +170,5 @@ export function useMafiaRoom(
     };
   }, []);
 
-  return { socket: socketRef.current, view, timer, status, error };
+  return { socket: socketRef.current, view, timer, status, error, closedReason };
 }

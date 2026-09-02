@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Copy, Crown, DoorOpen, Link2, LogOut, RotateCcw, Settings2, VenetianMask, X, Check } from "lucide-react";
+import { Check, Copy, Crown, DoorOpen, Link2, LogOut, Pencil, Settings2, Unlock, VenetianMask, X } from "lucide-react";
 import {
   MIN_MAFIA_PLAYERS,
   MAX_MAFIA_PLAYERS,
@@ -18,14 +18,19 @@ import MafiaAvatar from "@/components/mafia/MafiaAvatar";
 import MafiaSettingsForm from "@/components/mafia/MafiaSettingsForm";
 import QrCode from "@/components/common/QrCode";
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
-import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
+import { loadRoomCreds, clearRoomCreds, saveDisplayName, type RoomCredentials } from "@/lib/room-session";
+import { resumeRoom } from "@/lib/room-resume";
+import { setRoomNotice } from "@/lib/room-notice";
 
 export default function MafiaLobbyPage() {
   const router = useRouter();
   const params = useParams();
   const code = String(params.code ?? "").toUpperCase();
 
-  const creds = useMemo(() => (code ? loadRoomCreds(code) : null), [code]);
+  // Креды читаем в эффекте, а не при рендере: sessionStorage на сервере нет,
+  // и обращение к нему в теле компонента разъезжалось с серверной разметкой —
+  // на гидратации React ругался на несовпадение.
+  const [creds, setCreds] = useState<RoomCredentials | null>(null);
   const opts = useMemo(
     () =>
       creds
@@ -34,16 +39,42 @@ export default function MafiaLobbyPage() {
     [creds],
   );
 
-  const { socket, view, error } = useMafiaRoom(opts);
+  const { socket, view, error, closedReason } = useMafiaRoom(opts);
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [draft, setDraft] = useState<MafiaSettings | null>(null);
 
-  // Нет креды в сессии — на экран входа.
+  // Креды живут во вкладке и умирают вместе с ней, а человек в комнате — нет.
+  // Поэтому сначала пробуем вернуться молча, и только если сервер не узнал —
+  // отправляем на экран входа.
   useEffect(() => {
-    if (code && !creds) router.replace(`/mafia/join?code=${code}`);
-  }, [code, creds, router]);
+    if (!code) return;
+    const stored = loadRoomCreds(code);
+    if (stored) {
+      setCreds(stored);
+      return;
+    }
+    let alive = true;
+    resumeRoom(code, "mafia").then((resumed) => {
+      if (!alive) return;
+      if (resumed) setCreds(resumed);
+      else router.replace(`/mafia/join?code=${code}`);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [code, router]);
+
+  // Выгнали или комнату закрыли — уводим на главный экран Мафии и объясняем
+  // там, что случилось. Раньше интерфейс комнаты оставался на месте, и любое
+  // переподключение возвращало человека обратно.
+  useEffect(() => {
+    if (!closedReason || !code) return;
+    clearRoomCreds(code);
+    setRoomNotice({ text: closedReason, tone: "danger" });
+    router.replace("/mafia");
+  }, [closedReason, code, router]);
 
   // Партия началась — на игровой экран.
   useEffect(() => {
@@ -57,6 +88,22 @@ export default function MafiaLobbyPage() {
   const isHost = view?.you.isHost ?? false;
   const players = view?.players ?? [];
   const count = players.length;
+
+  // Своя запись — источник актуального ника: его мог поменять и сам игрок,
+  // и другая вкладка.
+  const me = players.find((p) => p.userId === view?.you.userId) ?? null;
+  const myName = me?.displayName ?? creds.displayName;
+
+  const commitMyName = (input: HTMLInputElement) => {
+    const next = input.value.trim().slice(0, 50);
+    if (!next || next === myName) {
+      input.value = myName;
+      return;
+    }
+    socket?.emit("mafia:set_name", { displayName: next }, () => {});
+    // Запоминаем и глобально: следующий вход подставит новое имя сам.
+    saveDisplayName(next);
+  };
   const enough = count >= MIN_MAFIA_PLAYERS;
   const settings = view?.settings;
   const comp = settings ? computeComposition(Math.max(count, MIN_MAFIA_PLAYERS), settings) : null;
@@ -146,6 +193,52 @@ export default function MafiaLobbyPage() {
             {linkCopied ? "Скопировано" : "Ссылка"}
           </button>
         </div>
+        {/* Свой ник. Раньше имя задавалось один раз при входе, и опечатку
+            было не исправить иначе как пересозданием комнаты. */}
+        <div style={{ width: "100%", maxWidth: 300 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "var(--mf-text-faint)", textTransform: "uppercase", marginBottom: 8, textAlign: "center" }}>
+            Твоё имя
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              background: "var(--mf-surface)",
+              border: "1px solid var(--mf-border)",
+              borderRadius: "var(--r-btn)",
+              padding: "8px 12px",
+            }}
+          >
+            <MafiaAvatar name={myName} idx={me?.avatarIdx ?? 0} size={28} />
+            <input
+              key={myName}
+              defaultValue={myName}
+              maxLength={50}
+              placeholder="Как тебя зовут"
+              onBlur={(e) => commitMyName(e.target)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") {
+                  e.currentTarget.value = myName;
+                  e.currentTarget.blur();
+                }
+              }}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                color: "var(--mf-text)",
+                fontWeight: 700,
+                fontSize: 15,
+              }}
+            />
+            <Pencil size={15} color="var(--mf-text-faint)" style={{ flexShrink: 0 }} />
+          </div>
+        </div>
+
         {/* QR удобен, когда компания рядом: навёл камеру — и ты в комнате. */}
         <div className="mf-lobby-qr">
           <QrCode value={inviteUrl} />
@@ -234,11 +327,16 @@ export default function MafiaLobbyPage() {
         </div>
       </div>
 
-      {/* Выгнанные — только хосту: кик обратим, комнату пересоздавать не надо */}
+      {/* Заблокированные — только хосту: кик обратим, комнату пересоздавать
+          не надо. Разблокировка лишь открывает вход: обратно человек заходит
+          сам, по коду или ссылке. */}
       {isHost && (view?.banned?.length ?? 0) > 0 ? (
         <div style={{ padding: "4px 20px 0" }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--mf-text-faint)", marginBottom: 8 }}>
-            Выгнанные ({view?.banned?.length}) · видно только тебе
+            Заблокированные ({view?.banned?.length}) · видно только тебе
+          </div>
+          <div style={{ fontSize: 12, color: "var(--mf-text-faint)", marginBottom: 8, lineHeight: 1.45 }}>
+            Разблокировка только открывает вход — заходить обратно человек будет сам.
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {view?.banned?.map((b) => (
@@ -263,7 +361,7 @@ export default function MafiaLobbyPage() {
                   style={{ minHeight: 36, padding: "0 14px", fontSize: 14 }}
                   onClick={() => unban(b.userId)}
                 >
-                  <RotateCcw size={15} /> Вернуть
+                  <Unlock size={15} /> Разблокировать
                 </button>
               </div>
             ))}

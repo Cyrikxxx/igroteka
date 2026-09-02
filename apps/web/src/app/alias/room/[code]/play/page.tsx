@@ -8,12 +8,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Check, Clock, DoorClosed, EyeOff, LogOut, Pause, RefreshCw, SkipForward, Users, X } from "lucide-react";
 import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
+import { resumeRoom } from "@/lib/room-resume";
+import { setRoomNotice } from "@/lib/room-notice";
 import { useRoom } from "@/hooks/useRoom";
 import { pluralize, WORDS } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
 import Avatar from "@/components/common/Avatar";
 import Modal from "@/components/common/Modal";
-import RoomClosedOverlay from "@/components/alias/room/RoomClosedOverlay";
 import TimerRing from "@/components/alias/game/TimerRing";
 import VictoryView from "@/components/alias/game/VictoryView";
 import type { GameFromAPI } from "@/types";
@@ -34,21 +35,38 @@ export default function PlayPage() {
   const rawCode = (params.code as string).toUpperCase();
   const [creds, setCreds] = useState<Creds | null>(null);
 
+  // Вкладку могли закрыть и открыть заново — сначала пробуем вернуться молча.
   useEffect(() => {
     const stored = loadRoomCreds(rawCode);
-    if (!stored) {
-      router.replace(`/alias/join?code=${rawCode}`);
+    if (stored) {
+      setCreds(stored);
       return;
     }
-    setCreds(stored);
+    let alive = true;
+    resumeRoom(rawCode, "alias").then((resumed) => {
+      if (!alive) return;
+      if (resumed) setCreds(resumed);
+      else router.replace(`/alias/join?code=${rawCode}`);
+    });
+    return () => {
+      alive = false;
+    };
   }, [rawCode, router]);
 
   const opts = useMemo(
     () => (creds ? { wsUrl: creds.wsUrl, token: creds.wsToken, code: creds.code } : null),
     [creds],
   );
-  const { socket, snapshot, tick, currentWord, wordCount, review, error, status } =
+  const { socket, snapshot, tick, currentWord, wordCount, review, error, status, closedReason } =
     useRoom(opts);
+
+  // Выгнали или комнату закрыли — на главный экран Алиаса с объяснением.
+  useEffect(() => {
+    if (!closedReason) return;
+    clearRoomCreds(rawCode);
+    setRoomNotice({ text: closedReason, tone: "danger" });
+    router.replace("/alias");
+  }, [closedReason, rawCode, router]);
 
   // Редирект назад в лобби, если игра ещё не началась
   useEffect(() => {
@@ -185,8 +203,6 @@ export default function PlayPage() {
 
   const modals = (
     <>
-      <RoomClosedOverlay open={status === "closed"} reason={error} code={creds.code} />
-
       <Modal isOpen={pauseModalOpen && canControlRound} title="Пауза" onClose={onResume}>
         <p className="muted" style={{ marginBottom: 18 }}>
           Раунд приостановлен. Таймер не идёт, пока модалка открыта.

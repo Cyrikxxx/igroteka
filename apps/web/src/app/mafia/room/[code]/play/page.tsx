@@ -28,7 +28,9 @@ import {
   useHostToast,
 } from "@/components/mafia/Overlays";
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
-import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
+import { loadRoomCreds, clearRoomCreds, type RoomCredentials } from "@/lib/room-session";
+import { resumeRoom } from "@/lib/room-resume";
+import { setRoomNotice } from "@/lib/room-notice";
 
 /** Фазы, которые идут по таймеру — только их и можно ставить на паузу. */
 const PAUSABLE = new Set([
@@ -45,7 +47,9 @@ export default function MafiaPlayPage() {
   const params = useParams();
   const code = String(params.code ?? "").toUpperCase();
 
-  const creds = useMemo(() => (code ? loadRoomCreds(code) : null), [code]);
+  // Креды читаем в эффекте: sessionStorage на сервере нет, и чтение прямо в
+  // теле компонента разъезжалось с серверной разметкой при гидратации.
+  const [creds, setCreds] = useState<RoomCredentials | null>(null);
   const opts = useMemo(
     () =>
       creds
@@ -53,7 +57,7 @@ export default function MafiaPlayPage() {
         : null,
     [creds],
   );
-  const { socket, view, status, error } = useMafiaRoom(opts);
+  const { socket, view, status, error, closedReason } = useMafiaRoom(opts);
   const hostToast = useHostToast(view?.you.isHost ?? false);
   // Экран «ты убит» показываем один раз, пока игрок сам не уйдёт в зрители.
   const [deathSeen, setDeathSeen] = useState(false);
@@ -62,9 +66,32 @@ export default function MafiaPlayPage() {
     if (alive) setDeathSeen(false);
   }, [alive]);
 
+  // Вкладку могли закрыть и открыть заново — сначала пробуем вернуться молча.
   useEffect(() => {
-    if (code && !creds) router.replace(`/mafia/join?code=${code}`);
-  }, [code, creds, router]);
+    if (!code) return;
+    const stored = loadRoomCreds(code);
+    if (stored) {
+      setCreds(stored);
+      return;
+    }
+    let alive = true;
+    resumeRoom(code, "mafia").then((resumed) => {
+      if (!alive) return;
+      if (resumed) setCreds(resumed);
+      else router.replace(`/mafia/join?code=${code}`);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [code, router]);
+
+  // Выгнали или комнату закрыли — на главный экран Мафии с объяснением.
+  useEffect(() => {
+    if (!closedReason || !code) return;
+    clearRoomCreds(code);
+    setRoomNotice({ text: closedReason, tone: "danger" });
+    router.replace("/mafia");
+  }, [closedReason, code, router]);
 
   // Партия закончилась и хост позвал играть заново — возвращаемся в лобби.
   useEffect(() => {

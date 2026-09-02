@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import SiteTopBar from "@/components/common/SiteTopBar";
+import RoomNoticeBanner from "@/components/common/RoomNoticeBanner";
 
 const STEPS: [LucideIcon, string, string][] = [
   [Users2, "Собери команды", "Два и больше — раздели друзей поровну"],
@@ -76,6 +77,8 @@ export default function AliasLandingPage() {
     <div className="al-landing">
       <div className="al-landing-inner">
       <SiteTopBar />
+      {/* Объяснение для того, кого только что выгнали из комнаты. */}
+      <RoomNoticeBanner />
       <section className="al-hero">
         <div className="al-hero-copy">
           <span className="al-chip al-chip-green">

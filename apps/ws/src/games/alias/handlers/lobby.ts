@@ -272,6 +272,30 @@ export function registerLobbyHandlers(
     await broadcastState(ns, roomCode, snap);
   });
 
+  // ─── room:set_name ─── (любой, только в LOBBY) → свой ник
+  // Имя задаётся один раз при входе и потом нигде не редактировалось: чтобы
+  // исправить опечатку, приходилось пересоздавать комнату.
+  socket.on("room:set_name", async (payload, ack) => {
+    if (typeof payload?.displayName !== "string") {
+      return ack?.({ error: "invalid_payload" });
+    }
+    const name = payload.displayName.trim().slice(0, 50);
+    if (!name) return ack?.({ error: "invalid_payload" });
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    // В идущей партии переименование запутало бы всех: имя уже уехало в
+    // Postgres вместе с составом команд.
+    if (current.phase !== "LOBBY") return ack?.({ error: "game_in_progress" });
+
+    const snap = await mutate(roomCode, (s) => {
+      const found = findPlayer(s, userId);
+      if (found) found.player.displayName = name;
+    });
+    if (!snap) return ack?.({ error: "room_not_found" });
+    ack?.({ ok: true });
+    await broadcastState(ns, roomCode, snap);
+  });
+
   // ─── room:rename ─── (host only)
   socket.on("room:rename", async (payload, ack) => {
     if (!(await isHost(roomCode, userId))) return ack?.({ error: "forbidden" });

@@ -19,7 +19,8 @@ import {
   Trash2,
   Crown,
   UserX,
-  RotateCcw,
+  Unlock,
+  Pencil,
 } from "lucide-react";
 import {
   MAX_TEAMS,
@@ -31,7 +32,9 @@ import {
 import { TRIO_TURNS } from "@alias/shared/trio";
 import type { GameFormat } from "@/types";
 import Chip from "@/components/common/Chip";
-import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
+import { loadRoomCreds, clearRoomCreds, saveDisplayName } from "@/lib/room-session";
+import { resumeRoom } from "@/lib/room-resume";
+import { setRoomNotice } from "@/lib/room-notice";
 import { useRoom } from "@/hooks/useRoom";
 import { pluralize, PLAYERS, SPECTATORS } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
@@ -39,7 +42,6 @@ import Avatar from "@/components/common/Avatar";
 import RoomCode from "@/components/common/RoomCode";
 import QrCode from "@/components/common/QrCode";
 import Modal from "@/components/common/Modal";
-import RoomClosedOverlay from "@/components/alias/room/RoomClosedOverlay";
 import RoomSettingsModal from "@/components/alias/room/RoomSettingsModal";
 
 interface Creds {
@@ -60,21 +62,46 @@ export default function LobbyPage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Креды живут во вкладке и умирают вместе с ней, а человек в комнате — нет:
+  // сервер помнит его по куке. Поэтому сначала пробуем вернуться молча, и
+  // только если сервер не узнал — отправляем на экран входа.
   useEffect(() => {
     const stored = loadRoomCreds(rawCode);
-    if (!stored) {
-      router.replace(`/alias/join?code=${rawCode}`);
+    if (stored) {
+      setCreds(stored);
+      setMounted(true);
       return;
     }
-    setCreds(stored);
-    setMounted(true);
+    let alive = true;
+    resumeRoom(rawCode, "alias").then((resumed) => {
+      if (!alive) return;
+      if (resumed) {
+        setCreds(resumed);
+        setMounted(true);
+      } else {
+        router.replace(`/alias/join?code=${rawCode}`);
+      }
+    });
+    return () => {
+      alive = false;
+    };
   }, [rawCode, router]);
 
   const roomOpts = useMemo(
     () => (creds ? { wsUrl: creds.wsUrl, token: creds.wsToken, code: creds.code } : null),
     [creds],
   );
-  const { socket, snapshot, status, error } = useRoom(roomOpts);
+  const { socket, snapshot, status, error, closedReason } = useRoom(roomOpts);
+
+  // Выгнали или комнату закрыли — уводим на главный экран Алиаса и объясняем
+  // там, что случилось. Раньше поверх лобби висело окно, а сама комната
+  // оставалась под ним: любое переподключение возвращало человека обратно.
+  useEffect(() => {
+    if (!closedReason) return;
+    clearRoomCreds(rawCode);
+    setRoomNotice({ text: closedReason, tone: "danger" });
+    router.replace("/alias");
+  }, [closedReason, rawCode, router]);
 
   // Авто-редирект на игровой экран при старте игры.
   useEffect(() => {
@@ -150,6 +177,28 @@ export default function LobbyPage() {
     socket?.emit("room:transfer_host", { userId }, () => {});
   };
 
+  // Своя запись в снапшоте — она же источник актуального ника: его мог
+  // поменять и сам игрок, и другая вкладка.
+  const me =
+    snapshot?.teams
+      .flatMap((t) => t.players)
+      .find((p) => p.userId === creds.userId) ??
+    snapshot?.spectators.find((p) => p.userId === creds.userId) ??
+    null;
+  const myName = me?.displayName ?? creds.displayName;
+  const inLobby = snapshot?.phase === "LOBBY";
+
+  const commitMyName = (input: HTMLInputElement) => {
+    const next = input.value.trim().slice(0, 50);
+    if (!next || next === myName) {
+      input.value = myName;
+      return;
+    }
+    socket?.emit("room:set_name", { displayName: next }, () => {});
+    // Запоминаем и глобально: следующий вход подставит новое имя сам.
+    saveDisplayName(next);
+  };
+
   const myTeam = snapshot?.teams.find((t) => t.players.some((p) => p.userId === creds.userId));
   const playersTotal = snapshot?.teams.reduce((s, t) => s + t.players.length, 0) ?? 0;
   const spectatorsTotal = snapshot?.spectators.length ?? 0;
@@ -222,6 +271,38 @@ export default function LobbyPage() {
                 <p className="invite-qr-s mono">{inviteUrl}</p>
               </div>
             </div>
+          </div>
+
+          {/* Свой ник. Раньше имя задавалось один раз при входе, и опечатку
+              было не исправить иначе как пересозданием комнаты. */}
+          <div className="card">
+            <span className="eyebrow">твоё имя</span>
+            <div className="row" style={{ gap: 10, marginTop: 12 }}>
+              <Avatar name={myName} size={32} />
+              <input
+                key={myName}
+                className="input"
+                style={{ flex: 1, minWidth: 0 }}
+                defaultValue={myName}
+                maxLength={50}
+                placeholder="Как тебя зовут"
+                disabled={!inLobby}
+                onBlur={(e) => commitMyName(e.target)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                  if (e.key === "Escape") {
+                    e.currentTarget.value = myName;
+                    e.currentTarget.blur();
+                  }
+                }}
+              />
+              <Pencil size={16} style={{ color: "var(--fg-3)", flex: "none" }} />
+            </div>
+            {!inLobby && (
+              <p className="muted" style={{ fontSize: 12.5, marginTop: 10 }}>
+                Пока идёт партия имя не поменять.
+              </p>
+            )}
           </div>
 
           <div className="card lobby-rules">
@@ -318,10 +399,15 @@ export default function LobbyPage() {
             <div className="card" style={{ marginTop: "var(--gap)" }}>
               <div className="row-between" style={{ marginBottom: 12 }}>
                 <h3 className="h-title" style={{ fontSize: 16 }}>
-                  Выгнанные ({snapshot?.banned?.length})
+                  Заблокированные ({snapshot?.banned?.length})
                 </h3>
                 <span className="muted" style={{ fontSize: 12 }}>видно только тебе</span>
               </div>
+              {/* Разблокировка лишь открывает вход: обратно человек заходит
+                  сам, по коду или ссылке. */}
+              <p className="muted" style={{ fontSize: 12.5, marginTop: -4, marginBottom: 12 }}>
+                Разблокировка только открывает вход — заходить обратно человек будет сам.
+              </p>
               <div className="stack" style={{ gap: 8 }}>
                 {snapshot?.banned?.map((b) => (
                   <div key={b.userId} className="lobby-player">
@@ -333,7 +419,7 @@ export default function LobbyPage() {
                       style={{ marginLeft: "auto", flex: "none" }}
                       onClick={() => unban(b.userId)}
                     >
-                      <RotateCcw size={15} /> Вернуть
+                      <Unlock size={15} /> Разблокировать
                     </button>
                   </div>
                 ))}
@@ -434,8 +520,6 @@ export default function LobbyPage() {
           }}
         />
       )}
-
-      <RoomClosedOverlay open={status === "closed"} reason={error} code={creds.code} />
 
       {/* Reconnect overlay */}
       <Modal isOpen={status === "reconnecting" || (status === "error" && !!error)} fullscreen>

@@ -187,6 +187,31 @@ export function registerMafiaLobbyHandlers(
     scheduleStateBroadcast(ns, roomCode);
   });
 
+  // ─── mafia:set_name ─── любой, только LOBBY
+  // Имя задаётся один раз при входе и потом нигде не редактировалось: чтобы
+  // исправить опечатку, приходилось пересоздавать комнату.
+  socket.on("mafia:set_name", async (payload, ack) => {
+    if (typeof payload?.displayName !== "string") {
+      return ack?.({ error: "invalid_payload" });
+    }
+    const name = payload.displayName.trim().slice(0, 50);
+    if (!name) return ack?.({ error: "invalid_payload" });
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    // В идущей партии переименование запутало бы всех: по именам голосуют.
+    if (current.phase !== "LOBBY") return ack?.({ error: "game_in_progress" });
+
+    const snap = await mutate(roomCode, (s) => {
+      const entry =
+        s.players.find((p) => p.userId === userId) ??
+        s.spectators.find((p) => p.userId === userId);
+      if (entry) entry.displayName = name;
+    });
+    if (!snap) return ack?.({ error: "room_not_found" });
+    ack?.({ ok: true });
+    scheduleStateBroadcast(ns, roomCode);
+  });
+
   // ─── mafia:unban ─── host
   socket.on("mafia:unban", async (payload, ack) => {
     if (typeof payload?.userId !== "string") return ack?.({ error: "invalid_payload" });

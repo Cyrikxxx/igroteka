@@ -27,13 +27,11 @@ export async function POST(request: NextRequest, { params }: Ctx) {
       return NextResponse.json({ error: "Invalid room code" }, { status: 400 });
     }
 
+    // Имя обязательно только для нового человека. Тот, кто уже в комнате,
+    // возвращается без него: он узнаётся по куке `aid`, а имя у него уже есть.
     const body = await request.json().catch(() => ({}));
     const displayName =
-      typeof body.displayName === "string" ? body.displayName.trim() : "";
-    if (displayName.length === 0) {
-      return NextResponse.json({ error: "displayName required" }, { status: 400 });
-    }
-    const trimmed = displayName.slice(0, 50);
+      typeof body.displayName === "string" ? body.displayName.trim().slice(0, 50) : "";
 
     const room = await prisma.room.findUnique({
       where: { code },
@@ -60,13 +58,23 @@ export async function POST(request: NextRequest, { params }: Ctx) {
     // Выгнанного хостом не пускаем обратно. Проверяем до ensureUser и до
     // создания Participant: иначе на него завелись бы строки в Postgres,
     // хотя в комнату он всё равно не попадёт.
-    const banCheck = await loadRoomSnapshot(code);
-    if (banCheck?.banned?.some((b) => b.userId === userId)) {
+    const snapshot = await loadRoomSnapshot(code);
+    const entry = snapshot
+      ? (snapshot.teams.flatMap((t) => t.players).find((p) => p.userId === userId) ??
+        snapshot.spectators.find((p) => p.userId === userId) ??
+        null)
+      : null;
+    if (!entry && snapshot?.banned?.some((b) => b.userId === userId)) {
       return NextResponse.json(
-        { error: "Хост удалил вас из этой комнаты" },
+        { error: "Хост заблокировал вам вход в эту комнату" },
         { status: 403 },
       );
     }
+
+    if (displayName.length === 0 && !entry) {
+      return NextResponse.json({ error: "displayName required" }, { status: 400 });
+    }
+    const trimmed = displayName || (entry?.displayName ?? "");
 
     await ensureUser(userId, trimmed);
 
@@ -109,22 +117,21 @@ export async function POST(request: NextRequest, { params }: Ctx) {
       });
     }
 
-    // Обновляем snapshot в Redis: добавляем нового зрителя, если его там нет.
-    const snapshot = await loadRoomSnapshot(code);
+    // Обновляем snapshot в Redis: новичка добавляем зрителем, а тому, кто уже
+    // тут, применяем заново введённое имя — раньше оно молча терялось, и в
+    // комнате оставалось то, под которым человек зашёл в первый раз. Меняем
+    // только в лобби: переименование посреди партии всех запутает.
     if (snapshot) {
-      const alreadyInTeam = snapshot.teams.some((t) =>
-        t.players.some((p) => p.userId === userId),
-      );
-      const alreadySpectator = snapshot.spectators.some(
-        (s) => s.userId === userId,
-      );
-      if (!alreadyInTeam && !alreadySpectator) {
+      if (!entry) {
         snapshot.spectators.push({
           userId,
           displayName: trimmed,
           online: false,
           order: joinOrder,
         });
+        await saveRoomSnapshot(snapshot);
+      } else if (displayName && displayName !== entry.displayName && snapshot.phase === "LOBBY") {
+        entry.displayName = displayName;
         await saveRoomSnapshot(snapshot);
       }
     }

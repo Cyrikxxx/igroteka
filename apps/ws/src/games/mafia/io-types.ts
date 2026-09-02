@@ -12,6 +12,8 @@ export interface MafiaClientToServerEvents {
   "mafia:hello": (payload: unknown, ack?: Ack<MafiaView | { error: string }>) => void;
   "mafia:settings": (payload: unknown, ack?: Ack<OkErr>) => void;
   "mafia:rename": (payload: { title: string }, ack?: Ack<OkErr>) => void;
+  /** Игрок меняет собственный ник. Только в лобби. */
+  "mafia:set_name": (payload: { displayName: string }, ack?: Ack<OkErr>) => void;
   "mafia:kick": (payload: { userId: string }, ack?: Ack<OkErr>) => void;
   /** Хост снимает бан: выгнанный снова может войти по коду. */
   "mafia:unban": (payload: { userId: string }, ack?: Ack<OkErr>) => void;

@@ -15,6 +15,7 @@
     "smoke:game": "tsx scripts/smoke-game.ts",
     "smoke:trio": "tsx scripts/smoke-trio.ts",
     "smoke:trio-online": "tsx scripts/smoke-trio-online.ts",
+    "smoke:rejoin": "tsx scripts/smoke-rejoin.ts",
     "smoke:mafia": "tsx scripts/smoke-mafia.ts"
   },
   "dependencies": {
