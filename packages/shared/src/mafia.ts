@@ -282,6 +282,12 @@ export interface MafiaSnapshot {
    * остаётся рабочим, и он тут же вернулся бы по mafia:hello.
    */
   banned?: { userId: string; displayName: string }[];
+  /**
+   * Когда хост пропал из сети (мс). Пока стоит — остальные могут забрать
+   * комнату себе, но только через HOST_CLAIM_AFTER_MS: сам по себе обрыв
+   * связи хоста прав не лишает. Снимается, когда он возвращается.
+   */
+  hostOfflineSince?: number | null;
 }
 
 export function emptyNightState(): MafiaNightState {
@@ -391,6 +397,8 @@ export interface MafiaView {
    * незачем, а хосту он нужен, чтобы вернуть выгнанного по ошибке.
    */
   banned?: { userId: string; displayName: string }[];
+  /** Когда хост пропал из сети — по нему рисуется «взять комнату на себя». */
+  hostOfflineSince?: number | null;
 }
 
 // ─────────── Приватные/широковещательные события ───────────

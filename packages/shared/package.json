@@ -19,6 +19,7 @@
     "./server/prisma": "./src/server/prisma.ts",
     "./server/redis": "./src/server/redis.ts",
     "./server/snapshot-store": "./src/server/snapshot-store.ts",
+    "./host": "./src/host.ts",
     "./season": "./src/season.ts",
     "./trio": "./src/trio.ts"
   },

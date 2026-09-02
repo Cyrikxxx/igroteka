@@ -10,6 +10,7 @@ import {
   TRIO_TEAMS,
   TRIO_PLAYERS_PER_TEAM,
 } from "./constants";
+import { pickHeir } from "./host";
 
 export function buildLobbySnapshot(args: {
   code: string;
@@ -138,9 +139,12 @@ export function reassignHostIfNeeded(
 ): RoomSnapshotPlayer | null {
   const present = everyoneIn(snapshot);
   if (present.some((p) => p.userId === snapshot.hostId)) return null;
-  const heir = present[0];
+  // Наследника выбирает общее правило: сначала тот, кто на связи. Раньше тут
+  // брался просто первый по списку, и комната могла достаться оффлайн-игроку.
+  const heir = pickHeir(present);
   if (!heir) return null;
   snapshot.hostId = heir.userId;
+  snapshot.hostOfflineSince = heir.online ? null : Date.now();
   return heir;
 }
 

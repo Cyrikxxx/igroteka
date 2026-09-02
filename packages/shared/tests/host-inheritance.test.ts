@@ -67,4 +67,24 @@ describe("reassignHostIfNeeded", () => {
     expect(reassignHostIfNeeded(s)).toBeNull();
     expect(s.hostId).toBe("host");
   });
+
+  it("наследника ищем среди тех, кто на связи", () => {
+    // Раньше брался просто первый по списку, и комната доставалась игроку,
+    // которого нет в сети, — то есть оставалась такой же беспомощной.
+    const s = room();
+    s.teams[0].players[1].online = false; // anna
+    removePlayer(s, "host");
+    expect(reassignHostIfNeeded(s)?.userId).toBe("boris");
+    expect(s.hostId).toBe("boris");
+    expect(s.hostOfflineSince).toBeNull();
+  });
+
+  it("все наследники оффлайн — права всё равно уходят, но отсчёт запускается", () => {
+    const s = room();
+    for (const t of s.teams) t.players.forEach((p) => (p.online = false));
+    s.spectators.forEach((p) => (p.online = false));
+    removePlayer(s, "host");
+    expect(reassignHostIfNeeded(s)?.userId).toBe("anna");
+    expect(typeof s.hostOfflineSince).toBe("number");
+  });
 });
