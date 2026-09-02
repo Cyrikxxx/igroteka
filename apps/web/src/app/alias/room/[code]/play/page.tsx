@@ -274,6 +274,24 @@ export default function PlayPage() {
     </div>
   ) : null;
 
+  const hostEndGameBar = !isRoomHost ? null : nextExplainerOffline ? (
+    <div className="notice notice-warn room-claim">
+      <span style={{ flex: 1 }}>
+        {nextUp?.player.displayName ?? "Следующий игрок"} не в сети — ход передать некому.
+        Можно подождать его или завершить игру.
+      </span>
+      <button type="button" className="btn btn-danger btn-sm" onClick={() => setEndGameAsk(true)}>
+        Завершить игру
+      </button>
+    </div>
+  ) : (
+    <div className="room-claim" style={{ justifyContent: "flex-end" }}>
+      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEndGameAsk(true)}>
+        <DoorClosed size={15} /> Завершить игру
+      </button>
+    </div>
+  );
+
   const modals = (
     <>
       <ConfirmDialog
@@ -527,6 +545,7 @@ export default function PlayPage() {
       <>
         <AppShell centered className="screen-anim">
           {claimBanner}
+          {hostEndGameBar}
           {actionError && (
             <div className="notice notice-danger" style={{ marginBottom: 12 }}>
               {actionError}

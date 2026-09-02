@@ -238,7 +238,11 @@ async function enterRoundActive(
     roundNumber: snap.currentRoundNumber,
     durationMs: snap.settings.roundTime * 1000,
     startedAt: Date.now(),
-    pausedAt: null,
+    // Объясняющий мог отвалиться в те секунды, что идут между раундами:
+    // передачу хода мы бы не пропустили, а вот здесь раунд стартовал бы с
+    // горящим таймером и без человека. Начинаем сразу на паузе — снимет её
+    // он сам, когда вернётся.
+    pausedAt: explainerPlayer?.online === false ? Date.now() : null,
     pausedTotalMs: 0,
     wordsSeen: [
       {
@@ -256,7 +260,7 @@ async function enterRoundActive(
 
   const updated = await mutate(code, (s) => {
     s.phase = "ROUND_ACTIVE";
-    s.timer = { msLeft: roundState.durationMs, paused: false };
+    s.timer = { msLeft: roundState.durationMs, paused: roundState.pausedAt !== null };
     s.scoreboard = { teamId: s.currentTeamId!, got: 0, skip: 0 };
   });
   if (!updated) return;

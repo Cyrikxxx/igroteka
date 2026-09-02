@@ -214,6 +214,21 @@ async function main() {
   assert(passed.ok === true, "как только он в сети — ход передаётся");
   await sleep(600);
 
+  // ─── Пропал в паузе между раундами → новый раунд стартует уже на паузе ───
+  // Передачу хода мы бы не пропустили, а вот здесь раунд раньше начинался с
+  // горящим таймером и без объясняющего.
+  await sleep(200);
+  const sBetween = await snap();
+  const afterId = sBetween.currentPlayerId!;
+  console.log(`  · следующий раунд за ${nameOf(afterId)}`);
+  all[ids.indexOf(afterId)].disconnect();
+  await sleep(6000); // BETWEEN_ROUNDS длится 4 секунды, ждём старта раунда
+  const sAuto = await snap();
+  assert(
+    sAuto.phase === "ROUND_ACTIVE" && sAuto.timer?.paused === true,
+    "раунд начался сразу на паузе, раз объясняющего нет в сети",
+  );
+
   // ─── Зритель выйти может ───
   const sMid = await snap();
   const spectator = sMid.spectators[0];
