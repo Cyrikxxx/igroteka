@@ -16,7 +16,6 @@ import {
   MAX_TEAMS,
   MIN_PLAYERS_PER_TEAM,
   MAX_PLAYERS_PER_TEAM,
-  TRIO_TEAMS,
   teamColorVar,
 } from "@/constants/game";
 import { TRIO_TURNS } from "@alias/shared/trio";

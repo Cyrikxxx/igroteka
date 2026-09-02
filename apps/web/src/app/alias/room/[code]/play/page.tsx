@@ -382,7 +382,6 @@ export default function PlayPage() {
             role={role}
             review={review}
             penaltySkip={snapshot.settings.penaltySkip}
-            teamName={teamName}
             onToggle={onReviewToggle}
             onConfirm={onReviewConfirm}
             isExplainer={isExplainer}
@@ -547,7 +546,6 @@ function ReviewView({
   pairName,
   review,
   penaltySkip,
-  teamName,
   onToggle,
   onConfirm,
   isExplainer,
@@ -558,7 +556,6 @@ function ReviewView({
   pairName: string;
   review: import("@alias/shared/domain").RoundReviewPayload | null;
   penaltySkip: boolean;
-  teamName: string;
   onToggle: (wordId: number) => void;
   onConfirm: () => void;
   isExplainer: boolean;
