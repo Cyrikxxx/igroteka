@@ -15,6 +15,16 @@ export async function closeRoom(code: string): Promise<void> {
       data: { status: "FINISHED", endedAt: new Date() },
     })
     .catch(() => {});
+  // Вместе с комнатой закрываем и партию. Иначе она навсегда остаётся «в
+  // процессе»: в истории такая партия зовёт «продолжить» в комнату, которой
+  // уже нет. Досрочно оборванная партия попадает сюда же — счёт в ней
+  // сохранён, дописывать нечего.
+  await prisma.game
+    .updateMany({
+      where: { room: { code }, status: "IN_PROGRESS" },
+      data: { status: "FINISHED", finishedAt: new Date() },
+    })
+    .catch(() => {});
 }
 
 /** «Сыграть ещё»: комната снова принимает игроков по тому же коду. */

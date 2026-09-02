@@ -51,7 +51,16 @@ function Circle({ children, spin = false }: { children: React.ReactNode; spin?: 
 }
 
 /** Игра на паузе. Снять может только хост. */
-export function PauseOverlay({ isHost, onResume }: { isHost: boolean; onResume: () => void }) {
+export function PauseOverlay({
+  isHost,
+  onResume,
+  onEndGame,
+}: {
+  isHost: boolean;
+  onResume: () => void;
+  /** Оборвать партию и вернуть всех в лобби. Только у хоста. */
+  onEndGame: () => void;
+}) {
   return (
     <Backdrop>
       <Circle>
@@ -67,6 +76,11 @@ export function PauseOverlay({ isHost, onResume }: { isHost: boolean; onResume: 
           </div>
           <button type="button" className="mf-btn mf-btn-crimson" style={{ minWidth: 220, marginTop: 8 }} onClick={onResume}>
             Продолжить игру
+          </button>
+          {/* Единственный способ разойтись, если партию доигрывать уже не с
+              кем: комната остаётся, состав пересобирается в лобби. */}
+          <button type="button" className="mf-btn mf-btn-ghost" style={{ minWidth: 220 }} onClick={onEndGame}>
+            Завершить партию
           </button>
         </>
       ) : (

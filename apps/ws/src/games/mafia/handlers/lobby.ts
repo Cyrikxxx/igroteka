@@ -36,6 +36,17 @@ function setHost(s: MafiaSnapshot, userId: string): void {
   s.hostOfflineSince = host && !host.online ? Date.now() : null;
 }
 
+/**
+ * Все ли посмотрели свою роль. Ушедших не ждём: `mafia:leave` помечает их
+ * погибшими, но из списка не убирает, и раньше один закрывший вкладку на
+ * раздаче ролей подвешивал партию навсегда — ночь наступала только когда
+ * «готов» нажали вообще все.
+ */
+function everyoneSawRole(s: MafiaSnapshot): boolean {
+  const waitingFor = s.players.filter((p) => p.alive);
+  return waitingFor.length > 0 && waitingFor.every((p) => p.ready);
+}
+
 /** Хост на связи? Отсюда берётся отсчёт «комната зависла». */
 function isHostOnline(s: MafiaSnapshot): boolean {
   return s.players.find((p) => p.userId === s.hostId)?.online ?? false;
@@ -382,7 +393,12 @@ export function registerMafiaLobbyHandlers(
       return;
     }
     scheduleStateBroadcast(ns, roomCode);
-    // Ушедший мог быть последним, кого ждала фаза.
+    // Ушедший мог быть последним, кого ждала фаза. Раздача ролей тоже ждёт:
+    // без этой проверки уход последнего «не готового» никто бы не заметил.
+    if (snap.phase === "ROLE_REVEAL" && everyoneSawRole(snap)) {
+      await enterNight(ns, roomCode);
+      return;
+    }
     await maybeResolveNightEarly(ns, roomCode);
     await maybeTallyEarly(ns, roomCode);
   });
@@ -451,6 +467,31 @@ export function registerMafiaLobbyHandlers(
     await broadcastStateNow(ns, roomCode);
   });
 
+  // ─── mafia:start_night ─── host, только на раздаче ролей
+  // Рычаг на случай, когда кто-то закрыл вкладку, не нажав «готов»: без него
+  // партия ждала бы его возвращения вечно.
+  socket.on("mafia:start_night", async (_payload, ack) => {
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
+    if (current.phase !== "ROLE_REVEAL") return ack?.({ error: "wrong_phase" });
+    ack?.({ ok: true });
+    await enterNight(ns, roomCode);
+  });
+
+  // ─── mafia:end_game ─── host, во время партии
+  // Оборвать партию и вернуть всех в лобби, не закрывая комнату: состав
+  // пересобирается и играют заново. Раньше у хоста было только «закрыть
+  // комнату» — то есть насовсем.
+  socket.on("mafia:end_game", async (_payload, ack) => {
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
+    if (current.phase === "LOBBY") return ack?.({ error: "not_in_game" });
+    const ok = await restartToLobby(ns, roomCode);
+    ack?.(ok ? { ok: true } : { error: "cant_end" });
+  });
+
   // ─── mafia:restart ─── host, только после финала
   socket.on("mafia:restart", async (_payload, ack) => {
     const current = await load(roomCode);
@@ -467,13 +508,7 @@ export function registerMafiaLobbyHandlers(
     const snap = await mutate(roomCode, (s) => {
       const me = s.players.find((p) => p.userId === userId);
       if (me) me.ready = true;
-      if (
-        s.phase === "ROLE_REVEAL" &&
-        s.players.length > 0 &&
-        s.players.every((p) => p.ready)
-      ) {
-        allReady = true;
-      }
+      if (s.phase === "ROLE_REVEAL" && everyoneSawRole(s)) allReady = true;
     });
     if (!snap) return ack?.({ error: "room_not_found" });
     ack?.({ ok: true });

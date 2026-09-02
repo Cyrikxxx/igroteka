@@ -24,6 +24,13 @@ export interface MafiaClientToServerEvents {
   "mafia:unban": (payload: { userId: string }, ack?: Ack<OkErr>) => void;
   /** Хост отдаёт комнату другому участнику. */
   "mafia:transfer_host": (payload: { userId: string }, ack?: Ack<OkErr>) => void;
+  /**
+   * Хост начинает ночь, не дожидаясь всех «готов». Нужно, когда кто-то закрыл
+   * вкладку на раздаче ролей: иначе партия ждёт его возвращения вечно.
+   */
+  "mafia:start_night": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
+  /** Хост обрывает партию и возвращает всех в лобби, не закрывая комнату. */
+  "mafia:end_game": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
   "mafia:leave": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
   "mafia:start": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
   "mafia:ready": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;

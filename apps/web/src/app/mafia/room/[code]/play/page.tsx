@@ -62,6 +62,7 @@ export default function MafiaPlayPage() {
   const hostToast = useHostToast(view?.you.isHost ?? false);
   // Экран «ты убит» показываем один раз, пока игрок сам не уйдёт в зрители.
   const [deathSeen, setDeathSeen] = useState(false);
+  const [endGameAsk, setEndGameAsk] = useState(false);
   const [closeAsk, setCloseAsk] = useState(false);
   const alive = view?.you.alive ?? true;
   useEffect(() => {
@@ -147,6 +148,8 @@ export default function MafiaPlayPage() {
             readyCount={view.readyCount}
             total={view.players.length}
             onReady={() => socket?.emit("mafia:ready", {}, () => {})}
+            isHost={view.you.isHost}
+            onStartNight={() => socket?.emit("mafia:start_night", {}, () => {})}
           />
         </MafiaShell>
       );
@@ -309,6 +312,7 @@ export default function MafiaPlayPage() {
         <PauseOverlay
           isHost={view.you.isHost}
           onResume={() => socket?.emit("mafia:resume", {}, () => {})}
+          onEndGame={() => setEndGameAsk(true)}
         />
       ) : null}
 
@@ -323,6 +327,19 @@ export default function MafiaPlayPage() {
           }}
         />
       ) : null}
+
+      <ConfirmDialog
+        open={endGameAsk}
+        variant="mafia"
+        title="Завершить партию?"
+        text="Партия оборвётся, все вернутся в лобби. Комната останется — можно пересобрать состав и сыграть заново."
+        confirmLabel="Завершить"
+        onConfirm={() => {
+          setEndGameAsk(false);
+          socket?.emit("mafia:end_game", {}, () => {});
+        }}
+        onCancel={() => setEndGameAsk(false)}
+      />
 
       <HostToast show={hostToast.show} onClose={hostToast.close} />
     </>

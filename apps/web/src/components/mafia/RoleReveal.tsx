@@ -122,6 +122,8 @@ export default function RoleReveal({
   readyCount,
   total,
   onReady,
+  isHost,
+  onStartNight,
 }: {
   role: MafiaRole;
   partners?: string[];
@@ -129,6 +131,9 @@ export default function RoleReveal({
   readyCount: number;
   total: number;
   onReady: () => void;
+  isHost: boolean;
+  /** Начать ночь, не дожидаясь всех: кто-то мог закрыть вкладку. */
+  onStartNight: () => void;
 }) {
   const [held, setHeld] = useState(false);
   const open = held;
@@ -180,6 +185,18 @@ export default function RoleReveal({
         <div className="mf-mono" style={{ textAlign: "center", fontSize: 13, color: "var(--mf-text-faint)", fontWeight: 700 }}>
           Готовы {readyCount} из {total}
         </div>
+        {/* Кто-то мог закрыть вкладку, не нажав «готов». Без этой кнопки
+            партия ждала бы его возвращения вечно. */}
+        {isHost && readyCount < total ? (
+          <button
+            type="button"
+            className="mf-btn mf-btn-ghost"
+            style={{ fontSize: 14 }}
+            onClick={onStartNight}
+          >
+            Начать ночь без остальных
+          </button>
+        ) : null}
       </div>
     </div>
   );

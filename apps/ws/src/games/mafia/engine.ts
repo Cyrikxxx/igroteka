@@ -311,8 +311,10 @@ export async function restartToLobby(
   ns: MafiaNamespace,
   code: string,
 ): Promise<boolean> {
+  // Годится и после финала («сыграть ещё»), и для досрочного обрыва партии
+  // хостом. Из лобби возвращать некуда — там и так лобби.
   const current = await load(code);
-  if (!current || current.phase !== "FINISHED") return false;
+  if (!current || current.phase === "LOBBY") return false;
 
   clearTimer(code);
   const snap = await mutate(code, (s) => {

@@ -304,8 +304,76 @@ async function emptyRoomScenario() {
   assert(zombieJoin.status === 410, "по протухшему коду отвечаем «комната закрыта», а не 200");
 }
 
+// ───────────────── Мафия: раздача ролей не висит вечно ─────────────────
+
+async function mafiaRoleRevealScenario() {
+  console.log("\n[мафия: раздача ролей]");
+  const hostTab = tab();
+  await hostTab.prime();
+  const created = (await (
+    await hostTab.post("/api/mafia/rooms", { hostName: "Хост", title: "Roles" })
+  ).json()) as { room: { code: string }; user: { id: string }; wsToken: string };
+  const code = created.room.code;
+
+  const hostSock = await connect("/mafia", created.wsToken, code, "Хост");
+  await emitAck(hostSock, "mafia:hello", {});
+
+  // Мафия начинается от пяти человек.
+  const names = ["Аня", "Боря", "Вера", "Гриша"];
+  const socks: Socket[] = [];
+  for (const name of names) {
+    const t = tab();
+    await t.prime();
+    const g = (await (
+      await t.post(`/api/mafia/rooms/${code}/join`, { displayName: name })
+    ).json()) as { wsToken: string };
+    const s = await connect("/mafia", g.wsToken, code, name);
+    await emitAck(s, "mafia:hello", {});
+    socks.push(s);
+  }
+  await sleep(300);
+
+  const start = await emitAck<{ ok?: true; error?: string }>(hostSock, "mafia:start", {});
+  if (start.error) throw new Error(`start: ${start.error}`);
+  await sleep(400);
+
+  const v0 = (await emitAck(hostSock, "mafia:hello", {})) as MafiaView;
+  assert(v0.phase === "ROLE_REVEAL", `раздача ролей началась (${v0.phase})`);
+
+  // Все, кроме одного, подтверждают. Последний закрывает вкладку.
+  await emitAck(hostSock, "mafia:ready", {});
+  for (const s of socks.slice(0, 3)) await emitAck(s, "mafia:ready", {});
+  socks[3].disconnect();
+  await sleep(700);
+
+  const stuck = (await emitAck(hostSock, "mafia:hello", {})) as MafiaView;
+  assert(
+    stuck.phase === "ROLE_REVEAL",
+    "партия ждёт того, кто не нажал «готов» — сама не начнётся",
+  );
+
+  // Рычаг хоста: начать ночь без него.
+  const forced = await emitAck<{ ok?: true; error?: string }>(hostSock, "mafia:start_night", {});
+  assert(forced.ok === true, "хост может начать ночь, не дожидаясь пропавшего");
+  await sleep(500);
+  const night = (await emitAck(hostSock, "mafia:hello", {})) as MafiaView;
+  assert(night.phase !== "ROLE_REVEAL", `партия пошла дальше (${night.phase})`);
+
+  // И оборвать партию с возвратом в лобби.
+  const ended = await emitAck<{ ok?: true; error?: string }>(hostSock, "mafia:end_game", {});
+  assert(ended.ok === true, "хост может оборвать партию");
+  await sleep(500);
+  const lobby = (await emitAck(hostSock, "mafia:hello", {})) as MafiaView;
+  assert(lobby.phase === "LOBBY", "все вернулись в лобби, комната цела");
+  assert(lobby.players.length >= 4, "состав на месте — можно играть заново");
+
+  hostSock.disconnect();
+  socks.forEach((s) => s.disconnect());
+}
+
 async function main() {
   await mafiaScenario();
+  await mafiaRoleRevealScenario();
   await aliasScenario();
   await emptyRoomScenario();
   console.log("\n[smoke-host] все проверки зелёные");

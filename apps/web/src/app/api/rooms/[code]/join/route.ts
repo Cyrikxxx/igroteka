@@ -67,6 +67,13 @@ export async function POST(request: NextRequest, { params }: Ctx) {
       await prisma.room
         .updateMany({ where: { code }, data: { status: "FINISHED", endedAt: new Date() } })
         .catch(() => {});
+      // Партия из этой комнаты иначе навсегда осталась бы «в процессе».
+      await prisma.game
+        .updateMany({
+          where: { room: { code }, status: "IN_PROGRESS" },
+          data: { status: "FINISHED", finishedAt: new Date() },
+        })
+        .catch(() => {});
       return NextResponse.json({ error: "Room is finished" }, { status: 410 });
     }
 
