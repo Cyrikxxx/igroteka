@@ -6,11 +6,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Check, Clock, DoorClosed, EyeOff, LogOut, Pause, RefreshCw, SkipForward, Users, X } from "lucide-react";
+import { ArrowLeft, Check, Clock, DoorClosed, EyeOff, LogOut, Pause, Play, RefreshCw, SkipForward, Users, X } from "lucide-react";
+import { nextExplainerFor } from "@alias/shared/snapshot-builders";
 import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
 import { resumeRoom } from "@/lib/room-resume";
 import { setRoomNotice } from "@/lib/room-notice";
 import { useRoom } from "@/hooks/useRoom";
+import { useHostClaim } from "@/hooks/useHostClaim";
 import { pluralize, WORDS } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
 import Avatar from "@/components/common/Avatar";
@@ -61,6 +63,14 @@ export default function PlayPage() {
   const { socket, snapshot, tick, currentWord, wordCount, review, error, status, closedReason } =
     useRoom(opts);
 
+  // Хоста нет в сети — комнату можно забрать. На игровом экране это важнее,
+  // чем в лобби: без хоста некому нажать «Завершить игру», и партия, которая
+  // ждёт пропавшего объясняющего, не кончится вообще никак.
+  const claim = useHostClaim(
+    snapshot?.hostOfflineSince,
+    !!creds && snapshot?.hostId === creds.userId,
+  );
+
   // Выгнали или комнату закрыли — на главный экран Алиаса с объяснением.
   useEffect(() => {
     if (!closedReason) return;
@@ -82,6 +92,10 @@ export default function PlayPage() {
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
   const [leaveAsk, setLeaveAsk] = useState(false);
   const [closeAsk, setCloseAsk] = useState(false);
+  const [endGameAsk, setEndGameAsk] = useState(false);
+  // Ошибки действий раньше проглатывались пустым коллбэком: человек жал
+  // кнопку, ничего не происходило, и понять почему было нельзя.
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Итоги финала: снапшот комнаты знает только счёт, а подиуму нужны
   // составы команд — берём готовую Game по её id.
@@ -165,12 +179,31 @@ export default function PlayPage() {
     setPauseModalOpen(false);
   };
   const onReviewToggle = (wordId: number) => socket?.emit("round:review_toggle", { wordId }, () => {});
-  const onReviewConfirm = () => socket?.emit("round:review_confirm", {}, () => {});
-  // Раньше «Выйти» просто уводило на хаб, не спросив и не сказав серверу:
-  // игрок оставался в комнате и висел в составе команды.
+  const onReviewConfirm = () =>
+    socket?.emit("round:review_confirm", {}, (resp: unknown) => {
+      if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
+        setActionError(
+          (resp as { error: string }).error === "next_explainer_offline"
+            ? "Следующий объясняющий не в сети — ход передать некому."
+            : `Не удалось передать ход: ${(resp as { error: string }).error}`,
+        );
+      }
+    });
+  // Зритель посреди партии выйти может — на ход он не влияет. Игроку команды
+  // сервер откажет: состав на время игры заморожен.
   const doLeave = () => {
     socket?.emit("room:leave", {}, () => {});
     router.push("/alias");
+  };
+  // Хост обрывает партию — единственный выход, когда ждём того, кто не
+  // вернётся. Счёт остаётся, все попадают на итоги, оттуда «Сыграть ещё».
+  const doEndGame = () => {
+    socket?.emit("round:end_game", {}, (resp: unknown) => {
+      if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
+        setActionError(`Не удалось завершить партию: ${(resp as { error: string }).error}`);
+      }
+    });
+    setEndGameAsk(false);
   };
 
   // После партии выход означает разное: хост закрывает комнату для всех,
@@ -192,9 +225,21 @@ export default function PlayPage() {
 
   const canControlRound = role === "explainer" || creds.userId === snapshot.hostId;
   const showReconnectOverlay = status === "reconnecting" || (status === "error" && !!error);
+
+  // Объясняющий пропал — раунд стоит на паузе, время не горит. Снимет паузу
+  // он сам, когда вернётся: автоматически возобновлять нельзя, иначе первые
+  // секунды сгорят, пока у него грузится страница.
   const explainerOffline =
     snapshot.phase === "ROUND_ACTIVE" && explainerPlayer !== undefined && !explainerPlayer.online;
-  const showExplainerDropBanner = explainerOffline && creds.userId === snapshot.hostId;
+  const paused = Boolean(tick?.paused ?? snapshot.timer?.paused);
+  const canResumeAfterDrop = role === "explainer" && paused && snapshot.phase === "ROUND_ACTIVE";
+
+  // Ход нельзя передать тому, кого нет в сети: он его просто не увидит.
+  // Ровно это же правило проверяет сервер.
+  const nextUp = nextExplainerFor(snapshot);
+  const nextExplainerOffline = !!nextUp && !nextUp.player.online;
+  // Только зритель уходит посреди партии; игрока команды сервер не выпустит.
+  const canLeaveMidGame = role === "spectator" && !myTeam;
 
   const teamColor = activeTeam?.color ?? "--team-1";
   const teamName = activeTeam?.name ?? "—";
@@ -206,6 +251,28 @@ export default function PlayPage() {
   const danger = snapshot.phase === "ROUND_ACTIVE" && sec <= 10;
   const got = wordCount?.got ?? 0;
   const skip = wordCount?.skip ?? 0;
+
+  const claimHost = () =>
+    socket?.emit("room:claim_host", {}, (resp: unknown) => {
+      if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
+        setActionError(`Не удалось забрать комнату: ${(resp as { error: string }).error}`);
+      }
+    });
+
+  const claimBanner = claim.hostGone ? (
+    <div className="notice notice-warn room-claim" style={{ margin: "0 0 12px" }}>
+      <span style={{ flex: 1 }}>
+        {claim.canClaim
+          ? "Хост не в сети. Возьми комнату на себя, чтобы управлять партией."
+          : `Хост не в сети. Взять комнату на себя можно через ${claim.secondsLeft} с.`}
+      </span>
+      {claim.canClaim && (
+        <button type="button" className="btn btn-secondary btn-sm" onClick={claimHost}>
+          Взять комнату на себя
+        </button>
+      )}
+    </div>
+  ) : null;
 
   const modals = (
     <>
@@ -230,6 +297,14 @@ export default function PlayPage() {
           doLeaveAfterGame();
         }}
         onCancel={() => setCloseAsk(false)}
+      />
+      <ConfirmDialog
+        open={endGameAsk}
+        title="Завершить игру?"
+        text="Партия закончится с текущим счётом, все увидят итоги. Комната останется — можно будет собрать состав заново и сыграть ещё."
+        confirmLabel="Завершить"
+        onConfirm={doEndGame}
+        onCancel={() => setEndGameAsk(false)}
       />
 
       <Modal isOpen={pauseModalOpen && canControlRound} title="Пауза" onClose={onResume}>
@@ -311,25 +386,55 @@ export default function PlayPage() {
                 teamName={teamName}
                 teamColor={teamColor}
                 roundNumber={snapshot.currentRoundNumber}
-                onLeave={onLeave}
+                onLeave={canLeaveMidGame ? onLeave : null}
+                onEndGame={isRoomHost ? () => setEndGameAsk(true) : null}
                 onPause={onPause}
               />
 
-              {showExplainerDropBanner && (
+              {/* Объясняющий пропал: раунд стоит, время не горит. Ждём его —
+                  вернётся и продолжит с того же места. */}
+              {explainerOffline && (
                 <div className="notice notice-warn" style={{ margin: "0 0 12px" }}>
                   <div className="row-between" style={{ gap: 10, flexWrap: "wrap" }}>
                     <div>
                       <div style={{ fontWeight: 700, color: "var(--warn)" }}>
-                        {explainerName} отключился
+                        {explainerName} не в сети — раунд на паузе
                       </div>
                       <p className="muted" style={{ fontSize: 12, margin: "2px 0 0" }}>
-                        Можно подождать реконнекта или завершить раунд досрочно.
+                        Время не идёт. Ждём, пока он вернётся и продолжит сам.
                       </p>
                     </div>
-                    <button type="button" className="btn btn-danger btn-sm" onClick={onEndRequest}>
-                      Завершить раунд
+                    {isRoomHost && (
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm"
+                        onClick={() => setEndGameAsk(true)}
+                      >
+                        Завершить игру
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Вернувшийся объясняющий снимает паузу сам: иначе первые
+                  секунды сгорят, пока у него грузится страница. */}
+              {canResumeAfterDrop && (
+                <div className="notice notice-warn" style={{ margin: "0 0 12px" }}>
+                  <div className="row-between" style={{ gap: 10, flexWrap: "wrap" }}>
+                    <span style={{ fontWeight: 700 }}>Раунд на паузе</span>
+                    <button type="button" className="btn btn-primary btn-sm" onClick={onResume}>
+                      <Play /> Продолжить
                     </button>
                   </div>
+                </div>
+              )}
+
+              {claimBanner}
+
+              {actionError && (
+                <div className="notice notice-danger" style={{ margin: "0 0 12px" }}>
+                  {actionError}
                 </div>
               )}
 
@@ -421,6 +526,12 @@ export default function PlayPage() {
     return (
       <>
         <AppShell centered className="screen-anim">
+          {claimBanner}
+          {actionError && (
+            <div className="notice notice-danger" style={{ marginBottom: 12 }}>
+              {actionError}
+            </div>
+          )}
           <ReviewView
             trio={trio}
             pairName={pairName}
@@ -430,6 +541,8 @@ export default function PlayPage() {
             onToggle={onReviewToggle}
             onConfirm={onReviewConfirm}
             isExplainer={isExplainer}
+            nextExplainerOffline={nextExplainerOffline}
+            nextExplainerName={nextUp?.player.displayName ?? "Следующий игрок"}
           />
         </AppShell>
         {modals}
@@ -530,6 +643,7 @@ function GameTop({
   teamColor,
   roundNumber,
   onLeave,
+  onEndGame,
   onPause,
 }: {
   role: Role;
@@ -539,14 +653,28 @@ function GameTop({
   teamName: string;
   teamColor: string;
   roundNumber: number;
-  onLeave: () => void;
+  /** Есть только у зрителя: игрок команды посреди партии не выходит. */
+  onLeave: (() => void) | null;
+  /** Есть только у хоста: оборвать партию, если ждать больше нечего. */
+  onEndGame: (() => void) | null;
   onPause: () => void;
 }) {
   return (
     <div className="game-top">
-      <button type="button" className="back-link" onClick={onLeave}>
-        <LogOut /> Выйти
-      </button>
+      {/* Выйти посреди партии может только зритель — состав команд заморожен,
+          иначе ломается очередь объясняющих. У хоста вместо выхода рычаг
+          «Завершить игру», у остальных тут пусто. */}
+      {onLeave ? (
+        <button type="button" className="back-link" onClick={onLeave}>
+          <LogOut /> Выйти
+        </button>
+      ) : onEndGame ? (
+        <button type="button" className="back-link" onClick={onEndGame}>
+          <DoorClosed /> Завершить игру
+        </button>
+      ) : (
+        <span />
+      )}
       <div className="game-turn">
         <Avatar name={explainerName} color={teamColor} size={40} online={role !== "explainer"} />
         <div>
@@ -593,6 +721,8 @@ function ReviewView({
   onToggle,
   onConfirm,
   isExplainer,
+  nextExplainerOffline,
+  nextExplainerName,
 }: {
   role: Role;
   trio: boolean;
@@ -603,6 +733,9 @@ function ReviewView({
   onToggle: (wordId: number) => void;
   onConfirm: () => void;
   isExplainer: boolean;
+  /** Следующий объясняющий не в сети — ход передавать некому. */
+  nextExplainerOffline: boolean;
+  nextExplainerName: string;
 }) {
   if (!review) {
     return (
@@ -652,9 +785,24 @@ function ReviewView({
         </div>
 
         {isExplainer ? (
-          <button type="button" className="btn btn-primary btn-lg btn-block" onClick={onConfirm}>
-            Подтвердить · передать ход
-          </button>
+          <>
+            {/* Передать ход тому, кого нет в сети, нельзя: он его не увидит,
+                и партия встала бы без объясняющего. Ждём его возвращения. */}
+            <button
+              type="button"
+              className="btn btn-primary btn-lg btn-block"
+              disabled={nextExplainerOffline}
+              onClick={onConfirm}
+            >
+              Подтвердить · передать ход
+            </button>
+            {nextExplainerOffline && (
+              <p className="muted" style={{ fontSize: 13, marginTop: 10, color: "var(--warn)" }}>
+                {nextExplainerName} не в сети — ход передать пока нельзя. Ждём, когда
+                вернётся.
+              </p>
+            )}
+          </>
         ) : (
           <p className="muted" style={{ fontSize: 13 }}>
             Ждём, пока объясняющий подтвердит…

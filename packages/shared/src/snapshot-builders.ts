@@ -2,7 +2,13 @@
 // Не зависят от Redis — каждая сторона (apps/web, apps/ws) использует
 // эти билдеры и сама записывает результат в свой ioredis-клиент.
 
-import type { GameFormat, RoomSnapshot, RoomSnapshotPlayer } from "./domain";
+import type {
+  GameFormat,
+  RoomSnapshot,
+  RoomSnapshotPlayer,
+  RoomSnapshotTeam,
+} from "./domain";
+import { trioRoles, nextTrioTurn } from "./trio";
 import {
   teamColorVar,
   DEFAULT_TEAM_NAMES,
@@ -42,6 +48,26 @@ export function buildLobbySnapshot(args: {
     scoreboard: null,
     gameId: null,
   };
+}
+
+/**
+ * Кто будет объяснять на следующем ходу. Считается по тем же правилам, что и
+ * на сервере при фиксации раунда, и живёт здесь ровно поэтому: клиент должен
+ * блокировать «передать ход» точно тогда же, когда его отклонит сервер. Две
+ * разные копии этой арифметики неизбежно разъехались бы.
+ */
+export function nextExplainerFor(
+  snapshot: RoomSnapshot,
+): { team: RoomSnapshotTeam; player: RoomSnapshotPlayer } | null {
+  if (snapshot.teams.length === 0) return null;
+  const trio = (snapshot.format ?? "TEAMS") === "TRIO";
+  const nextIndex = trio
+    ? trioRoles(nextTrioTurn(snapshot.trioTurn ?? 0)).explainer
+    : ((snapshot.currentTeamIndex ?? 0) + 1) % snapshot.teams.length;
+  const team = snapshot.teams[nextIndex];
+  if (!team) return null;
+  const player = team.players[team.playerCursor ?? 0];
+  return player ? { team, player } : null;
 }
 
 /**

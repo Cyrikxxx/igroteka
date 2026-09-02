@@ -84,6 +84,11 @@ export interface ClientToServerEvents {
 
   // ─── Round (game cycle) ────────────────────────────────────────────
   "round:start_game": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
+  /**
+   * Хост обрывает партию досрочно. Нужен потому, что посреди игры выйти
+   * нельзя: если партия ждёт того, кто не вернётся, это единственный выход.
+   */
+  "round:end_game": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
   "round:guess": (
     payload: { wordId: number; guessed: boolean },
     ack?: Ack<

@@ -18,7 +18,11 @@ import {
   TRIO_TEAMS,
 } from "@alias/shared/constants";
 import { trioRoles } from "@alias/shared/trio";
-import { findPlayer, removePlayer } from "@alias/shared/snapshot-builders";
+import {
+  findPlayer,
+  removePlayer,
+  nextExplainerFor,
+} from "@alias/shared/snapshot-builders";
 import { mutate, load, save } from "../snapshot";
 import { prisma } from "../../../prisma";
 import {
@@ -398,6 +402,31 @@ async function handleResume(
   return { ok: true };
 }
 
+/**
+ * Объясняющий пропал из сети — ставим раунд на паузу. Время не должно гореть,
+ * пока человека нет: он вернётся в тот же раунд и досказывает своё слово.
+ *
+ * Снимает паузу он сам кнопкой «Продолжить» — автоматически возобновлять
+ * нельзя, иначе первые секунды сгорят, пока у него грузится страница.
+ */
+export async function pauseIfExplainerDropped(
+  ns: AppNamespace,
+  code: string,
+  droppedUserId: string,
+): Promise<void> {
+  const rs = await loadRoundState(code);
+  if (!rs) return;
+  if (rs.explainerUserId !== droppedUserId) return;
+  if (rs.pausedAt !== null) return;
+
+  rs.pausedAt = Date.now();
+  await saveRoundState(code, rs);
+  const snap = await mutate(code, (s) => {
+    if (s.timer) s.timer.paused = true;
+  });
+  if (snap) broadcastState(ns, code, snap);
+}
+
 // ─── round:end (досрочный завершить раунд) ────────────────────────────────
 
 async function handleEnd(
@@ -522,6 +551,15 @@ async function handleReviewConfirm(
   }
   const dbTeamId = snap.teamIdMap[rs.teamId];
   if (!dbTeamId) return { error: "team_id_not_mapped" };
+
+  // Передавать ход некому: следующий объясняющий не в сети. Раунд не
+  // фиксируем и остаёмся на итогах — иначе ход ушёл бы человеку, который его
+  // не увидит, и партия встала бы без объясняющего. Клиент блокирует кнопку
+  // тем же правилом; здесь — на случай, если его обойдут.
+  const next = nextExplainerFor(snap);
+  if (next && !next.player.online) {
+    return { error: "next_explainer_offline" };
+  }
 
   // Готовим данные для финализации
   const snapTeam = snap.teams.find((t) => t.id === rs.teamId);
@@ -684,6 +722,23 @@ export function registerRoundHandlers(
   socket.on("round:end", async (_payload, ack) => {
     const res = await handleEnd(ns, socket);
     ack?.(res);
+  });
+
+  // ─── round:end_game ─── (host only) — оборвать партию досрочно
+  // Единственный рычаг, когда партия ждёт человека, который не возвращается:
+  // выйти посреди игры нельзя, и без этой кнопки комната зависла бы. Счёт
+  // остаётся текущим, все попадают на экран итогов, откуда хост уже
+  // существующей «Сыграть ещё» возвращает комнату в лобби.
+  socket.on("round:end_game", async (_payload, ack) => {
+    const code = socket.data.roomCode;
+    const snap = await load(code);
+    if (!snap) return ack?.({ error: "room_not_found" });
+    if (snap.hostId !== socket.data.userId) return ack?.({ error: "forbidden" });
+    if (snap.phase === "LOBBY" || snap.phase === "FINISHED") {
+      return ack?.({ error: "not_in_game" });
+    }
+    ack?.({ ok: true });
+    await endGame(ns, code, "ended_by_host");
   });
 
   socket.on("round:review_toggle", async (payload, ack) => {

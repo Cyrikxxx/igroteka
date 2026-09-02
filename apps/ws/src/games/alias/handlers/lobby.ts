@@ -30,7 +30,7 @@ import type {
   AppSocket,
   AppNamespace,
 } from "../io-types";
-import { maybeRehydrateExplainer } from "./round";
+import { maybeRehydrateExplainer, pauseIfExplainerDropped } from "./round";
 import { scheduleStateBroadcast, broadcastStateNow } from "../broadcast";
 
 /**
@@ -515,6 +515,18 @@ export function registerLobbyHandlers(
   });
 
   socket.on("room:leave", async (_payload, ack) => {
+    // Посреди партии игрок команды не выходит: очередь объясняющих завязана
+    // на состав, и вынутый из списка человек ломал её — ход упирался в пустое
+    // место, и партию нельзя было продолжить вообще никому. Раз выйти нельзя,
+    // состав на время игры заморожен, и ломаться нечему. Хосту, чтобы
+    // разойтись, есть кнопка «Завершить игру». Зрителям выход оставляем: на
+    // ход они не влияют, запирать их в комнате незачем.
+    const before = await load(roomCode);
+    const inGame = before && before.phase !== "LOBBY" && before.phase !== "FINISHED";
+    if (inGame && findPlayer(before, userId)?.location === "team") {
+      return ack?.({ error: "game_in_progress" });
+    }
+
     const snap = await mutate(roomCode, (s) => {
       removePlayer(s, userId);
       // Ушёл хост — права переходят следующему. Иначе hostId указывал бы на
@@ -558,7 +570,11 @@ export function registerLobbyHandlers(
         current: s.hostOfflineSince,
       });
     });
-    if (snap) await broadcastState(ns, roomCode, snap);
+    if (!snap) return;
+    // Пропал тот, кто сейчас объясняет — ставим раунд на паузу, чтобы время
+    // не горело, пока его нет.
+    await pauseIfExplainerDropped(ns, roomCode, userId);
+    await broadcastState(ns, roomCode, snap);
   });
 
   // Подавляем "unused MIN_TEAMS" (нужен для UI-валидации старта игры,
