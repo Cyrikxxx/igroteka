@@ -761,6 +761,10 @@ html { scrollbar-color: var(--bg-4) transparent; }
   /* Плашка «что случилось с комнатой» на главном экране игры. Закрывается
      крестиком; у Мафии своя палитра, поэтому отдельный класс. */
   .room-notice { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+  /* Предупреждение «хост не в сети» с кнопкой: на узком экране кнопка
+     переезжает под текст, а не сплющивает его. */
+  .room-claim { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; font-size: 14px; }
+  .room-claim .btn, .room-claim .mf-chip { flex: none; }
   .mf-notice {
     display: flex; align-items: center; gap: 10px;
     margin: 0 0 16px; padding: 13px 15px;

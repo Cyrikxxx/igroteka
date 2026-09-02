@@ -23,6 +23,7 @@ import {
   MAX_TEAMS,
   MIN_TEAMS,
 } from "@alias/shared/constants";
+import { nextHostOfflineSince, canClaimHost } from "@alias/shared/host";
 import { mutate, load, remove } from "../snapshot";
 import { reopenRoom, closeRoom } from "../../../services/room-lifecycle";
 import type {
@@ -45,6 +46,11 @@ async function isHost(code: string, userId: string): Promise<boolean> {
 
 function room(socket: AppSocket): string {
   return `room:${socket.data.roomCode}`;
+}
+
+/** Хост на связи? Отсюда берётся отсчёт «комната зависла». */
+function isHostOnline(s: RoomSnapshot): boolean {
+  return findPlayer(s, s.hostId)?.player.online ?? false;
 }
 
 // Дебаунс — несколько последовательных мутаций сольются в один state.
@@ -86,6 +92,12 @@ export function registerLobbyHandlers(
           order: s.spectators.length + s.teams.reduce((a, t) => a + t.players.length, 0),
         });
       }
+      // Хост вернулся — отсчёт «комната зависла» снимаем, и кнопка «взять
+      // комнату на себя» у остальных пропадает.
+      s.hostOfflineSince = nextHostOfflineSince({
+        hostOnline: isHostOnline(s),
+        current: s.hostOfflineSince,
+      });
     });
     if (!snap) {
       ack?.({ error: "room_not_found" });
@@ -451,6 +463,35 @@ export function registerLobbyHandlers(
     await broadcastState(ns, roomCode, snap);
   });
 
+  // ─── room:claim_host ─── (любой в комнате, когда хост давно не в сети)
+  // Обрыв связи хоста прав не отнимает — иначе комната слетала бы от любого
+  // моргнувшего Wi-Fi. Но и ждать пропавшего вечно нельзя: без хоста нельзя
+  // ни начать игру, ни поменять настройки. Поэтому забрать комнату может сам
+  // участник — руками и не раньше чем через минуту.
+  socket.on("room:claim_host", async (_payload, ack) => {
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    const claimer = findPlayer(current, userId);
+    if (!claimer) return ack?.({ error: "not_in_room" });
+    // Время сверяем по серверным часам: клиент рисует кнопку по своим, и они
+    // могут врать.
+    const allowed = canClaimHost({
+      hostId: current.hostId,
+      hostOfflineSince: current.hostOfflineSince,
+      claimerId: userId,
+      claimerOnline: claimer.player.online,
+    });
+    if (!allowed) return ack?.({ error: "host_is_here" });
+
+    const snap = await mutate(roomCode, (s) => {
+      s.hostId = userId;
+      s.hostOfflineSince = null;
+    });
+    if (!snap) return ack?.({ error: "room_not_found" });
+    ack?.({ ok: true });
+    await broadcastState(ns, roomCode, snap);
+  });
+
   // ─── room:transfer_host ─── (host only)
   socket.on("room:transfer_host", async (payload, ack) => {
     if (typeof payload?.userId !== "string") return ack?.({ error: "invalid_payload" });
@@ -465,6 +506,8 @@ export function registerLobbyHandlers(
 
     const snap = await mutate(roomCode, (s) => {
       s.hostId = target;
+      const heir = findPlayer(s, target);
+      s.hostOfflineSince = heir && !heir.player.online ? Date.now() : null;
     });
     if (!snap) return ack?.({ error: "room_not_found" });
     ack?.({ ok: true });
@@ -498,6 +541,13 @@ export function registerLobbyHandlers(
     const snap = await mutate(roomCode, (s) => {
       const found = findPlayer(s, userId);
       if (found) found.player.online = false;
+      // Прав за обрыв связи не лишаем: у человека мог моргнуть Wi-Fi. Но
+      // запускаем отсчёт, после которого комнату можно забрать кнопкой —
+      // иначе один севший телефон подвешивает всю компанию.
+      s.hostOfflineSince = nextHostOfflineSince({
+        hostOnline: isHostOnline(s),
+        current: s.hostOfflineSince,
+      });
     });
     if (snap) await broadcastState(ns, roomCode, snap);
   });

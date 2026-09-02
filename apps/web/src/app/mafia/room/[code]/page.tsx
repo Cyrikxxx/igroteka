@@ -19,6 +19,7 @@ import MafiaSettingsForm from "@/components/mafia/MafiaSettingsForm";
 import QrCode from "@/components/common/QrCode";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
+import { useHostClaim } from "@/hooks/useHostClaim";
 import { loadRoomCreds, clearRoomCreds, saveDisplayName, type RoomCredentials } from "@/lib/room-session";
 import { resumeRoom } from "@/lib/room-resume";
 import { setRoomNotice } from "@/lib/room-notice";
@@ -91,6 +92,16 @@ export default function MafiaLobbyPage() {
   const isHost = view?.you.isHost ?? false;
   const players = view?.players ?? [];
   const count = players.length;
+  const claim = useHostClaim(view?.hostOfflineSince, isHost);
+
+  const claimHost = () =>
+    socket?.emit("mafia:claim_host", {}, (resp: unknown) => {
+      if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
+        // Обычно значит, что хост успел вернуться между показом кнопки и
+        // нажатием — состояние поправит следующий broadcast.
+        console.warn("claim_host:", (resp as { error: string }).error);
+      }
+    });
 
   // Своя запись — источник актуального ника: его мог поменять и сам игрок,
   // и другая вкладка.
@@ -187,6 +198,28 @@ export default function MafiaLobbyPage() {
           </button>
         </div>
       </div>
+
+      {/* Хост пропал. Комнату у него не отбирали — но и висеть без хозяина
+          она не должна: через минуту любой может забрать её кнопкой. */}
+      {claim.hostGone ? (
+        <div className="mf-notice room-claim" style={{ margin: "0 20px 12px" }}>
+          <span style={{ flex: 1 }}>
+            {claim.canClaim
+              ? "Хост не в сети. Можно взять комнату на себя — тогда настройки и старт будут у тебя."
+              : `Хост не в сети. Взять комнату на себя можно через ${claim.secondsLeft} с.`}
+          </span>
+          {claim.canClaim ? (
+            <button
+              type="button"
+              className="mf-chip"
+              style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 13, color: "var(--mf-text)" }}
+              onClick={claimHost}
+            >
+              <Crown size={15} /> Взять комнату
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mf-lobby-grid">
       {/* Код комнаты */}

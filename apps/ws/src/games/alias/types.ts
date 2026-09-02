@@ -45,6 +45,14 @@ export interface ClientToServerEvents {
     payload: { displayName: string },
     ack?: Ack<OkErr>,
   ) => void;
+  /**
+   * Забрать комнату себе, когда хост давно не в сети. Автоматической передачи
+   * по обрыву связи нет: комната переходит только по этой кнопке.
+   */
+  "room:claim_host": (
+    payload: Record<string, never>,
+    ack?: Ack<OkErr>,
+  ) => void;
   "room:settings": (
     payload: {
       roundTime?: number;

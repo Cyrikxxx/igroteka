@@ -258,6 +258,33 @@ export function registerMafiaLobbyHandlers(
     scheduleStateBroadcast(ns, roomCode);
   });
 
+  // ─── mafia:claim_host ─── любой игрок, когда хост давно не в сети
+  // Обрыв связи хоста прав не отнимает — иначе комната слетала бы от любого
+  // моргнувшего Wi-Fi. Но и ждать пропавшего вечно нельзя: без хоста нельзя
+  // ни начать игру, ни поменять настройки. Поэтому забрать комнату может сам
+  // участник — руками и не раньше чем через минуту.
+  socket.on("mafia:claim_host", async (_payload, ack) => {
+    const current = await load(roomCode);
+    if (!current) return ack?.({ error: "room_not_found" });
+    // Только игрок: клиент считает права по players[].isHost, и зритель-хост
+    // остался бы без кнопок.
+    const claimer = current.players.find((p) => p.userId === userId);
+    if (!claimer) return ack?.({ error: "not_in_room" });
+    // Время сверяем по серверным часам: клиент рисует кнопку по своим.
+    const allowed = canClaimHost({
+      hostId: current.hostId,
+      hostOfflineSince: current.hostOfflineSince,
+      claimerId: userId,
+      claimerOnline: claimer.online,
+    });
+    if (!allowed) return ack?.({ error: "host_is_here" });
+
+    const snap = await mutate(roomCode, (s) => setHost(s, userId));
+    if (!snap) return ack?.({ error: "room_not_found" });
+    ack?.({ ok: true });
+    scheduleStateBroadcast(ns, roomCode);
+  });
+
   // ─── mafia:transfer_host ─── host
   // До этого хост менялся только сам, когда прежний уходил из комнаты.
   socket.on("mafia:transfer_host", async (payload, ack) => {

@@ -16,6 +16,7 @@
     "smoke:trio": "tsx scripts/smoke-trio.ts",
     "smoke:trio-online": "tsx scripts/smoke-trio-online.ts",
     "smoke:rejoin": "tsx scripts/smoke-rejoin.ts",
+    "smoke:host": "tsx scripts/smoke-host.ts",
     "smoke:mafia": "tsx scripts/smoke-mafia.ts"
   },
   "dependencies": {

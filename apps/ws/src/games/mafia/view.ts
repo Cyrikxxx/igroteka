@@ -201,5 +201,7 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
     timer: timerView(snap),
     spotlight,
     banned: you.isHost ? (snap.banned ?? []) : undefined,
+    // Видно всем: по этой отметке остальные рисуют «взять комнату на себя».
+    hostOfflineSince: snap.hostOfflineSince ?? null,
   };
 }

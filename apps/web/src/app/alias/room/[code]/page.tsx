@@ -37,6 +37,7 @@ import { loadRoomCreds, clearRoomCreds, saveDisplayName } from "@/lib/room-sessi
 import { resumeRoom } from "@/lib/room-resume";
 import { setRoomNotice } from "@/lib/room-notice";
 import { useRoom } from "@/hooks/useRoom";
+import { useHostClaim } from "@/hooks/useHostClaim";
 import { pluralize, PLAYERS, SPECTATORS } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
 import Avatar from "@/components/common/Avatar";
@@ -134,6 +135,7 @@ export default function LobbyPage() {
   }
 
   const isHost = snapshot?.hostId === creds.userId;
+  const claim = useHostClaim(snapshot?.hostOfflineSince, isHost);
   const inviteUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/alias/join?code=${creds.code}`
@@ -188,6 +190,15 @@ export default function LobbyPage() {
     null;
   const myName = me?.displayName ?? creds.displayName;
   const inLobby = snapshot?.phase === "LOBBY";
+
+  const claimHost = () =>
+    socket?.emit("room:claim_host", {}, (resp: unknown) => {
+      if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
+        // Обычно это значит, что хост успел вернуться между показом кнопки и
+        // нажатием — снапшот сам себя поправит следующим broadcast'ом.
+        console.warn("claim_host:", (resp as { error: string }).error);
+      }
+    });
 
   const commitMyName = (input: HTMLInputElement) => {
     const next = input.value.trim().slice(0, 50);
@@ -252,6 +263,23 @@ export default function LobbyPage() {
       {error && (
         <div className="notice notice-danger" style={{ marginBottom: 16 }}>
           {error}
+        </div>
+      )}
+
+      {/* Хост пропал. Комнату у него не отбирали — но и висеть без хозяина
+          она не должна: через минуту любой может забрать её кнопкой. */}
+      {claim.hostGone && (
+        <div className="notice notice-warn room-claim">
+          <span style={{ flex: 1 }}>
+            {claim.canClaim
+              ? "Хост не в сети. Можно взять комнату на себя — тогда настройки и старт будут у тебя."
+              : `Хост не в сети. Взять комнату на себя можно через ${claim.secondsLeft} с.`}
+          </span>
+          {claim.canClaim && (
+            <button type="button" className="btn btn-secondary btn-sm" onClick={claimHost}>
+              <Crown size={15} /> Взять комнату на себя
+            </button>
+          )}
         </div>
       )}
       {actionError && (

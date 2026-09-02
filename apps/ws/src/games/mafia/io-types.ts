@@ -14,6 +14,11 @@ export interface MafiaClientToServerEvents {
   "mafia:rename": (payload: { title: string }, ack?: Ack<OkErr>) => void;
   /** Игрок меняет собственный ник. Только в лобби. */
   "mafia:set_name": (payload: { displayName: string }, ack?: Ack<OkErr>) => void;
+  /**
+   * Забрать комнату себе, когда хост давно не в сети. Автоматической передачи
+   * по обрыву связи нет: комната переходит только по этой кнопке.
+   */
+  "mafia:claim_host": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
   "mafia:kick": (payload: { userId: string }, ack?: Ack<OkErr>) => void;
   /** Хост снимает бан: выгнанный снова может войти по коду. */
   "mafia:unban": (payload: { userId: string }, ack?: Ack<OkErr>) => void;
