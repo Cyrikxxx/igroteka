@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Pause } from "lucide-react";
 import MafiaShell from "@/components/mafia/MafiaShell";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import RoleReveal from "@/components/mafia/RoleReveal";
 import NightScreen from "@/components/mafia/NightScreen";
 import SpectatorScreen from "@/components/mafia/SpectatorScreen";
@@ -61,6 +62,7 @@ export default function MafiaPlayPage() {
   const hostToast = useHostToast(view?.you.isHost ?? false);
   // Экран «ты убит» показываем один раз, пока игрок сам не уйдёт в зрители.
   const [deathSeen, setDeathSeen] = useState(false);
+  const [closeAsk, setCloseAsk] = useState(false);
   const alive = view?.you.alive ?? true;
   useEffect(() => {
     if (alive) setDeathSeen(false);
@@ -109,6 +111,13 @@ export default function MafiaPlayPage() {
   }
 
   const me = view.players.find((p) => p.userId === view.you.userId);
+  // Хост закрывает комнату для всех, игрок уходит один.
+  const leaveToHome = () => {
+    if (view.you.isHost) socket?.emit("mafia:close", {}, () => {});
+    else socket?.emit("mafia:leave", {}, () => {});
+    clearRoomCreds(code);
+    router.push("/mafia");
+  };
   const dead = !view.you.alive && !view.you.isSpectator;
   const exiled = me?.eliminatedBy === "vote";
   const paused = Boolean(view.timer?.paused);
@@ -150,15 +159,22 @@ export default function MafiaPlayPage() {
             onHome={() => {
               // Раньше отсюда просто уходили со страницы: комната
               // оставалась висеть в Redis до дворника, а игроки — в ней.
-              if (view.you.isHost) {
-                if (!window.confirm("Закрыть комнату? Все выйдут из неё.")) return;
-                socket?.emit("mafia:close", {}, () => {});
-              } else {
-                socket?.emit("mafia:leave", {}, () => {});
-              }
-              clearRoomCreds(code);
-              router.push("/mafia");
+              // Хосту закрытие необратимо — спрашиваем своим окном.
+              if (view.you.isHost) setCloseAsk(true);
+              else leaveToHome();
             }}
+          />
+          <ConfirmDialog
+            open={closeAsk}
+            variant="mafia"
+            title="Закрыть комнату?"
+            text="Все выйдут из неё. Вернуться в эту комнату будет нельзя."
+            confirmLabel="Закрыть"
+            onConfirm={() => {
+              setCloseAsk(false);
+              leaveToHome();
+            }}
+            onCancel={() => setCloseAsk(false)}
           />
         </MafiaShell>
       );

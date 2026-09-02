@@ -14,6 +14,7 @@ import { formatTime } from "@/lib/utils";
 import { pluralize, WORDS } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
 import Avatar from "@/components/common/Avatar";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import Modal from "@/components/common/Modal";
 import TimerRing from "@/components/alias/game/TimerRing";
 
@@ -31,6 +32,7 @@ export default function LocalRoundPage() {
   const [error, setError] = useState<string | null>(null);
   const [pauseOpen, setPauseOpen] = useState(false);
   const [flash, setFlash] = useState<"got" | "skip" | null>(null);
+  const [exitAsk, setExitAsk] = useState(false);
 
   const wordsRef = useRef(words);
   wordsRef.current = words;
@@ -286,14 +288,10 @@ export default function LocalRoundPage() {
               type="button"
               className="back-link"
               onClick={() => {
-                pause();
                 // Раунд не сохраняется, счёт этой попытки пропадёт —
                 // раньше уходили молча по одному нажатию.
-                if (window.confirm("Выйти из партии? Текущий раунд не засчитается.")) {
-                  router.push("/alias");
-                } else {
-                  start();
-                }
+                pause();
+                setExitAsk(true);
               }}
             >
               <LogOut /> Выйти
@@ -397,6 +395,22 @@ export default function LocalRoundPage() {
             </button>
           </div>
         </Modal>
+
+        <ConfirmDialog
+          open={exitAsk}
+          title="Выйти из партии?"
+          text="Текущий раунд не засчитается — очки за него пропадут."
+          confirmLabel="Выйти"
+          cancelLabel="Остаться"
+          onConfirm={() => {
+            setExitAsk(false);
+            router.push("/alias");
+          }}
+          onCancel={() => {
+            setExitAsk(false);
+            start();
+          }}
+        />
       </div>
     </AppShell>
   );

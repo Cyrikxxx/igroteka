@@ -716,6 +716,48 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .notice-danger { background: color-mix(in srgb, var(--danger) 12%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--danger) 32%, transparent); color: var(--danger); }
   .notice-warn { background: color-mix(in srgb, var(--warn) 12%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--warn) 32%, transparent); }
 
+  /* Подтверждение опасного действия. Заменяет системный window.confirm,
+     который выпадал из оформления и по-разному выглядел в браузерах. */
+  .confirm-overlay {
+    position: fixed; inset: 0; z-index: 90;
+    display: grid; place-items: center; padding: 20px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+  }
+  .confirm-box {
+    width: 100%; max-width: 400px;
+    background: var(--bg-2); color: var(--fg);
+    border: 1px solid var(--line-strong); border-radius: var(--r-lg);
+    padding: clamp(20px, 2.2vw, 28px);
+    box-shadow: var(--shadow-pop);
+  }
+  .confirm-box.mf {
+    background: var(--mf-surface); color: var(--mf-text);
+    border-color: var(--mf-border);
+  }
+  .confirm-head { display: flex; align-items: center; gap: 11px; margin-bottom: 10px; }
+  .confirm-ic { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 50%; background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger); }
+  .confirm-box.mf .confirm-ic { background: rgba(225, 29, 72, 0.16); color: var(--mf-crimson); }
+  .confirm-title { font-size: clamp(16px, 1.2vw, 19px); font-weight: 800; letter-spacing: -0.01em; margin: 0; }
+  .confirm-text { margin: 0; font-size: 14px; line-height: 1.5; color: var(--fg-2); }
+  .confirm-box.mf .confirm-text { color: var(--mf-text-dim); }
+  .confirm-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .confirm-btn {
+    all: unset; flex: 1; cursor: pointer; text-align: center;
+    padding: 11px 16px; border-radius: var(--r-btn);
+    font-weight: 700; font-size: 14.5px;
+  }
+  .confirm-btn.ghost { border: 1px solid var(--line-strong); color: var(--fg-2); }
+  .confirm-box.mf .confirm-btn.ghost { border-color: var(--mf-border); color: var(--mf-text-dim); }
+  .confirm-btn.ghost:hover { color: var(--fg); }
+  .confirm-btn.danger { background: var(--danger); color: #fff; }
+  .confirm-box.mf .confirm-btn.danger { background: var(--mf-crimson); }
+  .confirm-btn.danger:hover { filter: brightness(1.08); }
+  .confirm-btn:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 2px; }
+
+  /* Подсказка под полем кода: набирают на русской раскладке. */
+  .code-layout-hint { margin: 10px 0 0; font-size: 13px; font-weight: 600; color: var(--danger); }
+
   /* Плашка «что случилось с комнатой» на главном экране игры. Закрывается
      крестиком; у Мафии своя палитра, поэтому отдельный класс. */
   .room-notice { display: flex; align-items: center; gap: 10px; font-size: 14px; }
@@ -820,6 +862,11 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .lobby-player-actions .slot-x:last-child:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
   .lobby-player .lp-name { font-weight: 700; font-size: 14.5px; flex: 1; min-width: 0; }
   .lobby-player .lp-name em { color: var(--fg-3); font-style: normal; font-weight: 600; }
+  /* Карандаш стоит у своего же имени в списке — править ник ходят туда, где
+     он написан, а не в отдельное поле сбоку. */
+  .lp-edit { all: unset; cursor: pointer; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; margin-left: 6px; vertical-align: -5px; color: var(--fg-3); }
+  .lp-edit:hover { color: var(--accent); background: var(--accent-soft); }
+  .lp-name-input { flex: 1; min-width: 0; height: 34px; padding: 0 10px; font-size: 14.5px; font-weight: 700; }
   .lobby-add { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: auto; padding: 11px; border: 1px dashed var(--line-strong); border-radius: var(--r-sm); background: none; color: var(--fg-3); font-size: 13px; font-weight: 600; cursor: pointer; transition: color .15s, border-color .15s; }
   .lobby-add:hover { color: var(--fg-1); border-color: var(--accent-line); }
   .lobby-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: clamp(24px, 3vh, 40px); padding: clamp(14px, 1.4vw, 20px) clamp(18px, 1.8vw, 26px); background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r-lg); position: sticky; bottom: 16px; box-shadow: var(--shadow-card); flex-wrap: wrap; }

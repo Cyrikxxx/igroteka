@@ -17,6 +17,7 @@ import MafiaShell from "@/components/mafia/MafiaShell";
 import MafiaAvatar from "@/components/mafia/MafiaAvatar";
 import MafiaSettingsForm from "@/components/mafia/MafiaSettingsForm";
 import QrCode from "@/components/common/QrCode";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
 import { loadRoomCreds, clearRoomCreds, saveDisplayName, type RoomCredentials } from "@/lib/room-session";
 import { resumeRoom } from "@/lib/room-resume";
@@ -43,6 +44,8 @@ export default function MafiaLobbyPage() {
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [closeAsk, setCloseAsk] = useState(false);
+  const [editingName, setEditingName] = useState(false);
   const [draft, setDraft] = useState<MafiaSettings | null>(null);
 
   // Креды живут во вкладке и умирают вместе с ней, а человек в комнате — нет.
@@ -96,10 +99,8 @@ export default function MafiaLobbyPage() {
 
   const commitMyName = (input: HTMLInputElement) => {
     const next = input.value.trim().slice(0, 50);
-    if (!next || next === myName) {
-      input.value = myName;
-      return;
-    }
+    setEditingName(false);
+    if (!next || next === myName) return;
     socket?.emit("mafia:set_name", { displayName: next }, () => {});
     // Запоминаем и глобально: следующий вход подставит новое имя сам.
     saveDisplayName(next);
@@ -129,24 +130,21 @@ export default function MafiaLobbyPage() {
   };
 
   const start = () => socket?.emit("mafia:start", {}, () => {});
-  const kick = (userId: string, name: string) => {
-    if (!window.confirm(`Выгнать ${name}? Вернуть его можно будет здесь же, в списке выгнанных.`)) return;
-    socket?.emit("mafia:kick", { userId }, () => {});
-  };
+  // Кик и передача хоста обратимы, поэтому делаются сразу: лишний вопрос на
+  // каждое нажатие только мешал.
+  const kick = (userId: string) => socket?.emit("mafia:kick", { userId }, () => {});
   const unban = (userId: string) => socket?.emit("mafia:unban", { userId }, () => {});
-  const makeHost = (userId: string, name: string) => {
-    if (!window.confirm(`Передать комнату — ${name}? Ты перестанешь быть хостом.`)) return;
+  const makeHost = (userId: string) =>
     socket?.emit("mafia:transfer_host", { userId }, () => {});
-  };
   const leave = () => {
     socket?.emit("mafia:leave", {}, () => {});
     clearRoomCreds(code);
     router.replace("/");
   };
-  // Хост уходит не один: комната без него всё равно никому не нужна,
-  // поэтому спрашиваем и закрываем её для всех.
+  // Хост уходит не один: комната без него всё равно никому не нужна, поэтому
+  // закрываем её для всех — и об этом единственном необратимом шаге
+  // спрашиваем.
   const closeRoom = () => {
-    if (!window.confirm("Закрыть комнату? Все игроки выйдут из неё.")) return;
     socket?.emit("mafia:close", {}, () => {});
     clearRoomCreds(code);
     router.replace("/");
@@ -165,7 +163,7 @@ export default function MafiaLobbyPage() {
         </div>
         <button
           type="button"
-          onClick={isHost ? closeRoom : leave}
+          onClick={() => (isHost ? setCloseAsk(true) : leave())}
           style={{ background: "none", border: "none", color: "var(--mf-text-faint)", cursor: "pointer", display: "flex", padding: 4 }}
           aria-label={isHost ? "Закрыть комнату" : "Выйти"}
           title={isHost ? "Закрыть комнату" : "Выйти"}
@@ -193,52 +191,6 @@ export default function MafiaLobbyPage() {
             {linkCopied ? "Скопировано" : "Ссылка"}
           </button>
         </div>
-        {/* Свой ник. Раньше имя задавалось один раз при входе, и опечатку
-            было не исправить иначе как пересозданием комнаты. */}
-        <div style={{ width: "100%", maxWidth: 300 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "var(--mf-text-faint)", textTransform: "uppercase", marginBottom: 8, textAlign: "center" }}>
-            Твоё имя
-          </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              background: "var(--mf-surface)",
-              border: "1px solid var(--mf-border)",
-              borderRadius: "var(--r-btn)",
-              padding: "8px 12px",
-            }}
-          >
-            <MafiaAvatar name={myName} idx={me?.avatarIdx ?? 0} size={28} />
-            <input
-              key={myName}
-              defaultValue={myName}
-              maxLength={50}
-              placeholder="Как тебя зовут"
-              onBlur={(e) => commitMyName(e.target)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.currentTarget.blur();
-                if (e.key === "Escape") {
-                  e.currentTarget.value = myName;
-                  e.currentTarget.blur();
-                }
-              }}
-              style={{
-                flex: 1,
-                minWidth: 0,
-                background: "transparent",
-                border: "none",
-                outline: "none",
-                color: "var(--mf-text)",
-                fontWeight: 700,
-                fontSize: 15,
-              }}
-            />
-            <Pencil size={15} color="var(--mf-text-faint)" style={{ flexShrink: 0 }} />
-          </div>
-        </div>
-
         {/* QR удобен, когда компания рядом: навёл камеру — и ты в комнате. */}
         <div className="mf-lobby-qr">
           <QrCode value={inviteUrl} />
@@ -294,11 +246,52 @@ export default function MafiaLobbyPage() {
                 />
               </div>
               <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-                <span style={{ fontWeight: 700, fontSize: 15.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {p.displayName}
-                  {p.userId === view?.you.userId ? " (ты)" : ""}
-                </span>
+                {/* Своё имя правится прямо здесь, по карандашу рядом с ним —
+                    искать отдельное поле где-то ещё не нужно. */}
+                {p.userId === view?.you.userId && editingName ? (
+                  <input
+                    autoFocus
+                    defaultValue={myName}
+                    maxLength={50}
+                    onBlur={(e) => commitMyName(e.target)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.currentTarget.blur();
+                      if (e.key === "Escape") {
+                        e.currentTarget.value = myName;
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      background: "var(--mf-bg)",
+                      border: "1px solid var(--mf-crimson)",
+                      borderRadius: 10,
+                      outline: "none",
+                      color: "var(--mf-text)",
+                      fontWeight: 700,
+                      fontSize: 15.5,
+                      padding: "5px 9px",
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontWeight: 700, fontSize: 15.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {p.displayName}
+                    {p.userId === view?.you.userId ? " (ты)" : ""}
+                  </span>
+                )}
                 {p.isHost ? <Crown size={16} color="var(--mf-gold)" /> : null}
+                {p.userId === view?.you.userId && !editingName ? (
+                  <button
+                    type="button"
+                    aria-label="Изменить своё имя"
+                    title="Изменить имя"
+                    onClick={() => setEditingName(true)}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--mf-text-faint)", display: "flex", padding: 4, flexShrink: 0 }}
+                  >
+                    <Pencil size={15} />
+                  </button>
+                ) : null}
               </div>
               {isHost && !p.isHost ? (
                 <div style={{ display: "flex", gap: 2 }}>
@@ -306,7 +299,7 @@ export default function MafiaLobbyPage() {
                     type="button"
                     aria-label={`Передать комнату — ${p.displayName}`}
                     title="Сделать хостом"
-                    onClick={() => makeHost(p.userId, p.displayName)}
+                    onClick={() => makeHost(p.userId)}
                     style={{ background: "none", border: "none", cursor: "pointer", color: "var(--mf-text-faint)", display: "flex", padding: 6 }}
                   >
                     <Crown size={17} />
@@ -315,7 +308,7 @@ export default function MafiaLobbyPage() {
                     type="button"
                     aria-label={`Выгнать ${p.displayName}`}
                     title="Выгнать"
-                    onClick={() => kick(p.userId, p.displayName)}
+                    onClick={() => kick(p.userId)}
                     style={{ background: "none", border: "none", cursor: "pointer", color: "var(--mf-text-faint)", display: "flex", padding: 6 }}
                   >
                     <X size={17} />
@@ -334,9 +327,6 @@ export default function MafiaLobbyPage() {
         <div style={{ padding: "4px 20px 0" }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--mf-text-faint)", marginBottom: 8 }}>
             Заблокированные ({view?.banned?.length}) · видно только тебе
-          </div>
-          <div style={{ fontSize: 12, color: "var(--mf-text-faint)", marginBottom: 8, lineHeight: 1.45 }}>
-            Разблокировка только открывает вход — заходить обратно человек будет сам.
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {view?.banned?.map((b) => (
@@ -468,6 +458,19 @@ export default function MafiaLobbyPage() {
           </div>
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={closeAsk}
+        variant="mafia"
+        title="Закрыть комнату?"
+        text="Все игроки выйдут из неё. Вернуться в эту комнату будет нельзя."
+        confirmLabel="Закрыть"
+        onConfirm={() => {
+          setCloseAsk(false);
+          closeRoom();
+        }}
+        onCancel={() => setCloseAsk(false)}
+      />
     </MafiaShell>
   );
 }

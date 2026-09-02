@@ -8,6 +8,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Hash, X } from "lucide-react";
 import AppShell from "@/components/common/AppShell";
 import { saveRoomCreds, saveDisplayName, loadDisplayName } from "@/lib/room-session";
+import { resumeRoom } from "@/lib/room-resume";
+import {
+  ROOM_CODE_LENGTH,
+  WRONG_LAYOUT_HINT,
+  pasteCode,
+  typeCode,
+} from "@/lib/room-code-input";
 import type { JoinRoomResponse } from "@/types";
 
 export default function JoinPage() {
@@ -35,40 +42,60 @@ function JoinPageInner() {
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [wrongLayout, setWrongLayout] = useState(false);
+  const [resuming, setResuming] = useState(false);
   const refs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     setName(loadDisplayName());
     // Префилл кода из ?code=ABCDEF (приходит по copy-link из лобби хоста).
     const fromUrl = searchParams.get("code");
-    if (fromUrl) {
-      const cleaned = fromUrl.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
-      if (cleaned) setCode(Array.from({ length: 6 }, (_, i) => cleaned[i] ?? ""));
-    }
-  }, [searchParams]);
+    if (!fromUrl) return;
+    const cleaned = pasteCode(fromUrl.trim());
+    if (!cleaned) return;
+    setCode(Array.from({ length: ROOM_CODE_LENGTH }, (_, i) => cleaned[i] ?? ""));
+
+    // Пришли по ссылке в комнату, где уже сидим, — имя спрашивать не за чем.
+    if (cleaned.length !== ROOM_CODE_LENGTH) return;
+    setResuming(true);
+    let alive = true;
+    resumeRoom(cleaned, "alias").then((resumed) => {
+      if (!alive) return;
+      if (resumed) router.replace(`/alias/room/${resumed.code}`);
+      else setResuming(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [searchParams, router]);
 
   const setChar = (i: number, v: string) => {
-    const c = v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(-1);
+    const { code: cleaned, wrongLayout } = typeCode(v);
+    const c = cleaned.slice(-1);
+    setWrongLayout(wrongLayout);
+    if (wrongLayout) return; // буквы чужой раскладки в поле не пускаем
     setCode((prev) => {
       const next = [...prev];
       next[i] = c;
       return next;
     });
     setError(null);
-    if (c && i < 5) refs.current[i + 1]?.focus();
+    if (c && i < ROOM_CODE_LENGTH - 1) refs.current[i + 1]?.focus();
   };
 
   const onKey = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Backspace" && !code[i] && i > 0) refs.current[i - 1]?.focus();
   };
 
+  // Вставку чиним молча: код мог быть скопирован уже в чужой раскладке.
   const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    const text = e.clipboardData.getData("text").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+    const text = pasteCode(e.clipboardData.getData("text"));
     if (!text) return;
     e.preventDefault();
-    setCode(Array.from({ length: 6 }, (_, i) => text[i] ?? ""));
+    setCode(Array.from({ length: ROOM_CODE_LENGTH }, (_, i) => text[i] ?? ""));
     setError(null);
-    refs.current[Math.min(text.length, 5)]?.focus();
+    setWrongLayout(false);
+    refs.current[Math.min(text.length, ROOM_CODE_LENGTH - 1)]?.focus();
   };
 
   const full = code.every(Boolean) && name.trim().length > 0;
@@ -118,6 +145,18 @@ function JoinPageInner() {
     }
   };
 
+  // Пока выясняем, не сидим ли мы уже в этой комнате, форму не показываем:
+  // иначе на секунду мелькает вопрос об имени, на который отвечать не нужно.
+  if (resuming) {
+    return (
+      <AppShell centered>
+        <p className="muted" style={{ textAlign: "center" }}>
+          Входим в комнату…
+        </p>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell centered className="screen-anim">
       <div className="form-narrow">
@@ -159,6 +198,7 @@ function JoinPageInner() {
               />
             ))}
           </div>
+          {wrongLayout && <p className="code-layout-hint">{WRONG_LAYOUT_HINT}</p>}
           {error && (
             <p className="join-err">
               <X size={15} /> {error}

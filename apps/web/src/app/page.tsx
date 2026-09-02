@@ -11,6 +11,12 @@ import { ArrowRight, Users, Loader2 } from "lucide-react";
 import type { MafiaRole } from "@alias/shared/mafia";
 import { ROLE_META } from "@/components/mafia/roleMeta";
 import SiteTopBar from "@/components/common/SiteTopBar";
+import {
+  ROOM_CODE_LENGTH,
+  WRONG_LAYOUT_HINT,
+  pasteCode,
+  typeCode,
+} from "@/lib/room-code-input";
 
 /** Слова-примеры на карточке Алиаса: показывают, из чего состоит игра. */
 const SAMPLE_WORDS = [
@@ -143,8 +149,23 @@ export default function HubPage() {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  const [wrongLayout, setWrongLayout] = useState(false);
 
-  const ready = code.length === 6;
+  const ready = code.length === ROOM_CODE_LENGTH;
+
+  const onType = (raw: string) => {
+    const { code: next, wrongLayout: bad } = typeCode(raw);
+    setCode(next);
+    setWrongLayout(bad);
+  };
+  // Вставку чиним молча: код мог быть скопирован уже в чужой раскладке.
+  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = pasteCode(e.clipboardData.getData("text"));
+    if (!pasted) return;
+    e.preventDefault();
+    setCode(pasted);
+    setWrongLayout(false);
+  };
 
   // Игрок вводит код, не указывая игру, — спрашиваем сервер, чей он.
   // Комнату не нашли — всё равно уводим на вход Алиаса: там человек
@@ -189,9 +210,8 @@ export default function HubPage() {
             id="room-code"
             className="hub-code-input"
             value={code}
-            onChange={(e) =>
-              setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))
-            }
+            onChange={(e) => onType(e.target.value)}
+            onPaste={onPaste}
             placeholder="K7F2QD"
             inputMode="text"
             autoComplete="off"
@@ -207,6 +227,7 @@ export default function HubPage() {
             {busy ? <Loader2 size={18} className="hub-spin" /> : "Войти"}
           </button>
         </div>
+        {wrongLayout && <p className="code-layout-hint">{WRONG_LAYOUT_HINT}</p>}
       </form>
 
       <footer className="hub-footer">

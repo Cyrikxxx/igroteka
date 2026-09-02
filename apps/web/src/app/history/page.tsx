@@ -19,12 +19,14 @@ import {
   Trash2,
   Dice5,
   RotateCcw,
+  X,
 } from "lucide-react";
 import type { GameFromAPI } from "@/types";
 import type { MafiaSettings, MafiaCreateRoomResponse } from "@alias/shared/mafia";
 import { prepareLocalRematch, createRoomLike } from "@/lib/rematch";
 import { loadDisplayName, saveRoomCreds } from "@/lib/room-session";
 import PageShell, { PageHead, PageFooter } from "@/components/platform/PageShell";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import type { MafiaHistoryGame } from "@/app/api/mafia/history/route";
 
 interface Stats {
@@ -77,6 +79,8 @@ export default function HistoryPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Ошибки показываем плашкой на странице, а не системным alert.
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/games")
@@ -95,8 +99,12 @@ export default function HistoryPage() {
 
   // `shared` — партия онлайн: её итоги открываются не только хосту, но и
   // всем участникам комнаты, поэтому такое удаление спрашиваем.
-  const onDelete = async (id: string, shared = false) => {
-    if (shared && !window.confirm("Удалить партию? Итоги пропадут у всех, кто в ней играл.")) return;
+  const [deleteAsk, setDeleteAsk] = useState<string | null>(null);
+  const askDelete = (id: string, shared = false) => {
+    if (shared) setDeleteAsk(id);
+    else void onDelete(id);
+  };
+  const onDelete = async (id: string) => {
     setDeletingId(id);
     try {
       const res = await fetch(`/api/games/${id}`, { method: "DELETE" });
@@ -121,7 +129,7 @@ export default function HistoryPage() {
         router.push(`/alias/room/${code}`);
       }
     } catch (e) {
-      window.alert((e as Error).message);
+      setActionError((e as Error).message);
       setAgainBusy(false);
     }
   };
@@ -146,7 +154,7 @@ export default function HistoryPage() {
       });
       router.push(`/mafia/room/${data.room.code}`);
     } catch (e) {
-      window.alert((e as Error).message);
+      setActionError((e as Error).message);
       setAgainBusy(false);
     }
   };
@@ -180,7 +188,7 @@ export default function HistoryPage() {
       ),
       // Удалять можно всё, кроме идущей онлайн-партии: её состояние живёт ещё
       // и в Redis, и в открытых сокетах, поэтому строка в базе — не вся игра.
-      onDelete: online && live ? undefined : () => onDelete(g.id, online),
+      onDelete: online && live ? undefined : () => askDelete(g.id, online),
       onAgain: live ? undefined : () => againAlias(g),
     };
   });
@@ -232,6 +240,20 @@ export default function HistoryPage() {
         title="История игр"
         lead="Партии Алиаса и Мафии в одном списке — незавершённую игру можно открыть и доиграть."
       />
+
+      {actionError && (
+        <div className="notice notice-danger room-notice" style={{ marginBottom: 18 }}>
+          <span style={{ flex: 1 }}>{actionError}</span>
+          <button
+            type="button"
+            className="room-notice-x"
+            onClick={() => setActionError(null)}
+            aria-label="Закрыть"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       <div className="hist-stats">
         <div className="pl-card hist-stat">
@@ -378,6 +400,19 @@ export default function HistoryPage() {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteAsk !== null}
+        title="Удалить партию?"
+        text="Итоги пропадут у всех, кто в ней играл."
+        confirmLabel="Удалить"
+        onConfirm={() => {
+          const id = deleteAsk;
+          setDeleteAsk(null);
+          if (id) void onDelete(id);
+        }}
+        onCancel={() => setDeleteAsk(null)}
+      />
 
       <PageFooter />
     </PageShell>

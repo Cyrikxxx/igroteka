@@ -13,6 +13,13 @@ import {
   saveDisplayName,
   loadDisplayName,
 } from "@/lib/room-session";
+import { resumeRoom } from "@/lib/room-resume";
+import {
+  ROOM_CODE_LENGTH,
+  WRONG_LAYOUT_HINT,
+  pasteCode,
+  typeCode,
+} from "@/lib/room-code-input";
 
 export default function MafiaJoinPage() {
   return (
@@ -29,16 +36,32 @@ function Inner() {
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [wrongLayout, setWrongLayout] = useState(false);
+  const [resuming, setResuming] = useState(false);
 
   useEffect(() => {
     setName(loadDisplayName());
     const fromUrl = searchParams.get("code");
-    if (fromUrl) {
-      setCode(fromUrl.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6));
-    }
-  }, [searchParams]);
+    if (!fromUrl) return;
+    const cleaned = pasteCode(fromUrl.trim());
+    if (!cleaned) return;
+    setCode(cleaned);
 
-  const full = code.length === 6 && name.trim().length > 0;
+    // Пришли по ссылке в комнату, где уже сидим, — имя спрашивать не за чем.
+    if (cleaned.length !== ROOM_CODE_LENGTH) return;
+    setResuming(true);
+    let alive = true;
+    resumeRoom(cleaned, "mafia").then((resumed) => {
+      if (!alive) return;
+      if (resumed) router.replace(`/mafia/room/${resumed.code}`);
+      else setResuming(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [searchParams, router]);
+
+  const full = code.length === ROOM_CODE_LENGTH && name.trim().length > 0;
 
   const submit = async () => {
     if (!full) {
@@ -80,6 +103,18 @@ function Inner() {
     }
   };
 
+  // Пока выясняем, не сидим ли мы уже в этой комнате, форму не показываем:
+  // иначе на секунду мелькает вопрос об имени, на который отвечать не нужно.
+  if (resuming) {
+    return (
+      <MafiaShell>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <p style={{ color: "var(--mf-text-faint)" }}>Входим в комнату…</p>
+        </div>
+      </MafiaShell>
+    );
+  }
+
   return (
     <MafiaShell>
       <div className="mf-phase-head" style={{ paddingBottom: 4 }}>
@@ -111,7 +146,18 @@ function Inner() {
           <input
             value={code}
             onChange={(e) => {
-              setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6));
+              const { code: next, wrongLayout: bad } = typeCode(e.target.value);
+              setCode(next);
+              setWrongLayout(bad);
+              setError(null);
+            }}
+            // Вставку чиним молча: код мог быть скопирован уже в чужой раскладке.
+            onPaste={(e) => {
+              const pasted = pasteCode(e.clipboardData.getData("text"));
+              if (!pasted) return;
+              e.preventDefault();
+              setCode(pasted);
+              setWrongLayout(false);
               setError(null);
             }}
             placeholder="K7F2QD"
@@ -132,6 +178,11 @@ function Inner() {
               textTransform: "uppercase",
             }}
           />
+          {wrongLayout ? (
+            <div style={{ color: "var(--mf-crimson)", fontSize: 12.5, fontWeight: 700 }}>
+              {WRONG_LAYOUT_HINT}
+            </div>
+          ) : null}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.09em", textTransform: "uppercase", color: "var(--mf-text-faint)" }}>

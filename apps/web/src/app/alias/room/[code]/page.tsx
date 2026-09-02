@@ -20,6 +20,7 @@ import {
   Crown,
   UserX,
   Unlock,
+  X,
   Pencil,
 } from "lucide-react";
 import {
@@ -61,6 +62,9 @@ export default function LobbyPage() {
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  // Ошибки действий показываем строкой в лобби, а не системным alert.
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Креды живут во вкладке и умирают вместе с ней, а человек в комнате — нет:
   // сервер помнит его по куке. Поэтому сначала пробуем вернуться молча, и
@@ -159,7 +163,7 @@ export default function LobbyPage() {
   const setFormat = (format: GameFormat) =>
     socket?.emit("room:format", { format }, (resp: unknown) => {
       if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
-        alert(`Не удалось сменить формат: ${(resp as { error: string }).error}`);
+        setActionError(`Не удалось сменить формат: ${(resp as { error: string }).error}`);
       }
     });
   const createTeam = () => socket?.emit("team:create", {}, () => {});
@@ -167,15 +171,12 @@ export default function LobbyPage() {
     socket?.emit("team:rename", { teamId, name }, () => {});
   const removeTeam = (teamId: number) => socket?.emit("team:remove", { teamId }, () => {});
   const joinTeam = (teamId: number | null) => socket?.emit("team:join", { teamId }, () => {});
-  const kickPlayer = (userId: string, name: string) => {
-    if (!window.confirm(`Выгнать ${name}? Вернуть его можно будет здесь же, в списке выгнанных.`)) return;
-    socket?.emit("room:kick", { userId }, () => {});
-  };
+  // Кик и передача хоста обратимы, поэтому делаются сразу: лишний вопрос на
+  // каждое нажатие только мешал.
+  const kickPlayer = (userId: string) => socket?.emit("room:kick", { userId }, () => {});
   const unban = (userId: string) => socket?.emit("room:unban", { userId }, () => {});
-  const makeHost = (userId: string, name: string) => {
-    if (!window.confirm(`Передать комнату — ${name}? Ты перестанешь быть хостом.`)) return;
+  const makeHost = (userId: string) =>
     socket?.emit("room:transfer_host", { userId }, () => {});
-  };
 
   // Своя запись в снапшоте — она же источник актуального ника: его мог
   // поменять и сам игрок, и другая вкладка.
@@ -190,13 +191,20 @@ export default function LobbyPage() {
 
   const commitMyName = (input: HTMLInputElement) => {
     const next = input.value.trim().slice(0, 50);
-    if (!next || next === myName) {
-      input.value = myName;
-      return;
-    }
+    setEditingName(false);
+    if (!next || next === myName) return;
     socket?.emit("room:set_name", { displayName: next }, () => {});
     // Запоминаем и глобально: следующий вход подставит новое имя сам.
     saveDisplayName(next);
+  };
+
+  // Всё, что нужно строке со своим именем: правится она прямо в списке.
+  const nameEditor: NameEditor = {
+    myName,
+    editing: editingName,
+    enabled: inLobby,
+    start: () => setEditingName(true),
+    commit: commitMyName,
   };
 
   const myTeam = snapshot?.teams.find((t) => t.players.some((p) => p.userId === creds.userId));
@@ -246,6 +254,19 @@ export default function LobbyPage() {
           {error}
         </div>
       )}
+      {actionError && (
+        <div className="notice notice-danger room-notice" style={{ marginBottom: 16 }}>
+          <span style={{ flex: 1 }}>{actionError}</span>
+          <button
+            type="button"
+            className="room-notice-x"
+            onClick={() => setActionError(null)}
+            aria-label="Закрыть"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       <div className="lobby-grid">
         {/* Панель приглашения */}
@@ -271,38 +292,6 @@ export default function LobbyPage() {
                 <p className="invite-qr-s mono">{inviteUrl}</p>
               </div>
             </div>
-          </div>
-
-          {/* Свой ник. Раньше имя задавалось один раз при входе, и опечатку
-              было не исправить иначе как пересозданием комнаты. */}
-          <div className="card">
-            <span className="eyebrow">твоё имя</span>
-            <div className="row" style={{ gap: 10, marginTop: 12 }}>
-              <Avatar name={myName} size={32} />
-              <input
-                key={myName}
-                className="input"
-                style={{ flex: 1, minWidth: 0 }}
-                defaultValue={myName}
-                maxLength={50}
-                placeholder="Как тебя зовут"
-                disabled={!inLobby}
-                onBlur={(e) => commitMyName(e.target)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") e.currentTarget.blur();
-                  if (e.key === "Escape") {
-                    e.currentTarget.value = myName;
-                    e.currentTarget.blur();
-                  }
-                }}
-              />
-              <Pencil size={16} style={{ color: "var(--fg-3)", flex: "none" }} />
-            </div>
-            {!inLobby && (
-              <p className="muted" style={{ fontSize: 12.5, marginTop: 10 }}>
-                Пока идёт партия имя не поменять.
-              </p>
-            )}
           </div>
 
           <div className="card lobby-rules">
@@ -362,6 +351,7 @@ export default function LobbyPage() {
                   onTake={() => joinTeam(team.id)}
                   onKick={kickPlayer}
                   onMakeHost={makeHost}
+                  nameEditor={nameEditor}
                 />
               ))}
               <p className="muted seat-note">
@@ -390,6 +380,7 @@ export default function LobbyPage() {
                   onJoin={() => joinTeam(team.id)}
                   onKick={kickPlayer}
                   onMakeHost={makeHost}
+                  nameEditor={nameEditor}
                 />
               ))}
             </div>
@@ -403,11 +394,6 @@ export default function LobbyPage() {
                 </h3>
                 <span className="muted" style={{ fontSize: 12 }}>видно только тебе</span>
               </div>
-              {/* Разблокировка лишь открывает вход: обратно человек заходит
-                  сам, по коду или ссылке. */}
-              <p className="muted" style={{ fontSize: 12.5, marginTop: -4, marginBottom: 12 }}>
-                Разблокировка только открывает вход — заходить обратно человек будет сам.
-              </p>
               <div className="stack" style={{ gap: 8 }}>
                 {snapshot?.banned?.map((b) => (
                   <div key={b.userId} className="lobby-player">
@@ -450,8 +436,29 @@ export default function LobbyPage() {
                     {sp.online && <span className="dot" style={{ color: "var(--accent)" }} />}
                     {sp.displayName}
                     {sp.userId === snapshot.hostId && " 👑"}
+                    {/* Своё имя правится и отсюда: в команду человек мог ещё
+                        не сесть, а ник поправить уже хочется. */}
+                    {sp.userId === creds.userId && inLobby && !editingName && (
+                      <button
+                        type="button"
+                        className="lp-edit"
+                        onClick={() => setEditingName(true)}
+                        aria-label="Изменить своё имя"
+                        title="Изменить имя"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                    )}
                   </span>
                 ))}
+              </div>
+            )}
+            {/* Правка ника зрителя: в «пилюлю» поле не влезает, поэтому оно
+                разворачивается под списком. */}
+            {editingName && !myTeam && (
+              <div className="row" style={{ gap: 10, marginTop: 12 }}>
+                <Avatar name={myName} size={30} />
+                <MyNameCell editor={nameEditor} />
               </div>
             )}
           </div>
@@ -480,7 +487,7 @@ export default function LobbyPage() {
                 onClick={() => {
                   socket?.emit("round:start_game", {}, (resp: unknown) => {
                     if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
-                      alert(`Не удалось стартовать: ${(resp as { error: string }).error}`);
+                      setActionError(`Не удалось стартовать: ${(resp as { error: string }).error}`);
                     }
                   });
                 }}
@@ -562,6 +569,7 @@ function TeamCard({
   onJoin,
   onKick,
   onMakeHost,
+  nameEditor,
 }: {
   team: RoomSnapshotTeam;
   currentUserId: string;
@@ -570,8 +578,9 @@ function TeamCard({
   onRename: (name: string) => void;
   onRemove: () => void;
   onJoin: () => void;
-  onKick: (userId: string, name: string) => void;
-  onMakeHost: (userId: string, name: string) => void;
+  onKick: (userId: string) => void;
+  onMakeHost: (userId: string) => void;
+  nameEditor: NameEditor;
 }) {
   const meIsHere = team.players.some((p) => p.userId === currentUserId);
   const canJoin = !meIsHere && team.players.length < MAX_PLAYERS_PER_TEAM;
@@ -637,17 +646,18 @@ function TeamCard({
             return (
               <div key={p.userId} className="lobby-player" style={{ opacity: p.online ? 1 : 0.55 }}>
                 <Avatar name={p.displayName} color={team.color} size={30} online={p.online} />
-                <span className="lp-name">
-                  {p.displayName}
-                  {isMe && <em> · ты</em>}
-                </span>
+                {isMe ? (
+                  <MyNameCell editor={nameEditor} />
+                ) : (
+                  <span className="lp-name">{p.displayName}</span>
+                )}
                 {isCrown && <span className="pill pill-mono pill-accent">хост</span>}
                 {isHost && !isMe && (
                   <div className="lobby-player-actions">
                     <button
                       type="button"
                       className="slot-x"
-                      onClick={() => onMakeHost(p.userId, p.displayName)}
+                      onClick={() => onMakeHost(p.userId)}
                       aria-label={`Передать комнату — ${p.displayName}`}
                       title="Сделать хостом"
                     >
@@ -656,7 +666,7 @@ function TeamCard({
                     <button
                       type="button"
                       className="slot-x"
-                      onClick={() => onKick(p.userId, p.displayName)}
+                      onClick={() => onKick(p.userId)}
                       aria-label={`Выгнать ${p.displayName}`}
                       title="Выгнать"
                     >
@@ -692,6 +702,7 @@ function SeatCard({
   onTake,
   onKick,
   onMakeHost,
+  nameEditor,
 }: {
   seat: number;
   team: RoomSnapshotTeam;
@@ -699,8 +710,9 @@ function SeatCard({
   hostId: string;
   isHost: boolean;
   onTake: () => void;
-  onKick: (userId: string, name: string) => void;
-  onMakeHost: (userId: string, name: string) => void;
+  onKick: (userId: string) => void;
+  onMakeHost: (userId: string) => void;
+  nameEditor: NameEditor;
 }) {
   const player = team.players[0] ?? null;
   const isMe = player?.userId === currentUserId;
@@ -714,17 +726,18 @@ function SeatCard({
       {player ? (
         <>
           <Avatar name={player.displayName} color={team.color} size={34} online={player.online} />
-          <span className="lp-name">
-            {player.displayName}
-            {isMe && <em> · ты</em>}
-          </span>
+          {isMe ? (
+            <MyNameCell editor={nameEditor} />
+          ) : (
+            <span className="lp-name">{player.displayName}</span>
+          )}
           {player.userId === hostId && <span className="pill pill-mono pill-accent">хост</span>}
           {isHost && !isMe && (
             <div className="lobby-player-actions">
               <button
                 type="button"
                 className="icon-btn"
-                onClick={() => onMakeHost(player.userId, player.displayName)}
+                onClick={() => onMakeHost(player.userId)}
                 aria-label="Передать комнату"
                 title="Передать комнату"
               >
@@ -733,7 +746,7 @@ function SeatCard({
               <button
                 type="button"
                 className="icon-btn"
-                onClick={() => onKick(player.userId, player.displayName)}
+                onClick={() => onKick(player.userId)}
                 aria-label="Выгнать"
                 title="Выгнать"
               >
@@ -751,5 +764,57 @@ function SeatCard({
         </>
       )}
     </div>
+  );
+}
+
+/** Всё, что нужно строке со своим именем в списке игроков. */
+interface NameEditor {
+  myName: string;
+  editing: boolean;
+  /** Пока идёт партия имя менять нельзя: оно уже уехало в состав команд. */
+  enabled: boolean;
+  start: () => void;
+  commit: (input: HTMLInputElement) => void;
+}
+
+/**
+ * Своя строка в списке: имя правится тут же, по карандашу рядом с ним.
+ * Отдельного поля где-то в стороне для этого не нужно.
+ */
+function MyNameCell({ editor }: { editor: NameEditor }) {
+  if (editor.editing) {
+    return (
+      <input
+        autoFocus
+        className="input lp-name-input"
+        defaultValue={editor.myName}
+        maxLength={50}
+        onBlur={(e) => editor.commit(e.target)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Escape") {
+            e.currentTarget.value = editor.myName;
+            e.currentTarget.blur();
+          }
+        }}
+      />
+    );
+  }
+  return (
+    <span className="lp-name">
+      {editor.myName}
+      <em> · ты</em>
+      {editor.enabled && (
+        <button
+          type="button"
+          className="lp-edit"
+          onClick={editor.start}
+          aria-label="Изменить своё имя"
+          title="Изменить имя"
+        >
+          <Pencil size={14} />
+        </button>
+      )}
+    </span>
   );
 }

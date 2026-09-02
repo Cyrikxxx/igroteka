@@ -15,6 +15,7 @@ import { pluralize, WORDS } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
 import Avatar from "@/components/common/Avatar";
 import Modal from "@/components/common/Modal";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import TimerRing from "@/components/alias/game/TimerRing";
 import VictoryView from "@/components/alias/game/VictoryView";
 import type { GameFromAPI } from "@/types";
@@ -79,6 +80,8 @@ export default function PlayPage() {
   // ВНИМАНИЕ: все хуки должны быть до любых ранних return.
   const [pauseModalOpen, setPauseModalOpen] = useState(false);
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
+  const [leaveAsk, setLeaveAsk] = useState(false);
+  const [closeAsk, setCloseAsk] = useState(false);
 
   // Итоги финала: снапшот комнаты знает только счёт, а подиуму нужны
   // составы команд — берём готовую Game по её id.
@@ -165,23 +168,26 @@ export default function PlayPage() {
   const onReviewConfirm = () => socket?.emit("round:review_confirm", {}, () => {});
   // Раньше «Выйти» просто уводило на хаб, не спросив и не сказав серверу:
   // игрок оставался в комнате и висел в составе команды.
-  const onLeave = () => {
-    if (!window.confirm("Выйти из комнаты? Вернуться можно будет по тому же коду.")) return;
+  const doLeave = () => {
     socket?.emit("room:leave", {}, () => {});
     router.push("/alias");
   };
 
   // После партии выход означает разное: хост закрывает комнату для всех,
   // игрок уходит один. Это же правило действует и в Мафии.
-  const onLeaveAfterGame = () => {
-    if (creds.userId === snapshot.hostId) {
-      if (!window.confirm("Закрыть комнату? Все выйдут из неё.")) return;
-      socket?.emit("room:close", {}, () => {});
-    } else {
-      socket?.emit("room:leave", {}, () => {});
-    }
+  const isRoomHost = creds.userId === snapshot.hostId;
+  const doLeaveAfterGame = () => {
+    if (isRoomHost) socket?.emit("room:close", {}, () => {});
+    else socket?.emit("room:leave", {}, () => {});
     clearRoomCreds(creds.code);
     router.push("/alias");
+  };
+  // Спрашиваем только там, где отменить уже нельзя: уход посреди раунда и
+  // закрытие комнаты хостом. Спрашиваем своим окном, а не системным.
+  const onLeave = () => setLeaveAsk(true);
+  const onLeaveAfterGame = () => {
+    if (isRoomHost) setCloseAsk(true);
+    else doLeaveAfterGame();
   };
 
   const canControlRound = role === "explainer" || creds.userId === snapshot.hostId;
@@ -203,6 +209,29 @@ export default function PlayPage() {
 
   const modals = (
     <>
+      <ConfirmDialog
+        open={leaveAsk}
+        title="Выйти из комнаты?"
+        text="Текущий раунд не засчитается. Вернуться можно будет по тому же коду."
+        confirmLabel="Выйти"
+        onConfirm={() => {
+          setLeaveAsk(false);
+          doLeave();
+        }}
+        onCancel={() => setLeaveAsk(false)}
+      />
+      <ConfirmDialog
+        open={closeAsk}
+        title="Закрыть комнату?"
+        text="Все выйдут из неё. Вернуться в эту комнату будет нельзя."
+        confirmLabel="Закрыть"
+        onConfirm={() => {
+          setCloseAsk(false);
+          doLeaveAfterGame();
+        }}
+        onCancel={() => setCloseAsk(false)}
+      />
+
       <Modal isOpen={pauseModalOpen && canControlRound} title="Пауза" onClose={onResume}>
         <p className="muted" style={{ marginBottom: 18 }}>
           Раунд приостановлен. Таймер не идёт, пока модалка открыта.
@@ -449,7 +478,6 @@ export default function PlayPage() {
   // Раньше отсюда уводило на /alias/results/[gameId] — статическую страницу
   // без сокета. К моменту, когда человек видел счёт, комнаты для него уже не
   // было, и собрать всех на новую партию было не из чего.
-  const isRoomHost = creds.userId === snapshot.hostId;
   return (
     <>
       <AppShell centered className="screen-anim">
