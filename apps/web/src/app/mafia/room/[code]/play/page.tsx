@@ -58,7 +58,17 @@ export default function MafiaPlayPage() {
         : null,
     [creds],
   );
-  const { socket, view, status, error, closedReason } = useMafiaRoom(opts);
+  const { socket, view: rawView, timer, status, error, closedReason } = useMafiaRoom(opts);
+
+  // Экраны фаз показывают view.timer — а это цифра из последней рассылки
+  // состояния, и между рассылками она стояла на месте: таймер выглядел
+  // замершим. Живой остаток считает хук (тики сервера плюс локальная
+  // интерполяция) — подмешиваем его в view, чтобы все экраны сразу пошли.
+  const view = useMemo(
+    () => (rawView ? { ...rawView, timer: timer ?? rawView.timer } : rawView),
+    [rawView, timer],
+  );
+
   const hostToast = useHostToast(view?.you.isHost ?? false);
   // Экран «ты убит» показываем один раз, пока игрок сам не уйдёт в зрители.
   const [deathSeen, setDeathSeen] = useState(false);

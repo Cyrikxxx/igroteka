@@ -18,6 +18,7 @@
     "smoke:rejoin": "tsx scripts/smoke-rejoin.ts",
     "smoke:host": "tsx scripts/smoke-host.ts",
     "smoke:ingame": "tsx scripts/smoke-ingame.ts",
+    "smoke:reconnect": "tsx scripts/smoke-reconnect.ts",
     "smoke:mafia": "tsx scripts/smoke-mafia.ts"
   },
   "dependencies": {

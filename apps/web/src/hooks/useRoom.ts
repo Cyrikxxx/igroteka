@@ -105,8 +105,13 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
       }
       if (p.phase === "ROUND_REVIEW") setTick((prev) => prev ? { ...prev, paused: true } : null);
     };
+    // Тик приходит только когда раунд реально идёт: на паузе сервер их не
+    // шлёт. Значит любой тик — сам по себе признак «пауза снята». Раньше
+    // здесь тянулось прежнее значение, и после реконнекта на паузе флаг
+    // оставался поднятым навсегда: кнопки «угадал/пропустить» так и стояли
+    // заблокированными, а предупреждение не пропадало.
     const onTick = (p: { msLeft: number }) =>
-      setTick((prev) => ({ msLeft: p.msLeft, paused: prev?.paused ?? false }));
+      setTick({ msLeft: p.msLeft, paused: false });
     const onWord = (p: RoundWordPayload) => setCurrentWord(p);
     const onWordCount = (p: { got: number; skip: number; msLeft: number }) => {
       setWordCount({ got: p.got, skip: p.skip });

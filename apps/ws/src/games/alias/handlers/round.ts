@@ -715,13 +715,24 @@ export function registerRoundHandlers(
     else ack?.({ ok: true, nextWord: null });
   });
 
+  // Пауза и снятие паузы касаются всей комнаты, а не только нажавшего:
+  // остальные должны увидеть, что время встало или снова пошло. Раньше
+  // состояние только записывалось в снапшот и никому не рассылалось.
   socket.on("round:pause", async (_payload, ack) => {
     const res = await handlePause(socket);
     ack?.(res);
+    if ("ok" in res) {
+      const snap = await load(socket.data.roomCode);
+      if (snap) broadcastState(ns, socket.data.roomCode, snap);
+    }
   });
   socket.on("round:resume", async (_payload, ack) => {
     const res = await handleResume(socket);
     ack?.(res);
+    if ("ok" in res) {
+      const snap = await load(socket.data.roomCode);
+      if (snap) broadcastState(ns, socket.data.roomCode, snap);
+    }
   });
   socket.on("round:end", async (_payload, ack) => {
     const res = await handleEnd(ns, socket);
