@@ -124,6 +124,7 @@ export default function RoleReveal({
   onReady,
   isHost,
   onStartNight,
+  onEndGame,
 }: {
   role: MafiaRole;
   partners?: string[];
@@ -134,6 +135,8 @@ export default function RoleReveal({
   isHost: boolean;
   /** Начать ночь, не дожидаясь всех: кто-то мог закрыть вкладку. */
   onStartNight: () => void;
+  /** Оборвать партию и вернуться в лобби. */
+  onEndGame: () => void;
 }) {
   const [held, setHeld] = useState(false);
   const open = held;
@@ -188,14 +191,28 @@ export default function RoleReveal({
         {/* Кто-то мог закрыть вкладку, не нажав «готов». Без этой кнопки
             партия ждала бы его возвращения вечно. */}
         {isHost && readyCount < total ? (
-          <button
-            type="button"
-            className="mf-btn mf-btn-ghost"
-            style={{ fontSize: 14 }}
-            onClick={onStartNight}
-          >
-            Начать ночь без остальных
-          </button>
+          <>
+            <button
+              type="button"
+              className="mf-btn mf-btn-ghost"
+              style={{ fontSize: 14 }}
+              onClick={onStartNight}
+            >
+              Начать ночь без остальных
+            </button>
+            {/* Второй выход: если ждать бессмысленно — оборвать партию и
+                вернуться в лобби, где отвалившихся можно просто убрать из
+                состава. Раньше отсюда завершить было нельзя вовсе: кнопка
+                жила только в оверлее паузы, а на этой фазе паузы нет. */}
+            <button
+              type="button"
+              className="mf-btn mf-btn-ghost"
+              style={{ fontSize: 14 }}
+              onClick={onEndGame}
+            >
+              Завершить партию и вернуться в лобби
+            </button>
+          </>
         ) : null}
       </div>
     </div>

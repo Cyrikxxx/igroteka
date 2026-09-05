@@ -13,6 +13,8 @@ import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
 import type { RoomSnapshot, RoundWordPayload } from "@alias/shared/domain";
 import type { MafiaView } from "@alias/shared/mafia";
+import { mafiaRoomKey } from "@alias/shared/redis-keys";
+import redis from "../src/redis";
 
 const WEB = "http://localhost:3000";
 const WS = process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001";
@@ -245,7 +247,35 @@ async function mafiaScenario() {
   const falling = ticks[ticks.length - 1].msLeft < ticks[0].msLeft;
   assert(falling, `остаток убывает (${ticks[0].msLeft} → ${ticks[ticks.length - 1].msLeft})`);
 
+  // Все закрыли вкладки. Раньше партия продолжала играть сама с собой:
+  // таймеры живут в процессе сервера, фазы сменялись без единого участника,
+  // и каждая смена продлевала комнате жизнь — так до бесконечности.
+  const hostToken = created.wsToken;
   socks.forEach((s) => s.disconnect());
+  await sleep(900);
+
+  // Состояние читаем прямо из Redis: ответ на mafia:hello собирается уже
+  // после того, как вернувшийся снимает эту паузу, и по нему её не увидеть.
+  const raw = await redis.get(mafiaRoomKey(code));
+  const stored = JSON.parse(raw ?? "{}") as {
+    phase?: string;
+    timerPaused?: boolean;
+    pausedByEmpty?: boolean;
+  };
+  assert(stored.timerPaused === true, "партия встала, когда комната опустела");
+  assert(stored.pausedByEmpty === true, "и помечена именно как «пауза из-за пустой комнаты»");
+  assert(stored.phase === "NIGHT", `фаза осталась прежней (${stored.phase})`);
+
+  const peek = await connect("/mafia", hostToken, code, "Хост");
+  await emitAck(peek, "mafia:hello", {});
+
+  // Первый вернувшийся снимает эту паузу сам — и время идёт с того же места.
+  const resumeTicks: { msLeft: number }[] = [];
+  peek.on("mafia:tick", (p: { msLeft: number }) => resumeTicks.push(p));
+  await sleep(1600);
+  assert(resumeTicks.length > 0, "с возвращением игрока партия продолжилась");
+
+  peek.disconnect();
 }
 
 async function main() {

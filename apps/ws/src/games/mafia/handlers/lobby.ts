@@ -20,6 +20,8 @@ import {
   maybeTallyEarly,
   restartToLobby,
   closeRoom,
+  pauseIfRoomEmpty,
+  resumeIfPausedByEmpty,
 } from "../engine";
 import { eliminateLeaver } from "../engine-core";
 import { checkWinner } from "../services/win";
@@ -196,6 +198,9 @@ export function registerMafiaLobbyHandlers(
     // ack отдаёт персональный view сразу; остальным — через mafia:state.
     ack?.(buildView(withHost ?? snap, userId));
     await broadcastStateNow(ns, roomCode);
+    // Вернулись в брошенную партию — снимаем паузу, поставленную из-за
+    // пустой комнаты, и продолжаем с того же остатка.
+    await resumeIfPausedByEmpty(ns, roomCode);
     // Если процесс ws перезапускался посреди партии, таймер фазы потерялся
     // вместе с памятью — заводим его заново по дедлайну из снапшота.
     await ensurePhaseTimer(ns, roomCode);
@@ -403,44 +408,6 @@ export function registerMafiaLobbyHandlers(
     await maybeTallyEarly(ns, roomCode);
   });
 
-  // ─── mafia:remove_player ─── host, во время партии
-  // Для тех, кто отвалился и не возвращается: без этого фаза каждый раз
-  // доходит до конца таймера, ожидая ход от закрытой вкладки.
-  socket.on("mafia:remove_player", async (payload, ack) => {
-    if (typeof payload?.userId !== "string") return ack?.({ error: "invalid_payload" });
-    const target = payload.userId;
-    if (target === userId) return ack?.({ error: "cant_remove_self" });
-
-    const current = await load(roomCode);
-    if (!current) return ack?.({ error: "room_not_found" });
-    if (current.hostId !== userId) return ack?.({ error: "forbidden" });
-    if (current.phase === "LOBBY" || current.phase === "FINISHED")
-      return ack?.({ error: "not_in_game" });
-
-    const victim = current.players.find((p) => p.userId === target);
-    if (!victim || !victim.alive) return ack?.({ error: "bad_target" });
-    // Выводить можно только тех, кто реально отвалился, — иначе это
-    // превратилось бы в кнопку «убить любого» в руках хоста.
-    if (victim.online) return ack?.({ error: "player_online" });
-
-    let winner: MafiaWinner | null = null;
-    const snap = await mutate(roomCode, (s) => {
-      eliminateLeaver(s, target);
-      transferHostIfNeeded(s, target);
-      winner = checkWinner(s);
-    });
-    if (!snap) return ack?.({ error: "room_not_found" });
-    ack?.({ ok: true });
-
-    if (winner) {
-      await finishGame(ns, roomCode, winner);
-      return;
-    }
-    scheduleStateBroadcast(ns, roomCode);
-    await maybeResolveNightEarly(ns, roomCode);
-    await maybeTallyEarly(ns, roomCode);
-  });
-
   // ─── mafia:close ─── host, в любой момент
   socket.on("mafia:close", async (_payload, ack) => {
     const current = await load(roomCode);
@@ -540,5 +507,8 @@ export function registerMafiaLobbyHandlers(
       });
     });
     if (snap) scheduleStateBroadcast(ns, roomCode);
+    // Ушёл последний — партию останавливаем, чтобы она не доигрывала сама
+    // себя в пустой комнате.
+    await pauseIfRoomEmpty(ns, roomCode);
   });
 }

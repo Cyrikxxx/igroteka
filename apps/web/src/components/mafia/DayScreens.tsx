@@ -3,7 +3,6 @@
 // Дневные экраны Мафии: утро, обсуждение, голосование, итог, последнее слово.
 // Презентационные — действия пробрасываются колбэками из play-страницы.
 
-import { useState } from "react";
 import {
   Sunrise,
   Sun,
@@ -12,7 +11,6 @@ import {
   Scale,
   Mic,
   Check,
-  UserMinus,
 } from "lucide-react";
 import type { MafiaView } from "@alias/shared/mafia";
 import Announce from "./Announce";
@@ -20,7 +18,6 @@ import PhaseHead, { fmtClock } from "./PhaseHead";
 import PlayerCard from "./PlayerCard";
 import MafiaAvatar from "./MafiaAvatar";
 import { RoleChip } from "./roleMeta";
-import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 // ─────────── Утро ───────────
 export function MorningScreen({ view }: { view: MafiaView }) {
@@ -70,17 +67,11 @@ export function DiscussionScreen({
   view,
   isHost,
   onEnd,
-  onRemovePlayer,
 }: {
   view: MafiaView;
   isHost: boolean;
   onEnd: () => void;
-  /** Вывести из партии того, кто отвалился и не возвращается. */
-  onRemovePlayer?: (userId: string) => void;
 }) {
-  // Вывод из партии необратим, поэтому спрашиваем — но своим окном, а не
-  // системным confirm.
-  const [removeAsk, setRemoveAsk] = useState<{ id: string; name: string } | null>(null);
   return (
     <>
       <PhaseHead icon={MessagesSquare} title={`День ${view.day} — обсуждение`} />
@@ -110,30 +101,6 @@ export function DiscussionScreen({
               {p.displayName}
             </span>
             {!p.alive && p.role ? <RoleChip role={p.role} /> : null}
-            {/* Обсуждение — единственная неспешная фаза, где у хоста есть
-                время разобраться с теми, кто выпал и не вернулся. */}
-            {isHost && p.alive && !p.online && onRemovePlayer ? (
-              <button
-                type="button"
-                onClick={() => setRemoveAsk({ id: p.userId, name: p.displayName })}
-                title="Вывести из партии"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                  background: "none",
-                  border: "1px solid var(--mf-border)",
-                  borderRadius: 999,
-                  padding: "4px 10px",
-                  color: "var(--mf-text-faint)",
-                  fontSize: 11.5,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                <UserMinus size={13} /> не в сети
-              </button>
-            ) : null}
           </div>
         ))}
       </div>
@@ -149,23 +116,6 @@ export function DiscussionScreen({
         )}
       </div>
 
-      <ConfirmDialog
-        open={removeAsk !== null}
-        variant="mafia"
-        title="Вывести из партии?"
-        text={
-          removeAsk
-            ? `${removeAsk.name} не в сети. Вернуть его в эту партию будет нельзя.`
-            : undefined
-        }
-        confirmLabel="Вывести"
-        onConfirm={() => {
-          const target = removeAsk;
-          setRemoveAsk(null);
-          if (target) onRemovePlayer?.(target.id);
-        }}
-        onCancel={() => setRemoveAsk(null)}
-      />
     </>
   );
 }

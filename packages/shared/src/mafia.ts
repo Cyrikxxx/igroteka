@@ -288,6 +288,12 @@ export interface MafiaSnapshot {
    * связи хоста прав не лишает. Снимается, когда он возвращается.
    */
   hostOfflineSince?: number | null;
+  /**
+   * Партия встала потому, что в комнате не осталось никого на связи, — а не
+   * потому, что хост нажал паузу. Различать обязательно: такую паузу снимает
+   * первый вернувшийся, хостскую — только сам хост.
+   */
+  pausedByEmpty?: boolean;
 }
 
 export function emptyNightState(): MafiaNightState {

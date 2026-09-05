@@ -301,6 +301,45 @@ export async function resumePhase(
   return true;
 }
 
+/**
+ * В комнате не осталось никого на связи — останавливаем партию.
+ *
+ * Без этого брошенная партия продолжала играть сама с собой: таймеры живут в
+ * процессе сервера, фазы сменялись без единого участника, ночью никто не
+ * погибал, голосование давало пустой результат — и круг повторялся
+ * бесконечно, каждый раз продлевая комнате жизнь.
+ */
+export async function pauseIfRoomEmpty(
+  ns: MafiaNamespace,
+  code: string,
+): Promise<void> {
+  const snap = await load(code);
+  if (!snap) return;
+  if (snap.timerPaused) return;
+  const anyoneOnline = [...snap.players, ...snap.spectators].some((p) => p.online);
+  if (anyoneOnline) return;
+  if (!(await pausePhase(ns, code))) return;
+  await mutate(code, (s) => {
+    s.pausedByEmpty = true;
+  });
+}
+
+/**
+ * Кто-то вернулся — снимаем паузу, поставленную из-за опустевшей комнаты.
+ * Хостскую паузу не трогаем: её снимает сам хост.
+ */
+export async function resumeIfPausedByEmpty(
+  ns: MafiaNamespace,
+  code: string,
+): Promise<void> {
+  const snap = await load(code);
+  if (!snap?.pausedByEmpty) return;
+  await mutate(code, (s) => {
+    s.pausedByEmpty = false;
+  });
+  await resumePhase(ns, code);
+}
+
 // ─────────── Новая партия тем же составом ───────────
 
 /**
