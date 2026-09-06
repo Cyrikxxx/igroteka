@@ -3,12 +3,14 @@
 // Форма настроек партии Мафии: состав, таймеры, правила. Контролируемая.
 // Используется на экране создания и в шите настроек лобби.
 
-import { Crown, Search, HeartPulse, Skull, Minus, Plus } from "lucide-react";
+import { useState } from "react";
+import { Crown, Search, HeartPulse, Skull, Minus, Plus, Mic, Volume2 } from "lucide-react";
 import {
   computeComposition,
   describeComposition,
   type MafiaSettings,
 } from "@alias/shared/mafia";
+import { primeSpeech, speak, russianVoiceState } from "@/lib/narrator";
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -158,6 +160,12 @@ function TimerRow({
   );
 }
 
+const NIGHT_STEP_OPTS = [
+  { label: "10 с", v: 10 },
+  { label: "15 с", v: 15 },
+  { label: "20 с", v: 20 },
+  { label: "30 с", v: 30 },
+];
 const NIGHT_OPTS = [
   { label: "30 с", v: 30 },
   { label: "60 с", v: 60 },
@@ -179,6 +187,37 @@ const LASTWORD_OPTS = [
   { label: "30 с", v: 30 },
   { label: "45 с", v: 45 },
 ];
+
+/**
+ * Проверка голоса. Она же разблокирует синтез: Safari на iOS молчит всю
+ * сессию, если первая реплика прозвучала не по нажатию человека.
+ */
+function VoiceCheck() {
+  const [missing, setMissing] = useState(false);
+  return (
+    <div style={{ padding: "11px 0", display: "flex", flexDirection: "column", gap: 8 }}>
+      <button
+        type="button"
+        className="mf-btn mf-btn-surface"
+        style={{ alignSelf: "flex-start", gap: 8 }}
+        onClick={() => {
+          primeSpeech();
+          speak("Город засыпает. Все закрывают глаза.");
+          // "unknown" — список голосов ещё не подгрузился; пугать рано.
+          setMissing(russianVoiceState() === "missing");
+        }}
+      >
+        <Volume2 size={16} /> Проверить голос
+      </button>
+      {missing ? (
+        <div className="mf-setting-sub" style={{ color: "var(--mf-gold)" }}>
+          На этом устройстве нет русского голоса. Реплики всё равно видны
+          текстом внизу экрана — играть можно, читая их вслух.
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export default function MafiaSettingsForm({
   value,
@@ -215,6 +254,32 @@ export default function MafiaSettingsForm({
 
   return (
     <div>
+      <SectionLabel>Режим</SectionLabel>
+      <ToggleRow
+        icon={Mic}
+        iconColor="var(--mf-gold)"
+        label="Ведущий"
+        sub="Игра за одним столом: ночь по шагам, сайт говорит, кому просыпаться"
+        on={s.narrator}
+        onChange={(v) => onChange({ ...s, narrator: v })}
+      />
+      {s.narrator ? (
+        <>
+          <TimerRow
+            label="Шаг ночи"
+            options={NIGHT_STEP_OPTS}
+            value={s.timers.nightStep}
+            onChange={setTimer("nightStep")}
+          />
+          <VoiceCheck />
+          <div className="mf-setting-sub" style={{ paddingBottom: 4 }}>
+            Вслух говорит устройство хоста. Любой может включить озвучку у себя
+            кнопкой динамика на игровом экране — но если включить её сразу на
+            нескольких телефонах, они заговорят вразнобой.
+          </div>
+        </>
+      ) : null}
+
       <SectionLabel>Состав</SectionLabel>
       <div className="mf-setting-row">
         <div className="mf-setting-label">Мафия</div>
@@ -296,7 +361,9 @@ export default function MafiaSettingsForm({
       </div>
 
       <SectionLabel>Таймеры</SectionLabel>
-      <TimerRow label="Ночь" options={NIGHT_OPTS} value={s.timers.night} onChange={setTimer("night")} />
+      {s.narrator ? null : (
+        <TimerRow label="Ночь" options={NIGHT_OPTS} value={s.timers.night} onChange={setTimer("night")} />
+      )}
       <TimerRow label="Обсуждение" options={DISCUSSION_OPTS} value={s.timers.discussion} onChange={setTimer("discussion")} />
       <TimerRow label="Голосование" options={VOTE_OPTS} value={s.timers.vote} onChange={setTimer("vote")} />
       <TimerRow label="Последнее слово" options={LASTWORD_OPTS} value={s.timers.lastWord} onChange={setTimer("lastWord")} />
