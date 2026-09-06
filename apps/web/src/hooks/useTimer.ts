@@ -41,11 +41,20 @@ export function useTimer({ initialTime, onTimeUp, autoStart = false }: UseTimerO
   /** Чтобы onTimeUp не выстрелил дважды на одном раунде. */
   const firedRef = useRef(false);
 
-  // Длительность раунда приезжает вместе с игрой, уже после первого рендера.
+  // Длительность раунда приезжает вместе с игрой, уже после первого рендера:
+  // сначала подставляется значение по умолчанию, потом настоящее.
+  //
+  // Остаток поправляем прямо при рендере, сравнив с прежней длительностью, —
+  // React разрешает такую подгонку и советует её вместо эффекта с setState:
+  // лишней перерисовки не будет. Эффекту остаются только ссылки.
+  const [seed, setSeed] = useState(initialTime);
+  if (seed !== initialTime) {
+    setSeed(initialTime);
+    setTimeLeft(initialTime);
+  }
   useEffect(() => {
     countdownRef.current = createCountdown(initialTime);
     firedRef.current = false;
-    setTimeLeft(initialTime);
   }, [initialTime]);
 
   useEffect(() => {

@@ -27,20 +27,9 @@ interface RoomSettingsModalProps {
 }
 
 export function RoomSettingsModal({ open, settings, onClose, onSave }: RoomSettingsModalProps) {
-  const [roundTime, setRoundTime] = useState(settings.roundTime);
-  const [winScore, setWinScore] = useState(settings.winScore);
-  const [penaltySkip, setPenaltySkip] = useState(settings.penaltySkip);
-  const [categoryIds, setCategoryIds] = useState<number[]>(settings.categoryIds);
+  // Каталог держим снаружи формы: иначе он грузился бы заново при каждом
+  // открытии окна.
   const [catalog, setCatalog] = useState<CatalogFromAPI | null>(null);
-
-  // Сбрасываем форму к текущим настройкам при каждом открытии.
-  useEffect(() => {
-    if (!open) return;
-    setRoundTime(settings.roundTime);
-    setWinScore(settings.winScore);
-    setPenaltySkip(settings.penaltySkip);
-    setCategoryIds(settings.categoryIds);
-  }, [open, settings]);
 
   useEffect(() => {
     if (open && !catalog) {
@@ -51,13 +40,46 @@ export function RoomSettingsModal({ open, settings, onClose, onSave }: RoomSetti
     }
   }, [open, catalog]);
 
+  return (
+    <Modal isOpen={open} title="Настройки комнаты" onClose={onClose} maxWidth={640}>
+      {/* Форма перемонтируется на каждое открытие — так она и сбрасывается к
+          текущим настройкам, без подгонки состояния эффектом. */}
+      {open ? (
+        <SettingsForm
+          key={`${settings.roundTime}|${settings.winScore}|${settings.penaltySkip}|${settings.categoryIds.join(",")}`}
+          settings={settings}
+          catalog={catalog}
+          onClose={onClose}
+          onSave={onSave}
+        />
+      ) : null}
+    </Modal>
+  );
+}
+
+function SettingsForm({
+  settings,
+  catalog,
+  onClose,
+  onSave,
+}: {
+  settings: RoomSettings;
+  catalog: CatalogFromAPI | null;
+  onClose: () => void;
+  onSave: (next: RoomSettings) => void;
+}) {
+  const [roundTime, setRoundTime] = useState(settings.roundTime);
+  const [winScore, setWinScore] = useState(settings.winScore);
+  const [penaltySkip, setPenaltySkip] = useState(settings.penaltySkip);
+  const [categoryIds, setCategoryIds] = useState<number[]>(settings.categoryIds);
+
   const save = () => {
     if (categoryIds.length === 0) return;
     onSave({ roundTime, winScore, penaltySkip, categoryIds });
   };
 
   return (
-    <Modal isOpen={open} title="Настройки комнаты" onClose={onClose} maxWidth={640}>
+    <>
       <div className="stack" style={{ gap: 18, maxHeight: "72vh", overflowY: "auto", paddingRight: 2 }}>
         <div className="set-row">
           <div className="set-label">
@@ -113,7 +135,7 @@ export function RoomSettingsModal({ open, settings, onClose, onSave }: RoomSetti
           Сохранить
         </button>
       </div>
-    </Modal>
+    </>
   );
 }
 
