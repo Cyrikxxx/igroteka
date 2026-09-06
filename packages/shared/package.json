@@ -12,6 +12,7 @@
     "./domain": "./src/domain.ts",
     "./load-env": "./src/load-env.ts",
     "./mafia": "./src/mafia.ts",
+    "./mafia-narration": "./src/mafia-narration.ts",
     "./token": "./src/token.ts",
     "./redis-keys": "./src/redis-keys.ts",
     "./snapshot-builders": "./src/snapshot-builders.ts",

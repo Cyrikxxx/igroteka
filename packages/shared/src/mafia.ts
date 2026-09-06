@@ -45,11 +45,56 @@ export type MafiaDeathCause = "mafia" | "maniac" | "vote" | "left";
 /** Ночные действия, которые шлёт клиент. */
 export type MafiaNightAction = "mafia" | "doctor" | "sheriff" | "maniac";
 
+// ─────────── Шаги ночи (режим ведущего) ───────────
+
+/**
+ * Шаг ночи. "sleep" — общая команда закрыть глаза, дальше роли по очереди.
+ * План строится из НАСТРОЕК, а не из живых: мёртвую роль ведущий зовёт так
+ * же, как живую, иначе её смерть была бы слышна первой же ночью.
+ */
+export type MafiaNightStepRole = "sleep" | "mafia" | "doctor" | "sheriff" | "maniac";
+
+/**
+ * Стадия шага: announce — говорит ведущий, ход ещё закрыт; act — окно хода;
+ * gap — тишина после хода, за которую сходивший закрывает глаза.
+ */
+export type MafiaNightStage = "announce" | "act" | "gap";
+
+export interface MafiaNightStep {
+  role: MafiaNightStepRole;
+  stage: MafiaNightStage;
+  /** Позиция в плане ночи. */
+  index: number;
+  /**
+   * Длина окна хода, мс. У мёртвой роли — случайная: шаг, проскочивший
+   * мгновенно, выдал бы, что роли больше нет. Решается один раз при входе в
+   * шаг и хранится здесь, чтобы перезапуск ws не переигрывал случайность.
+   */
+  actMs: number;
+}
+
+/** «Город засыпает, все закрывают глаза» — перед первым шагом. */
+export const NIGHT_SLEEP_MS = 6000;
+/** Ведущий называет роль; ход в это время ещё запрещён. */
+export const NIGHT_ANNOUNCE_MS = 4500;
+/** Тишина после хода: сходивший успевает закрыть глаза. */
+export const NIGHT_GAP_MS = 3000;
+/** Шерифу дольше — он ещё читает вердикт проверки. */
+export const NIGHT_SHERIFF_GAP_MS = 5000;
+/** Нижняя граница «раздумья» мёртвой роли. */
+export const NIGHT_IDLE_MIN_MS = 5000;
+
 // ─────────── Настройки ───────────
 
 export interface MafiaSettings {
   /** "auto" — состав по числу игроков; число — фиксированное кол-во мафий. */
   mafiaCount: number | "auto";
+  /**
+   * Игра за одним столом: ночь идёт по шагам, роли просыпаются по очереди, и
+   * сайт проговаривает вслух, кому просыпаться. Без него ночь как прежде —
+   * одна общая фаза, все ходят одновременно каждый на своём телефоне.
+   */
+  narrator: boolean;
   roles: {
     don: boolean;
     sheriff: boolean;
@@ -62,6 +107,8 @@ export interface MafiaSettings {
     discussion: number;
     vote: number;
     lastWord: number;
+    /** Сколько длится ход одной роли в режиме ведущего. */
+    nightStep: number;
   };
   rules: {
     firstDayNoVote: boolean;
@@ -77,8 +124,9 @@ export const MAX_MAFIA_PLAYERS = 16;
 
 export const DEFAULT_MAFIA_SETTINGS: MafiaSettings = {
   mafiaCount: "auto",
+  narrator: false,
   roles: { don: true, sheriff: true, doctor: true, maniac: false },
-  timers: { night: 60, discussion: 120, vote: 45, lastWord: 30 },
+  timers: { night: 60, discussion: 120, vote: 45, lastWord: 30, nightStep: 20 },
   rules: {
     firstDayNoVote: true,
     revealRoles: true,
@@ -87,6 +135,66 @@ export const DEFAULT_MAFIA_SETTINGS: MafiaSettings = {
     spectatorsSeeRoles: true,
   },
 };
+
+/**
+ * Привести присланные настройки к полным и допустимым.
+ *
+ * Настройки приходят с клиента и лежат в Redis/Postgres как JSON, поэтому у
+ * комнат, созданных раньше, новых полей попросту нет: недостающее берётся из
+ * `base` (по умолчанию — дефолты), лишнее игнорируется, числа клампятся.
+ * Одна функция на оба входа: создание комнаты по REST и mafia:settings в ws.
+ */
+export function normalizeMafiaSettings(
+  input: unknown,
+  base: MafiaSettings = DEFAULT_MAFIA_SETTINGS,
+): MafiaSettings {
+  const out: MafiaSettings = {
+    mafiaCount: base.mafiaCount,
+    narrator: base.narrator ?? false,
+    roles: { ...base.roles },
+    timers: { ...DEFAULT_MAFIA_SETTINGS.timers, ...base.timers },
+    rules: { ...base.rules },
+  };
+  if (!input || typeof input !== "object") return out;
+  const x = input as Record<string, unknown>;
+
+  if (x.mafiaCount === "auto") out.mafiaCount = "auto";
+  else if (typeof x.mafiaCount === "number")
+    out.mafiaCount = Math.max(1, Math.min(8, Math.round(x.mafiaCount)));
+
+  if (typeof x.narrator === "boolean") out.narrator = x.narrator;
+
+  if (x.roles && typeof x.roles === "object") {
+    const r = x.roles as Record<string, unknown>;
+    for (const k of ["don", "sheriff", "doctor", "maniac"] as const)
+      if (typeof r[k] === "boolean") out.roles[k] = r[k] as boolean;
+  }
+
+  if (x.timers && typeof x.timers === "object") {
+    const t = x.timers as Record<string, unknown>;
+    const clamp = (v: unknown, lo: number, hi: number, d: number) =>
+      typeof v === "number" ? Math.max(lo, Math.min(hi, Math.round(v))) : d;
+    out.timers.night = clamp(t.night, 15, 180, out.timers.night);
+    out.timers.discussion = clamp(t.discussion, 30, 600, out.timers.discussion);
+    out.timers.vote = clamp(t.vote, 15, 120, out.timers.vote);
+    out.timers.lastWord = clamp(t.lastWord, 10, 90, out.timers.lastWord);
+    out.timers.nightStep = clamp(t.nightStep, 8, 60, out.timers.nightStep);
+  }
+
+  if (x.rules && typeof x.rules === "object") {
+    const ru = x.rules as Record<string, unknown>;
+    for (const k of [
+      "firstDayNoVote",
+      "revealRoles",
+      "openVotes",
+      "donHiddenFromSheriff",
+      "spectatorsSeeRoles",
+    ] as const)
+      if (typeof ru[k] === "boolean") out.rules[k] = ru[k] as boolean;
+  }
+
+  return out;
+}
 
 /** Счётчики ролей для данного числа игроков и настроек. */
 export interface MafiaComposition {
@@ -186,6 +294,10 @@ export interface MafiaNightState {
   maniacTarget?: string;
   /** userId ролей, зафиксировавших ход этой ночью. */
   acted: string[];
+  /** Порядок шагов этой ночи. Только в режиме ведущего. */
+  plan?: MafiaNightStepRole[];
+  /** Где ночь сейчас. Только в режиме ведущего. */
+  step?: MafiaNightStep;
 }
 
 export interface MafiaVoteState {
@@ -294,6 +406,12 @@ export interface MafiaSnapshot {
    * первый вернувшийся, хостскую — только сам хост.
    */
   pausedByEmpty?: boolean;
+  /**
+   * Счётчик повторов реплики. Клиент произносит текст, когда меняется ключ, а
+   * после паузы роль надо вызвать теми же словами — ключ совпал бы, и все
+   * промолчали бы. Снятие паузы поднимает счётчик, и реплика звучит снова.
+   */
+  narrationEpoch?: number;
 }
 
 export function emptyNightState(): MafiaNightState {
@@ -405,6 +523,22 @@ export interface MafiaView {
   banned?: { userId: string; displayName: string }[];
   /** Когда хост пропал из сети — по нему рисуется «взять комнату на себя». */
   hostOfflineSince?: number | null;
+  /**
+   * Где идёт ночь в режиме ведущего. Сам шаг виден всем — его всё равно
+   * произносят вслух; `yourTurn` считает сервер, по нему клиент решает,
+   * гасить экран или показывать сетку.
+   */
+  night?: {
+    step: MafiaNightStepRole;
+    stage: MafiaNightStage;
+    yourTurn: boolean;
+  };
+  /**
+   * Что должен произнести ведущий. Текст сочиняет СЕРВЕР и одинаковый для
+   * всех: собери его клиент из персонального вида — устройство мёртвого
+   * хоста, которому видны все роли, зачитало бы их вслух на весь стол.
+   */
+  narration?: { key: string; text: string };
 }
 
 // ─────────── Приватные/широковещательные события ───────────
