@@ -111,21 +111,24 @@ export default function LobbyPage() {
     router.replace("/alias");
   }, [closedReason, rawCode, router]);
 
-  // Авто-редирект на игровой экран при старте игры.
+  // Авто-редирект на игровой экран при старте игры. Эффекту нужна только
+  // фаза — берём её отдельно, чтобы не срабатывать на каждое обновление
+  // комнаты.
+  const phase = snapshot?.phase;
+  const myCode = creds?.code;
   useEffect(() => {
-    if (!snapshot || !creds) return;
+    if (!phase || !myCode) return;
     if (
-      snapshot.phase === "PRE_ROUND" ||
-      snapshot.phase === "ROUND_ACTIVE" ||
-      snapshot.phase === "ROUND_REVIEW" ||
-      snapshot.phase === "BETWEEN_ROUNDS"
-    ) {
-      router.replace(`/alias/room/${creds.code}/play`);
-    } else if (snapshot.phase === "FINISHED") {
+      phase === "PRE_ROUND" ||
+      phase === "ROUND_ACTIVE" ||
+      phase === "ROUND_REVIEW" ||
+      phase === "BETWEEN_ROUNDS" ||
       // Финал живёт внутри комнаты: оттуда хост может собрать всех заново.
-      router.replace(`/alias/room/${creds.code}/play`);
+      phase === "FINISHED"
+    ) {
+      router.replace(`/alias/room/${myCode}/play`);
     }
-  }, [snapshot?.phase, creds, router]);
+  }, [phase, myCode, router]);
 
   if (!creds) {
     return (

@@ -166,9 +166,11 @@ export function useMafiaRoom(
     };
   }, [opts?.wsUrl, opts?.token, opts?.code, opts?.name, opts]);
 
-  // Локальный обратный отсчёт между серверными тиками/снапшотами.
+  // Локальный обратный отсчёт между серверными тиками/снапшотами. Зависит
+  // ровно от одного: идёт таймер или нет. null — таймера нет вовсе.
+  const timerPaused = timer ? timer.paused : null;
   useEffect(() => {
-    if (!timer || timer.paused) return;
+    if (timerPaused !== false) return;
     const id = setInterval(() => {
       setTimer((prev) =>
         prev && !prev.paused
@@ -177,7 +179,7 @@ export function useMafiaRoom(
       );
     }, 250);
     return () => clearInterval(id);
-  }, [timer?.paused, timer === null]);
+  }, [timerPaused]);
 
   useEffect(() => {
     return () => {

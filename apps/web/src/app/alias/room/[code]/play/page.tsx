@@ -84,13 +84,13 @@ export default function PlayPage() {
     router.replace("/alias");
   }, [closedReason, rawCode, router]);
 
-  // Редирект назад в лобби, если игра ещё не началась
+  // Редирект назад в лобби, если игра ещё не началась. Эффекту нужна только
+  // фаза — берём её отдельно.
+  const phase = snapshot?.phase;
+  const myCode = creds?.code;
   useEffect(() => {
-    if (!snapshot || !creds) return;
-    if (snapshot.phase === "LOBBY") {
-      router.replace(`/alias/room/${creds.code}`);
-    }
-  }, [snapshot?.phase, creds, router]);
+    if (phase === "LOBBY" && myCode) router.replace(`/alias/room/${myCode}`);
+  }, [phase, myCode, router]);
 
   // ВНИМАНИЕ: все хуки должны быть до любых ранних return.
   const [pauseModalOpen, setPauseModalOpen] = useState(false);
