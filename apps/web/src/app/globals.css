@@ -1369,6 +1369,11 @@ html { scrollbar-color: var(--bg-4) transparent; }
      убраны: поле узкое, и они съедают половину. */
   .mf-num { font-family: var(--font-mono); font-size: 13px; font-weight: 700; width: 88px; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--mf-crimson); background: transparent; color: var(--mf-text); outline: none; -moz-appearance: textfield; appearance: textfield; }
   .mf-num:focus { box-shadow: var(--sh-glow-crimson); }
+
+  /* Выбор голоса. Список длинный и с системными названиями, поэтому не чип,
+     а обычный select — но в той же оправе. */
+  .mf-select { font-size: 13.5px; font-weight: 700; max-width: 100%; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--mf-border); background: var(--mf-surface-2); color: var(--mf-text); cursor: pointer; outline: none; }
+  .mf-select:focus { border-color: var(--mf-crimson); }
   .mf-num::-webkit-outer-spin-button, .mf-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 }
 

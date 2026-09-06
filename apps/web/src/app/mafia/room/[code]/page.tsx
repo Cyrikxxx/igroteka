@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Check, Copy, Crown, DoorClosed, DoorOpen, Link2, LogOut, Pencil, Settings2, Unlock, VenetianMask, X } from "lucide-react";
+import { Check, Copy, Crown, DoorClosed, DoorOpen, Link2, LogOut, Pencil, Settings2, Unlock, VenetianMask, Volume2, VolumeX, X } from "lucide-react";
 import {
   MIN_MAFIA_PLAYERS,
   MAX_MAFIA_PLAYERS,
@@ -20,6 +20,7 @@ import QrCode from "@/components/common/QrCode";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
 import { useHostClaim } from "@/hooks/useHostClaim";
+import { useVoicePref } from "@/hooks/useVoicePref";
 import { useHydrated } from "@/hooks/useHydrated";
 import { loadRoomCreds, clearRoomCreds, saveDisplayName, type RoomCredentials } from "@/lib/room-session";
 import { resumeRoom } from "@/lib/room-resume";
@@ -65,6 +66,9 @@ export default function MafiaLobbyPage() {
   // Вызываем до ранних return'ов: порядок хуков не должен зависеть от того,
   // загрузились ли уже креды и состояние комнаты.
   const claim = useHostClaim(view?.hostOfflineSince, view?.you.isHost ?? false);
+  // Озвучку выбирают до партии: за столом надо решить, какой телефон говорит,
+  // пока все ещё смотрят в экран. В игре останется только вкл/выкл.
+  const voice = useVoicePref(view?.you.isHost ?? false);
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -433,6 +437,46 @@ export default function MafiaLobbyPage() {
               <span>{count} игрок(ов) — состав появится от <b style={{ color: "var(--mf-text)" }}>{MIN_MAFIA_PLAYERS} игроков</b></span>
             )}
           </div>
+        ) : null}
+        {/* Кто озвучивает. Настройка устройства, поэтому она есть у всех, а не
+            только у хоста: телефон-ведущий можно положить в центр стола. */}
+        {settings?.narrator ? (
+          <button
+            type="button"
+            onClick={() => voice.toggle("Озвучка включена.")}
+            aria-pressed={voice.on}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              width: "100%",
+              textAlign: "left",
+              font: "inherit",
+              background: voice.on ? "rgba(225,29,72,0.09)" : "var(--mf-surface-2)",
+              border: `1px solid ${voice.on ? "rgba(225,29,72,0.32)" : "var(--mf-border)"}`,
+              borderRadius: 14,
+              padding: "11px 14px",
+              color: "var(--mf-text-dim)",
+              cursor: "pointer",
+            }}
+          >
+            {voice.on ? (
+              <Volume2 size={18} color="var(--mf-crimson)" style={{ flexShrink: 0 }} />
+            ) : (
+              <VolumeX size={18} style={{ flexShrink: 0 }} />
+            )}
+            <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, lineHeight: 1.35 }}>
+              {voice.on
+                ? "Ведущий говорит с этого устройства"
+                : "Ведущий здесь молчит"}
+            </span>
+            <span
+              className="mf-mono"
+              style={{ fontSize: 12.5, fontWeight: 700, color: "var(--mf-text-faint)" }}
+            >
+              {voice.on ? "выключить" : "включить"}
+            </span>
+          </button>
         ) : null}
         {isHost ? (
           <div style={{ display: "flex", gap: 10 }}>

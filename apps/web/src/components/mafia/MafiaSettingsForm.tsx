@@ -3,7 +3,7 @@
 // Форма настроек партии Мафии: состав, таймеры, правила. Контролируемая.
 // Используется на экране создания и в шите настроек лобби.
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Crown, Search, HeartPulse, Skull, Minus, Plus, Mic, Volume2 } from "lucide-react";
 import {
   computeComposition,
@@ -11,7 +11,10 @@ import {
   MAFIA_TIMER_LIMITS,
   type MafiaSettings,
 } from "@alias/shared/mafia";
-import { primeSpeech, speak, russianVoiceState } from "@/lib/narrator";
+import { primeSpeech, speak, VOICE_SAMPLE } from "@/lib/narrator";
+import { loadVoiceURI, saveVoiceURI } from "@/lib/voice-prefs";
+import { useVoices } from "@/hooks/useVoices";
+import { useHydrated } from "@/hooks/useHydrated";
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -244,32 +247,72 @@ const LASTWORD_OPTS = [
 ];
 
 /**
- * Проверка голоса. Она же разблокирует синтез: Safari на iOS молчит всю
- * сессию, если первая реплика прозвучала не по нажатию человека.
+ * Выбор голоса ведущего. Голоса ставит операционная система, поэтому список
+ * у каждого устройства свой, и выбор запоминается в нём же, а не в комнате.
+ *
+ * Прослушивание заодно разблокирует синтез: Safari на iOS молчит всю сессию,
+ * если первый звук прозвучал не по нажатию человека.
  */
-function VoiceCheck() {
-  const [missing, setMissing] = useState(false);
+function VoiceSettings() {
+  const voices = useVoices();
+  const hydrated = useHydrated();
+  const stored = useMemo(() => (hydrated ? loadVoiceURI() : null), [hydrated]);
+  const [picked, setPicked] = useState<string | null>(null);
+  const current = picked ?? stored ?? voices[0]?.voiceURI ?? "";
+
+  const listen = () => {
+    primeSpeech();
+    speak(VOICE_SAMPLE);
+  };
+
   return (
-    <div style={{ padding: "11px 0", display: "flex", flexDirection: "column", gap: 8 }}>
-      <button
-        type="button"
-        className="mf-btn mf-btn-surface"
-        style={{ alignSelf: "flex-start", gap: 8 }}
-        onClick={() => {
-          primeSpeech();
-          speak("Город засыпает. Все закрывают глаза.");
-          // "unknown" — список голосов ещё не подгрузился; пугать рано.
-          setMissing(russianVoiceState() === "missing");
-        }}
-      >
-        <Volume2 size={16} /> Проверить голос
-      </button>
-      {missing ? (
-        <div className="mf-setting-sub" style={{ color: "var(--mf-gold)" }}>
-          На этом устройстве нет русского голоса. Реплики всё равно видны
-          текстом внизу экрана — играть можно, читая их вслух.
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        padding: "11px 0",
+        borderBottom: "1px solid var(--mf-border)",
+      }}
+    >
+      <div className="mf-setting-label">Голос ведущего</div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        {voices.length > 0 ? (
+          <select
+            className="mf-select"
+            aria-label="Голос ведущего"
+            value={current}
+            onChange={(e) => {
+              // Сохраняем ДО прослушивания: синтез берёт голос из хранилища.
+              saveVoiceURI(e.target.value);
+              setPicked(e.target.value);
+              listen();
+            }}
+          >
+            {voices.map((v) => (
+              <option key={v.voiceURI} value={v.voiceURI}>
+                {v.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
+        <button type="button" className="mf-preset" onClick={listen}>
+          <Volume2 size={14} style={{ verticalAlign: "-2px", marginRight: 6 }} />
+          Послушать
+        </button>
+      </div>
+      {voices.length > 0 ? (
+        <div className="mf-setting-sub">
+          Голоса берутся из устройства — на другом телефоне список будет свой.
+          Звучит тот телефон, у которого включена озвучка.
         </div>
-      ) : null}
+      ) : (
+        <div className="mf-setting-sub" style={{ color: "var(--mf-gold)" }}>
+          Русского голоса пока не видно. Нажми «Послушать» — часть браузеров
+          отдаёт список только после этого. Если голоса нет совсем, реплики
+          останутся текстом внизу экрана, и играть можно, читая их вслух.
+        </div>
+      )}
     </div>
   );
 }
@@ -327,11 +370,11 @@ export default function MafiaSettingsForm({
             onChange={setTimer("nightStep")}
             limits={MAFIA_TIMER_LIMITS.nightStep}
           />
-          <VoiceCheck />
+          <VoiceSettings />
           <div className="mf-setting-sub" style={{ paddingBottom: 4 }}>
             Вслух говорит устройство хоста. Любой может включить озвучку у себя
-            кнопкой динамика на игровом экране — но если включить её сразу на
-            нескольких телефонах, они заговорят вразнобой.
+            переключателем в лобби или кнопкой динамика в игре — но если
+            включить её сразу на нескольких телефонах, они заговорят вразнобой.
           </div>
         </>
       ) : null}

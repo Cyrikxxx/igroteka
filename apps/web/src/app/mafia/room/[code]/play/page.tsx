@@ -30,9 +30,8 @@ import {
 } from "@/components/mafia/Overlays";
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
 import { useNarrator } from "@/hooks/useNarrator";
+import { useVoicePref } from "@/hooks/useVoicePref";
 import { useHydrated } from "@/hooks/useHydrated";
-import { primeSpeech } from "@/lib/narrator";
-import { loadVoicePref, saveVoicePref, voiceEnabledFor, type VoicePref } from "@/lib/voice-prefs";
 import { loadRoomCreds, clearRoomCreds, type RoomCredentials } from "@/lib/room-session";
 import { resumeRoom } from "@/lib/room-resume";
 import { setRoomNotice } from "@/lib/room-notice";
@@ -94,23 +93,15 @@ export default function MafiaPlayPage() {
   );
 
   // Озвучка — настройка ЭТОГО устройства: за столом восемь телефонов, и хором
-  // они говорить не должны. Кто ничего не выбирал — молчит, кроме хоста.
-  const storedVoice = useMemo(() => (hydrated ? loadVoicePref() : null), [hydrated]);
-  const [voiceChoice, setVoiceChoice] = useState<VoicePref | null>(null);
+  // они говорить не должны. В игре её можно только включить и выключить, сам
+  // голос выбирается в лобби, в настройках хоста.
   const narratorMode = Boolean(view?.settings.narrator);
-  const voiceOn = voiceEnabledFor(voiceChoice ?? storedVoice, view?.you.isHost ?? false);
+  const voice = useVoicePref(view?.you.isHost ?? false);
   useNarrator({
     narration: view?.narration,
-    enabled: narratorMode && voiceOn,
+    enabled: narratorMode && voice.on,
     paused: view?.paused,
   });
-  const toggleVoice = () => {
-    const next: VoicePref = voiceOn ? "off" : "on";
-    // Клик — единственный момент, когда iOS разрешает разбудить синтез.
-    if (next === "on") primeSpeech();
-    saveVoicePref(next);
-    setVoiceChoice(next);
-  };
 
   const hostToast = useHostToast(view?.you.isHost ?? false);
   // Экран «ты убит» показываем один раз, пока игрок сам не уйдёт в зрители.
@@ -356,8 +347,8 @@ export default function MafiaPlayPage() {
       {narratorMode ? (
         <button
           type="button"
-          aria-label={voiceOn ? "Выключить озвучку на этом устройстве" : "Озвучивать на этом устройстве"}
-          onClick={toggleVoice}
+          aria-label={voice.on ? "Выключить озвучку на этом устройстве" : "Озвучивать на этом устройстве"}
+          onClick={() => voice.toggle()}
           style={{
             position: "fixed",
             right: 16,
@@ -369,13 +360,13 @@ export default function MafiaPlayPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: voiceOn ? "var(--mf-crimson)" : "var(--mf-surface-2)",
+            background: voice.on ? "var(--mf-crimson)" : "var(--mf-surface-2)",
             border: "1px solid var(--mf-border)",
-            color: voiceOn ? "#fff" : "var(--mf-text-dim)",
+            color: voice.on ? "#fff" : "var(--mf-text-dim)",
             cursor: "pointer",
           }}
         >
-          {voiceOn ? <Volume2 size={19} /> : <VolumeX size={19} />}
+          {voice.on ? <Volume2 size={19} /> : <VolumeX size={19} />}
         </button>
       ) : null}
 

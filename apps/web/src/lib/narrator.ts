@@ -6,6 +6,8 @@
 // записью их не покрыть. Синтез есть не везде и звучит по-разному, поэтому
 // всё наружу отдаётся честно — есть ли русский голос вообще.
 
+import { loadVoiceURI } from "./voice-prefs";
+
 /** Разблокирован ли синтез. На iOS первый speak обязан идти из клика. */
 let primed = false;
 
@@ -26,16 +28,46 @@ export function isSpeechSupported(): boolean {
 export function russianVoiceState(): "ready" | "missing" | "unknown" {
   const s = synth();
   if (!s) return "missing";
-  const voices = s.getVoices();
-  if (voices.length === 0) return "unknown";
-  return voices.some((v) => v.lang.toLowerCase().startsWith("ru")) ? "ready" : "missing";
+  if (s.getVoices().length === 0) return "unknown";
+  return russianVoices().length > 0 ? "ready" : "missing";
 }
 
-function pickVoice(): SpeechSynthesisVoice | null {
+/** Фраза для проверки голоса — та же, с которой начинается ночь. */
+export const VOICE_SAMPLE = "Город засыпает. Все закрывают глаза.";
+
+/**
+ * Русские голоса устройства. Ссылка на массив меняется, только когда меняется
+ * сам список: `useSyncExternalStore` сравнивает снимки по ссылке, и новый
+ * массив на каждый вызов зациклил бы рендер.
+ */
+let cachedVoices: SpeechSynthesisVoice[] = [];
+let cachedKey = "";
+
+export function russianVoices(): SpeechSynthesisVoice[] {
   const s = synth();
-  if (!s) return null;
-  const voices = s.getVoices();
-  return voices.find((v) => v.lang.toLowerCase().startsWith("ru")) ?? null;
+  const ru = (s?.getVoices() ?? []).filter((v) => v.lang.toLowerCase().startsWith("ru"));
+  const key = ru.map((v) => v.voiceURI).join("|");
+  if (key !== cachedKey) {
+    cachedKey = key;
+    cachedVoices = ru;
+  }
+  return cachedVoices;
+}
+
+/** Список голосов в Chrome приезжает уже после загрузки страницы. */
+export function subscribeVoices(onChange: () => void): () => void {
+  const s = synth();
+  if (!s) return () => {};
+  s.addEventListener("voiceschanged", onChange);
+  return () => s.removeEventListener("voiceschanged", onChange);
+}
+
+/** Выбранный человеком голос, иначе первый русский. */
+function pickVoice(): SpeechSynthesisVoice | null {
+  const ru = russianVoices();
+  if (ru.length === 0) return null;
+  const wanted = loadVoiceURI();
+  return ru.find((v) => v.voiceURI === wanted) ?? ru[0];
 }
 
 /**
