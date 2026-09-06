@@ -220,6 +220,7 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
     // Журнал раскрывает роли и проверки шерифа — живому игроку нельзя.
     events: seeAll ? (snap.events ?? []) : undefined,
     timer,
+    paused: Boolean(snap.timerPaused),
     night: step ? { step: step.role, stage: step.stage, yourTurn } : undefined,
     // Реплику ведущего строим из снапшота: она одинакова для всех и содержит
     // только публичные факты. Собери её клиент из своего вида — устройство

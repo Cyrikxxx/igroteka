@@ -63,6 +63,51 @@ function chip(text: string, bg: string, color: string): ReactNode {
   );
 }
 
+/**
+ * Экран того, кто сейчас спит. В режиме ведущего его видят все, кроме
+ * вызванной роли: ни сетки, ни таймера, ни намёка на то, чей идёт шаг.
+ */
+export function NightHush({ day }: { day: number }) {
+  return (
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 18,
+        padding: "0 32px",
+        textAlign: "center",
+      }}
+    >
+      <div
+        style={{
+          width: 96,
+          height: 96,
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid var(--mf-border)",
+          color: "var(--mf-text-dim)",
+        }}
+      >
+        <MoonStar size={44} strokeWidth={1.4} />
+      </div>
+      <div style={{ fontWeight: 800, fontSize: 32, letterSpacing: "-0.02em" }}>
+        Глаза закрыты
+      </div>
+      <div style={{ fontWeight: 600, fontSize: 15.5, color: "var(--mf-text-dim)", lineHeight: 1.5 }}>
+        Ночь {day}. Слушай ведущего —
+        <br />
+        он назовёт, когда просыпаться.
+      </div>
+    </div>
+  );
+}
+
 export default function NightScreen({
   view,
   onAction,
@@ -79,6 +124,30 @@ export default function NightScreen({
   // Состояние проверки шерифа. Хуки — до всех ранних возвратов.
   const [pending, setPending] = useState<{ userId: string; name: string; avatarIdx: number } | null>(null);
   const [verdictClosed, setVerdictClosed] = useState<string | null>(null);
+
+  // ─── Режим ведущего ───
+  // Ночь идёт по шагам: сетка живая только в своё окно хода. Пока ведущий
+  // называет роль и пока идёт тишина после хода — тапать нельзя, сервер
+  // такой ход всё равно отклонит.
+  const night = view.night;
+  const locked = Boolean(night && night.stage !== "act");
+  const hint = (prompt: string): string => {
+    if (night?.stage === "announce") return "Слушай ведущего…";
+    if (night?.stage === "gap") return "Ход принят. Закрывай глаза";
+    if (acted) return night ? "Ход принят" : "Ход принят. Ждём остальных…";
+    return prompt;
+  };
+
+  // Зовут не тебя — темнота. Ни таймера, ни имён: по ним и вычисляют, кто
+  // ходит и жива ли роль.
+  if (night && !night.yourTurn) {
+    return (
+      <>
+        <PhaseHead icon={Moon} title={`Ночь ${view.day}`} />
+        <NightHush day={view.day} />
+      </>
+    );
+  }
 
   // ─── Мирный (или без ночной роли) ───
   if (!role || role === "civilian") {
@@ -166,7 +235,7 @@ export default function NightScreen({
                 avatarIdx={p.avatarIdx}
                 me={isMe}
                 picked={picked}
-                disabled={ally}
+                disabled={ally || locked}
                 onClick={() => onAction("mafia", picked ? null : p.userId)}
                 subline={
                   isPartner ? (
@@ -182,7 +251,7 @@ export default function NightScreen({
           })}
         </div>
         <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--mf-crimson)" : undefined}>
-          {acted ? "Ход принят. Ждём остальных…" : "Тапни по игроку, чтобы проголосовать"}
+          {hint("Тапни по игроку, чтобы проголосовать")}
         </StatusBar>
       </>
     );
@@ -215,7 +284,7 @@ export default function NightScreen({
                 avatarIdx={p.avatarIdx}
                 me={isMe}
                 picked={picked}
-                disabled={disabled}
+                disabled={disabled || locked}
                 onClick={() => onAction("doctor", picked ? null : p.userId)}
                 subline={
                   prev ? (
@@ -229,7 +298,7 @@ export default function NightScreen({
           })}
         </div>
         <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--role-doctor)" : undefined}>
-          {acted ? "Ход принят. Ждём остальных…" : "Тапни по игроку, чтобы вылечить"}
+          {hint("Тапни по игроку, чтобы вылечить")}
         </StatusBar>
       </>
     );
@@ -266,7 +335,7 @@ export default function NightScreen({
                 picked={picked}
                 gold
                 // Проверка необратима, поэтому после хода сетка блокируется.
-                disabled={isMe || acted}
+                disabled={isMe || acted || locked}
                 onClick={() =>
                   setPending({ userId: p.userId, name: p.displayName, avatarIdx: p.avatarIdx })
                 }
@@ -282,7 +351,7 @@ export default function NightScreen({
           })}
         </div>
         <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--mf-gold)" : undefined}>
-          {acted ? "Ход принят. Ждём остальных…" : "Тапни по игроку, чтобы проверить"}
+          {hint("Тапни по игроку, чтобы проверить")}
         </StatusBar>
 
         {pending ? (
@@ -331,7 +400,7 @@ export default function NightScreen({
               avatarIdx={p.avatarIdx}
               me={isMe}
               picked={picked}
-              disabled={isMe}
+              disabled={isMe || locked}
               onClick={() => onAction("maniac", picked ? null : p.userId)}
               subline={picked ? <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--role-maniac)" }}>жертва</div> : undefined}
             />
@@ -339,7 +408,7 @@ export default function NightScreen({
         })}
       </div>
       <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--role-maniac)" : undefined}>
-        {acted ? "Ход принят. Ждём остальных…" : "Тапни по игроку"}
+        {hint("Тапни по игроку")}
       </StatusBar>
     </>
   );

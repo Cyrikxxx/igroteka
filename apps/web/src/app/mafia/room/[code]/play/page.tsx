@@ -6,11 +6,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Pause } from "lucide-react";
+import { Pause, Volume2, VolumeX } from "lucide-react";
 import MafiaShell from "@/components/mafia/MafiaShell";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import RoleReveal from "@/components/mafia/RoleReveal";
-import NightScreen from "@/components/mafia/NightScreen";
+import NightScreen, { NightHush } from "@/components/mafia/NightScreen";
 import SpectatorScreen from "@/components/mafia/SpectatorScreen";
 import YouDeadScreen from "@/components/mafia/YouDeadScreen";
 import {
@@ -29,7 +29,10 @@ import {
   useHostToast,
 } from "@/components/mafia/Overlays";
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
+import { useNarrator } from "@/hooks/useNarrator";
 import { useHydrated } from "@/hooks/useHydrated";
+import { primeSpeech } from "@/lib/narrator";
+import { loadVoicePref, saveVoicePref, voiceEnabledFor, type VoicePref } from "@/lib/voice-prefs";
 import { loadRoomCreds, clearRoomCreds, type RoomCredentials } from "@/lib/room-session";
 import { resumeRoom } from "@/lib/room-resume";
 import { setRoomNotice } from "@/lib/room-notice";
@@ -90,6 +93,25 @@ export default function MafiaPlayPage() {
     [rawView, timer],
   );
 
+  // Озвучка — настройка ЭТОГО устройства: за столом восемь телефонов, и хором
+  // они говорить не должны. Кто ничего не выбирал — молчит, кроме хоста.
+  const storedVoice = useMemo(() => (hydrated ? loadVoicePref() : null), [hydrated]);
+  const [voiceChoice, setVoiceChoice] = useState<VoicePref | null>(null);
+  const narratorMode = Boolean(view?.settings.narrator);
+  const voiceOn = voiceEnabledFor(voiceChoice ?? storedVoice, view?.you.isHost ?? false);
+  useNarrator({
+    narration: view?.narration,
+    enabled: narratorMode && voiceOn,
+    paused: view?.paused,
+  });
+  const toggleVoice = () => {
+    const next: VoicePref = voiceOn ? "off" : "on";
+    // Клик — единственный момент, когда iOS разрешает разбудить синтез.
+    if (next === "on") primeSpeech();
+    saveVoicePref(next);
+    setVoiceChoice(next);
+  };
+
   const hostToast = useHostToast(view?.you.isHost ?? false);
   // Экран «ты убит» показываем один раз, пока игрок сам не уйдёт в зрители.
   const [deathSeenAt, setDeathSeenAt] = useState<number | null>(null);
@@ -138,7 +160,9 @@ export default function MafiaPlayPage() {
   };
   const dead = !view.you.alive && !view.you.isSpectator;
   const exiled = me?.eliminatedBy === "vote";
-  const paused = Boolean(view.timer?.paused);
+  // Ночью в режиме ведущего остаток видит только тот, чей ход, — поэтому
+  // паузу берём из отдельного поля, а не из таймера.
+  const paused = view.paused;
   const canPause = view.you.isHost && PAUSABLE.has(view.phase) && !paused;
 
   function screen() {
@@ -206,6 +230,16 @@ export default function MafiaPlayPage() {
       return (
         <MafiaShell vignette vignetteLevel={0.2}>
           <YouDeadScreen exiled={exiled} onWatch={markDeathSeen} />
+        </MafiaShell>
+      );
+    }
+
+    // В режиме ведущего мёртвые и зрители сидят за тем же столом: свечение
+    // экрана и реакция выдают не меньше слов, поэтому ночью у них темно.
+    if ((dead || view.you.isSpectator) && view.night) {
+      return (
+        <MafiaShell vignette vignetteLevel={0.16}>
+          <NightHush day={view.day} />
         </MafiaShell>
       );
     }
@@ -317,6 +351,60 @@ export default function MafiaPlayPage() {
         >
           <Pause size={19} />
         </button>
+      ) : null}
+
+      {narratorMode ? (
+        <button
+          type="button"
+          aria-label={voiceOn ? "Выключить озвучку на этом устройстве" : "Озвучивать на этом устройстве"}
+          onClick={toggleVoice}
+          style={{
+            position: "fixed",
+            right: 16,
+            bottom: 16,
+            zIndex: 70,
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: voiceOn ? "var(--mf-crimson)" : "var(--mf-surface-2)",
+            border: "1px solid var(--mf-border)",
+            color: voiceOn ? "#fff" : "var(--mf-text-dim)",
+            cursor: "pointer",
+          }}
+        >
+          {voiceOn ? <Volume2 size={19} /> : <VolumeX size={19} />}
+        </button>
+      ) : null}
+
+      {/* Реплика ведущего текстом: у части телефонов русского голоса нет, и
+          стол должен уметь играть, читая с экрана. */}
+      {narratorMode && view.narration ? (
+        <div
+          role="status"
+          style={{
+            position: "fixed",
+            left: 16,
+            right: 16,
+            bottom: 72,
+            zIndex: 65,
+            margin: "0 auto",
+            maxWidth: 420,
+            padding: "10px 14px",
+            borderRadius: 14,
+            textAlign: "center",
+            fontSize: 13.5,
+            fontWeight: 700,
+            lineHeight: 1.4,
+            color: "var(--mf-text-dim)",
+            background: "rgba(5,5,9,0.72)",
+            border: "1px solid var(--mf-border)",
+          }}
+        >
+          {view.narration.text}
+        </div>
       ) : null}
 
       {paused ? (
