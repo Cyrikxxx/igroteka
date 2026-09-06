@@ -2,7 +2,7 @@
 
 // Вход в комнату Мафии по коду. POST /api/mafia/rooms/[code]/join → лобби.
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { MafiaJoinRoomResponse } from "@alias/shared/mafia";
@@ -13,6 +13,7 @@ import {
   saveDisplayName,
   loadDisplayName,
 } from "@/lib/room-session";
+import { useHydrated } from "@/hooks/useHydrated";
 import { resumeRoom } from "@/lib/room-resume";
 import {
   ROOM_CODE_LENGTH,
@@ -32,34 +33,41 @@ export default function MafiaJoinPage() {
 function Inner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
+  // Имя и код выводятся при рендере, а не подставляются эффектом. Хранилище
+  // читаем только после гидратации: на сервере его нет.
+  const hydrated = useHydrated();
+  const [typedCode, setTypedCode] = useState<string | null>(null);
+  const [typedName, setTypedName] = useState<string | null>(null);
+
+  const codeFromUrl = useMemo(() => {
+    const raw = searchParams.get("code");
+    return raw ? pasteCode(raw.trim()) : "";
+  }, [searchParams]);
+
+  const code = typedCode ?? codeFromUrl;
+  const name = typedName ?? (hydrated ? loadDisplayName() : "");
+  const setCode = setTypedCode;
+  const setName = setTypedName;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [wrongLayout, setWrongLayout] = useState(false);
-  const [resuming, setResuming] = useState(false);
+  const [resumeFailed, setResumeFailed] = useState(false);
+  const resuming = codeFromUrl.length === ROOM_CODE_LENGTH && !resumeFailed;
 
+  // Пришли по полной ссылке в комнату, где уже сидим, — пробуем вернуться
+  // молча. Это запрос к серверу, поэтому и остаётся эффектом.
   useEffect(() => {
-    setName(loadDisplayName());
-    const fromUrl = searchParams.get("code");
-    if (!fromUrl) return;
-    const cleaned = pasteCode(fromUrl.trim());
-    if (!cleaned) return;
-    setCode(cleaned);
-
-    // Пришли по ссылке в комнату, где уже сидим, — имя спрашивать не за чем.
-    if (cleaned.length !== ROOM_CODE_LENGTH) return;
-    setResuming(true);
+    if (codeFromUrl.length !== ROOM_CODE_LENGTH) return;
     let alive = true;
-    resumeRoom(cleaned, "mafia").then((resumed) => {
+    resumeRoom(codeFromUrl, "mafia").then((resumed) => {
       if (!alive) return;
       if (resumed) router.replace(`/mafia/room/${resumed.code}`);
-      else setResuming(false);
+      else setResumeFailed(true);
     });
     return () => {
       alive = false;
     };
-  }, [searchParams, router]);
+  }, [codeFromUrl, router]);
 
   const full = code.length === ROOM_CODE_LENGTH && name.trim().length > 0;
 

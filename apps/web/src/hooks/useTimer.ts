@@ -31,7 +31,11 @@ export function useTimer({ initialTime, onTimeUp, autoStart = false }: UseTimerO
   const [isRunning, setIsRunning] = useState(autoStart);
 
   const onTimeUpRef = useRef(onTimeUp);
-  onTimeUpRef.current = onTimeUp;
+  // Обновляем в эффекте, а не при рендере: колбэк зовётся из интервала, то
+  // есть всегда после монтирования.
+  useEffect(() => {
+    onTimeUpRef.current = onTimeUp;
+  });
 
   const countdownRef = useRef<Countdown>(createCountdown(initialTime));
   /** Чтобы onTimeUp не выстрелил дважды на одном раунде. */

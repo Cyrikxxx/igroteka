@@ -76,7 +76,9 @@ export default function CategoryPicker({ catalog, selected, onChange, onWordCoun
   // сюда инлайновую стрелку, ссылка будет новой на каждый рендер и запрос
   // уйдёт в цикл.
   const reportRef = useRef(onWordCount);
-  reportRef.current = onWordCount;
+  useEffect(() => {
+    reportRef.current = onWordCount;
+  });
 
   const chosen = useMemo(() => new Set(selected), [selected]);
   const month = new Date().getMonth() + 1;

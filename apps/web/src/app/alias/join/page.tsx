@@ -3,11 +3,12 @@
 // Вход в комнату по коду. Дизайн — JoinScreen из редизайна (6-значные ячейки).
 // Логика реальная: POST /api/rooms/[code]/join → saveRoomCreds → лобби.
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Hash, X } from "lucide-react";
 import AppShell from "@/components/common/AppShell";
 import { saveRoomCreds, saveDisplayName, loadDisplayName } from "@/lib/room-session";
+import { useHydrated } from "@/hooks/useHydrated";
 import { resumeRoom } from "@/lib/room-resume";
 import {
   ROOM_CODE_LENGTH,
@@ -38,36 +39,48 @@ function JoinFallback() {
 function JoinPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [code, setCode] = useState<string[]>(["", "", "", "", "", ""]);
-  const [name, setName] = useState("");
+  // Имя и код не «подставляются эффектом», а выводятся при рендере: пока
+  // человек ничего не трогал, показываем запомненное имя и код из ссылки.
+  // Хранилище читаем только после гидратации — на сервере его нет, и разметка
+  // разъехалась бы.
+  const hydrated = useHydrated();
+  const [typedCode, setTypedCode] = useState<string[] | null>(null);
+  const [typedName, setTypedName] = useState<string | null>(null);
+
+  const codeFromUrl = useMemo(() => {
+    const raw = searchParams.get("code");
+    return raw ? pasteCode(raw.trim()) : "";
+  }, [searchParams]);
+
+  const code =
+    typedCode ??
+    Array.from({ length: ROOM_CODE_LENGTH }, (_, i) => codeFromUrl[i] ?? "");
+  const name = typedName ?? (hydrated ? loadDisplayName() : "");
+  const setName = setTypedName;
+  const setCode = (next: string[] | ((prev: string[]) => string[])) =>
+    setTypedCode(typeof next === "function" ? next(code) : next);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [wrongLayout, setWrongLayout] = useState(false);
-  const [resuming, setResuming] = useState(false);
+  const [resumeFailed, setResumeFailed] = useState(false);
+  const resuming = codeFromUrl.length === ROOM_CODE_LENGTH && !resumeFailed;
   const refs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // Пришли по полной ссылке в комнату, где уже сидим, — имя спрашивать не за
+  // чем: пробуем вернуться молча. Это единственное, что тут осталось эффектом,
+  // потому что это запрос к серверу.
   useEffect(() => {
-    setName(loadDisplayName());
-    // Префилл кода из ?code=ABCDEF (приходит по copy-link из лобби хоста).
-    const fromUrl = searchParams.get("code");
-    if (!fromUrl) return;
-    const cleaned = pasteCode(fromUrl.trim());
-    if (!cleaned) return;
-    setCode(Array.from({ length: ROOM_CODE_LENGTH }, (_, i) => cleaned[i] ?? ""));
-
-    // Пришли по ссылке в комнату, где уже сидим, — имя спрашивать не за чем.
-    if (cleaned.length !== ROOM_CODE_LENGTH) return;
-    setResuming(true);
+    if (codeFromUrl.length !== ROOM_CODE_LENGTH) return;
     let alive = true;
-    resumeRoom(cleaned, "alias").then((resumed) => {
+    resumeRoom(codeFromUrl, "alias").then((resumed) => {
       if (!alive) return;
       if (resumed) router.replace(`/alias/room/${resumed.code}`);
-      else setResuming(false);
+      else setResumeFailed(true);
     });
     return () => {
       alive = false;
     };
-  }, [searchParams, router]);
+  }, [codeFromUrl, router]);
 
   const setChar = (i: number, v: string) => {
     const { code: cleaned, wrongLayout } = typeCode(v);

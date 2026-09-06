@@ -34,10 +34,14 @@ export default function LocalRoundPage() {
   const [flash, setFlash] = useState<"got" | "skip" | null>(null);
   const [exitAsk, setExitAsk] = useState(false);
 
+  // Свежие значения для обработчиков таймера: они срабатывают вне рендера,
+  // поэтому и обновляем ссылки эффектом, а не в теле компонента.
   const wordsRef = useRef(words);
-  wordsRef.current = words;
   const currentIndexRef = useRef(currentIndex);
-  currentIndexRef.current = currentIndex;
+  useEffect(() => {
+    wordsRef.current = words;
+    currentIndexRef.current = currentIndex;
+  });
   const fetchedRef = useRef(false);
 
   const handleTimeUp = useCallback(() => {
