@@ -57,7 +57,7 @@ describe("useHostClaim", () => {
   it("хост вернулся — кнопка пропадает", () => {
     const { result, rerender } = renderHook(
       ({ since }: { since: number | null }) => useHostClaim(since, false),
-      { initialProps: { since: Date.now() - HOST_CLAIM_AFTER_MS - 1000 } },
+      { initialProps: { since: Date.now() - HOST_CLAIM_AFTER_MS - 1000 as number | null } },
     );
     expect(result.current.canClaim).toBe(true);
 
