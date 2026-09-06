@@ -27,8 +27,10 @@ export default function MafiaNewPage() {
   const [typedName, setTypedName] = useState<string | null>(null);
   const name = typedName ?? (hydrated ? loadDisplayName() : "");
   const setName = setTypedName;
+  // Копия дефолтов: форма правит вложенные объекты, а общую константу
+  // трогать нельзя — она одна на весь процесс.
   const [settings, setSettings] = useState<MafiaSettings>(() => ({
-    mafiaCount: DEFAULT_MAFIA_SETTINGS.mafiaCount,
+    ...DEFAULT_MAFIA_SETTINGS,
     roles: { ...DEFAULT_MAFIA_SETTINGS.roles },
     timers: { ...DEFAULT_MAFIA_SETTINGS.timers },
     rules: { ...DEFAULT_MAFIA_SETTINGS.rules },

@@ -9,52 +9,9 @@ import { buildMafiaLobbySnapshot, saveMafiaSnapshot } from "@/lib/mafia-snapshot
 import { issueWsToken, wsConnectUrlFor } from "@/lib/ws-token";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
-  DEFAULT_MAFIA_SETTINGS,
-  type MafiaSettings,
+  normalizeMafiaSettings,
   type MafiaCreateRoomResponse,
 } from "@alias/shared/mafia";
-
-/** Слить присланные настройки с дефолтами и проклампить. */
-function parseSettings(input: unknown): MafiaSettings {
-  const d = DEFAULT_MAFIA_SETTINGS;
-  const s: MafiaSettings = {
-    mafiaCount: d.mafiaCount,
-    roles: { ...d.roles },
-    timers: { ...d.timers },
-    rules: { ...d.rules },
-  };
-  if (!input || typeof input !== "object") return s;
-  const x = input as Record<string, unknown>;
-  if (x.mafiaCount === "auto") s.mafiaCount = "auto";
-  else if (typeof x.mafiaCount === "number")
-    s.mafiaCount = Math.max(1, Math.min(8, Math.round(x.mafiaCount)));
-  if (x.roles && typeof x.roles === "object") {
-    const r = x.roles as Record<string, unknown>;
-    for (const k of ["don", "sheriff", "doctor", "maniac"] as const)
-      if (typeof r[k] === "boolean") s.roles[k] = r[k] as boolean;
-  }
-  if (x.timers && typeof x.timers === "object") {
-    const t = x.timers as Record<string, unknown>;
-    const clamp = (v: unknown, lo: number, hi: number, def: number) =>
-      typeof v === "number" ? Math.max(lo, Math.min(hi, Math.round(v))) : def;
-    s.timers.night = clamp(t.night, 15, 180, d.timers.night);
-    s.timers.discussion = clamp(t.discussion, 30, 600, d.timers.discussion);
-    s.timers.vote = clamp(t.vote, 15, 120, d.timers.vote);
-    s.timers.lastWord = clamp(t.lastWord, 10, 90, d.timers.lastWord);
-  }
-  if (x.rules && typeof x.rules === "object") {
-    const ru = x.rules as Record<string, unknown>;
-    for (const k of [
-      "firstDayNoVote",
-      "revealRoles",
-      "openVotes",
-      "donHiddenFromSheriff",
-      "spectatorsSeeRoles",
-    ] as const)
-      if (typeof ru[k] === "boolean") s.rules[k] = ru[k] as boolean;
-  }
-  return s;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,7 +35,7 @@ export async function POST(request: NextRequest) {
       typeof title === "string" && title.trim().length > 0
         ? title.trim().slice(0, 80)
         : null;
-    const parsedSettings = parseSettings(settings);
+    const parsedSettings = normalizeMafiaSettings(settings);
 
     await ensureUser(userId, trimmedHost);
     const code = await generateUniqueRoomCode();

@@ -10,8 +10,11 @@ import type {
   MafiaVoteView,
   MafiaPlayerFull,
   MafiaDeathView,
+  MafiaRole,
+  MafiaNightStep,
 } from "@alias/shared/mafia";
 import { roleTeam } from "@alias/shared/mafia";
+import { narrationFor } from "@alias/shared/mafia-narration";
 
 function findSelf(
   snap: MafiaSnapshot,
@@ -33,6 +36,12 @@ function timerView(snap: MafiaSnapshot): MafiaView["timer"] {
   if (!snap.timerEndsAt) return undefined;
   const msLeft = Math.max(0, snap.timerEndsAt - Date.now());
   return { msLeft, paused: Boolean(snap.timerPaused) };
+}
+
+/** Зовёт ли этот шаг именно эту роль. Шаг мафии зовёт и дона. */
+function stepCalls(step: MafiaNightStep, role: MafiaRole): boolean {
+  if (step.role === "mafia") return role === "mafia" || role === "don";
+  return step.role === role;
 }
 
 export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
@@ -181,6 +190,18 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
     }
   }
 
+  // ── ночь по шагам (режим ведущего) ──
+  const step =
+    snap.phase === "NIGHT" && snap.settings.narrator ? snap.night.step : undefined;
+  const yourTurn = Boolean(
+    step && selfP && selfP.alive && !isSpectator && myRole && stepCalls(step, myRole),
+  );
+
+  // Длина шага — сама по себе секрет: у мёртвой роли она случайная, и общий
+  // обратный отсчёт выдал бы её всему столу. Поэтому ночью остаток видит
+  // только тот, чей сейчас ход. (Тики на это время сервер тоже не шлёт.)
+  const timer = step && !yourTurn ? undefined : timerView(snap);
+
   return {
     code: snap.code,
     title: snap.title,
@@ -198,7 +219,12 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
     deaths,
     // Журнал раскрывает роли и проверки шерифа — живому игроку нельзя.
     events: seeAll ? (snap.events ?? []) : undefined,
-    timer: timerView(snap),
+    timer,
+    night: step ? { step: step.role, stage: step.stage, yourTurn } : undefined,
+    // Реплику ведущего строим из снапшота: она одинакова для всех и содержит
+    // только публичные факты. Собери её клиент из своего вида — устройство
+    // мёртвого хоста зачитало бы вслух все роли, которые ему видны.
+    narration: narrationFor(snap),
     spotlight,
     banned: you.isHost ? (snap.banned ?? []) : undefined,
     // Видно всем: по этой отметке остальные рисуют «взять комнату на себя».

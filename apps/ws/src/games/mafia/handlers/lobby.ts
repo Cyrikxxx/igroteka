@@ -4,7 +4,7 @@
 import {
   MIN_MAFIA_PLAYERS,
   MAX_MAFIA_PLAYERS,
-  type MafiaSettings,
+  normalizeMafiaSettings,
   type MafiaPlayerFull,
   type MafiaSnapshot,
   type MafiaWinner,
@@ -74,42 +74,6 @@ import {
   mafiaRoom,
 } from "../broadcast";
 import type { MafiaSocket, MafiaNamespace } from "../io-types";
-
-/** Валидация частичных настроек от хоста (с клампами). */
-function applySettings(s: MafiaSettings, p: unknown): void {
-  if (!p || typeof p !== "object") return;
-  const x = p as Record<string, unknown>;
-  if (x.mafiaCount === "auto") s.mafiaCount = "auto";
-  else if (typeof x.mafiaCount === "number")
-    s.mafiaCount = Math.max(1, Math.min(8, Math.round(x.mafiaCount)));
-
-  if (x.roles && typeof x.roles === "object") {
-    const r = x.roles as Record<string, unknown>;
-    if (typeof r.don === "boolean") s.roles.don = r.don;
-    if (typeof r.sheriff === "boolean") s.roles.sheriff = r.sheriff;
-    if (typeof r.doctor === "boolean") s.roles.doctor = r.doctor;
-    if (typeof r.maniac === "boolean") s.roles.maniac = r.maniac;
-  }
-  if (x.timers && typeof x.timers === "object") {
-    const t = x.timers as Record<string, unknown>;
-    const clamp = (v: unknown, lo: number, hi: number, d: number) =>
-      typeof v === "number" ? Math.max(lo, Math.min(hi, Math.round(v))) : d;
-    s.timers.night = clamp(t.night, 15, 180, s.timers.night);
-    s.timers.discussion = clamp(t.discussion, 30, 600, s.timers.discussion);
-    s.timers.vote = clamp(t.vote, 15, 120, s.timers.vote);
-    s.timers.lastWord = clamp(t.lastWord, 10, 90, s.timers.lastWord);
-  }
-  if (x.rules && typeof x.rules === "object") {
-    const ru = x.rules as Record<string, unknown>;
-    if (typeof ru.firstDayNoVote === "boolean") s.rules.firstDayNoVote = ru.firstDayNoVote;
-    if (typeof ru.revealRoles === "boolean") s.rules.revealRoles = ru.revealRoles;
-    if (typeof ru.openVotes === "boolean") s.rules.openVotes = ru.openVotes;
-    if (typeof ru.donHiddenFromSheriff === "boolean")
-      s.rules.donHiddenFromSheriff = ru.donHiddenFromSheriff;
-    if (typeof ru.spectatorsSeeRoles === "boolean")
-      s.rules.spectatorsSeeRoles = ru.spectatorsSeeRoles;
-  }
-}
 
 export function registerMafiaLobbyHandlers(
   ns: MafiaNamespace,
@@ -212,7 +176,11 @@ export function registerMafiaLobbyHandlers(
     if (!current) return ack?.({ error: "room_not_found" });
     if (current.hostId !== userId) return ack?.({ error: "forbidden" });
     if (current.phase !== "LOBBY") return ack?.({ error: "game_in_progress" });
-    const snap = await mutate(roomCode, (s) => applySettings(s.settings, payload));
+    // Присланное сливается с текущими настройками и клампится общей функцией:
+    // она же чинит комнаты, созданные до появления новых полей.
+    const snap = await mutate(roomCode, (s) => {
+      s.settings = normalizeMafiaSettings(payload, s.settings);
+    });
     if (!snap) return ack?.({ error: "room_not_found" });
     ack?.({ ok: true });
     scheduleStateBroadcast(ns, roomCode);

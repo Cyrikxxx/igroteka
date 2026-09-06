@@ -7,6 +7,7 @@ import { scheduleStateBroadcast } from "../broadcast";
 import { clearTimer } from "../services/scheduler";
 import {
   maybeResolveNightEarly,
+  maybeEndNightStepEarly,
   maybeTallyEarly,
   afterDiscussion,
   afterLastWord,
@@ -36,6 +37,15 @@ export function registerMafiaGameHandlers(
       (action === "sheriff" && me.role === "sheriff") ||
       (action === "maniac" && me.role === "maniac");
     if (!roleOk) return ack?.({ error: "wrong_role" });
+
+    // В режиме ведущего ночь идёт по шагам, и ход принимается только в своё
+    // окно: иначе можно было бы сходить, пока стол слушает вызов чужой роли,
+    // а то и вовсе до команды «город засыпает».
+    if (snap0.settings.narrator) {
+      const step = snap0.night.step;
+      if (!step || step.role !== action) return ack?.({ error: "not_your_turn" });
+      if (step.stage !== "act") return ack?.({ error: "not_yet" });
+    }
 
     // Проверка шерифа необратима и одна за ночь. Клиент блокирует сетку
     // после хода, но полагаться на клиент нельзя: без этой проверки можно
@@ -94,7 +104,8 @@ export function registerMafiaGameHandlers(
     if (!snap) return ack?.({ error: "room_not_found" });
     ack?.({ ok: true });
     scheduleStateBroadcast(ns, code);
-    await maybeResolveNightEarly(ns, code);
+    if (snap.settings.narrator) await maybeEndNightStepEarly(ns, code, action);
+    else await maybeResolveNightEarly(ns, code);
   });
 
   // ─── Дневной голос ───

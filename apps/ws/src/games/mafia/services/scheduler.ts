@@ -24,18 +24,26 @@ export function clearTimer(code: string): void {
   }
 }
 
-/** Запустить таймер фазы: тики раз в секунду + дедлайн → onExpire. */
+/**
+ * Запустить таймер фазы: тики раз в секунду + дедлайн → onExpire.
+ *
+ * `silent` — не рассылать тики. Нужен ночью в режиме ведущего: длина шага
+ * там сама по себе секрет (у мёртвой роли она случайная), и общий на комнату
+ * обратный отсчёт выдал бы её всем сразу. Тому, чей ход, остаток приходит в
+ * персональном виде.
+ */
 export function startTimer(
   ns: MafiaNamespace,
   code: string,
   ms: number,
   onExpire: () => void | Promise<void>,
+  silent = false,
 ): number {
   clearTimer(code);
   const endsAt = Date.now() + ms;
-  emitTick(ns, code, ms, false);
+  if (!silent) emitTick(ns, code, ms, false);
   const tick = setInterval(() => {
-    emitTick(ns, code, Math.max(0, endsAt - Date.now()), false);
+    if (!silent) emitTick(ns, code, Math.max(0, endsAt - Date.now()), false);
   }, 1000);
   const deadline = setTimeout(() => {
     clearTimer(code);

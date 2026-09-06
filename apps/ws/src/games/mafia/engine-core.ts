@@ -5,9 +5,12 @@
 import {
   emptyNightState,
   emptyVoteState,
+  NIGHT_IDLE_MIN_MS,
   type MafiaSnapshot,
   type MafiaDeathCause,
   type MafiaEvent,
+  type MafiaSettings,
+  type MafiaNightStepRole,
 } from "@alias/shared/mafia";
 
 /** Дописать запись в журнал партии. Журнал никогда не уходит живым игрокам. */
@@ -160,6 +163,65 @@ export function allNightActorsDone(s: MafiaSnapshot): boolean {
     }
   }
   return true;
+}
+
+// ─────────── Шаги ночи (режим ведущего) ───────────
+
+/**
+ * Порядок ролей на ночь. Берётся ИЗ НАСТРОЕК, а не из живых: мёртвую роль
+ * ведущий зовёт наравне с живой. Строй план по живым — и первая же ночь без
+ * доктора объявила бы столу, что доктора больше нет.
+ */
+export function buildNightPlan(settings: MafiaSettings): MafiaNightStepRole[] {
+  const plan: MafiaNightStepRole[] = ["sleep", "mafia"];
+  if (settings.roles.doctor) plan.push("doctor");
+  if (settings.roles.sheriff) plan.push("sheriff");
+  if (settings.roles.maniac) plan.push("maniac");
+  return plan;
+}
+
+/** Живые носители роли этого шага. */
+function stepActors(s: MafiaSnapshot, role: MafiaNightStepRole) {
+  if (role === "mafia")
+    return s.players.filter((p) => p.alive && (p.role === "mafia" || p.role === "don"));
+  if (role === "sleep") return [];
+  return s.players.filter((p) => p.alive && p.role === role);
+}
+
+/** Есть ли кому ходить на этом шаге. */
+export function nightStepHasActor(s: MafiaSnapshot, role: MafiaNightStepRole): boolean {
+  return stepActors(s, role).length > 0;
+}
+
+/**
+ * Все ли, кого зовёт этот шаг, уже сходили. Шаг без живых носителей никогда
+ * не «готов»: пустой every() иначе завершал бы его мгновенно — ровно то, по
+ * чему стол и вычислил бы, что роли нет.
+ */
+export function nightStepDone(s: MafiaSnapshot, role: MafiaNightStepRole): boolean {
+  const actors = stepActors(s, role);
+  if (actors.length === 0) return false;
+  if (role === "mafia") return actors.every((p) => Boolean(s.night.mafiaVotes[p.userId]));
+  if (role === "doctor") return Boolean(s.night.doctorTarget);
+  if (role === "sheriff") return Boolean(s.night.sheriffTarget);
+  if (role === "maniac") return Boolean(s.night.maniacTarget);
+  return false;
+}
+
+/**
+ * Длина окна хода. Живой роли — полный шаг из настроек; мёртвой — случайное
+ * время, иначе её шаг проскакивал бы мгновенно и выдавал бы себя.
+ * `rnd` вынесен параметром, чтобы тест мог подставить свой генератор.
+ */
+export function nightStepActMs(
+  s: MafiaSnapshot,
+  role: MafiaNightStepRole,
+  rnd: () => number = Math.random,
+): number {
+  const full = s.settings.timers.nightStep * 1000;
+  if (nightStepHasActor(s, role)) return full;
+  const min = Math.min(NIGHT_IDLE_MIN_MS, full);
+  return Math.round(min + rnd() * (full - min));
 }
 
 export function allVoted(s: MafiaSnapshot): boolean {

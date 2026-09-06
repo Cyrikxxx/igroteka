@@ -9,8 +9,15 @@ import {
   emptyNightState,
   emptyVoteState,
   MAX_MAFIA_PLAYERS,
+  NIGHT_SLEEP_MS,
+  NIGHT_ANNOUNCE_MS,
+  NIGHT_GAP_MS,
+  NIGHT_SHERIFF_GAP_MS,
   type MafiaWinner,
   type MafiaPhase,
+  type MafiaNightStep,
+  type MafiaNightStepRole,
+  type MafiaNightAction,
 } from "@alias/shared/mafia";
 import {
   applyEnterNight,
@@ -20,6 +27,9 @@ import {
   allNightActorsDone,
   allVoted,
   logEvent,
+  buildNightPlan,
+  nightStepDone,
+  nightStepActMs,
 } from "./engine-core";
 import { load, mutate, remove } from "./snapshot";
 import { broadcastStateNow, mafiaRoom } from "./broadcast";
@@ -37,12 +47,122 @@ const VOTE_RESULT_MS = 4500;
 export async function enterNight(ns: MafiaNamespace, code: string): Promise<void> {
   const snap = await mutate(code, (s) => {
     applyEnterNight(s);
-    s.timerEndsAt = Date.now() + s.settings.timers.night * 1000;
+    if (s.settings.narrator) {
+      // За одним столом ночь идёт по шагам: сначала общая команда закрыть
+      // глаза, дальше роли по очереди.
+      s.night.plan = buildNightPlan(s.settings);
+      s.night.step = { role: "sleep", stage: "announce", index: 0, actMs: 0 };
+      s.timerEndsAt = Date.now() + NIGHT_SLEEP_MS;
+    } else {
+      s.timerEndsAt = Date.now() + s.settings.timers.night * 1000;
+    }
     s.timerPaused = false;
   });
   if (!snap) return;
   await broadcastStateNow(ns, code);
-  startTimer(ns, code, snap.settings.timers.night * 1000, () => onTimeout(ns, code));
+  const narrated = Boolean(snap.settings.narrator);
+  const ms = narrated ? NIGHT_SLEEP_MS : snap.settings.timers.night * 1000;
+  startTimer(ns, code, ms, () => onTimeout(ns, code), narrated);
+}
+
+// ─────────── Ночь по шагам (режим ведущего) ───────────
+
+/** Тишина после хода. Шерифу дольше: он в эти секунды читает вердикт. */
+function nightGapMs(role: MafiaNightStepRole): number {
+  return role === "sheriff" ? NIGHT_SHERIFF_GAP_MS : NIGHT_GAP_MS;
+}
+
+/** Записать шаг, разослать состояние и завести тихий таймер на его окно. */
+async function setNightStep(
+  ns: MafiaNamespace,
+  code: string,
+  step: MafiaNightStep,
+  ms: number,
+): Promise<void> {
+  const snap = await mutate(code, (s) => {
+    s.night.step = step;
+    s.timerEndsAt = Date.now() + ms;
+    s.timerPaused = false;
+    s.timerRemainingMs = undefined;
+  });
+  if (!snap) return;
+  await broadcastStateNow(ns, code);
+  startTimer(ns, code, ms, () => onTimeout(ns, code), true);
+}
+
+/** Перейти к шагу с этим номером; план кончился — разыгрываем ночь. */
+async function enterNightStep(
+  ns: MafiaNamespace,
+  code: string,
+  index: number,
+): Promise<void> {
+  const snap = await load(code);
+  if (!snap) return;
+  const plan = snap.night.plan ?? [];
+  if (index >= plan.length) {
+    await resolveNightPhase(ns, code);
+    return;
+  }
+  const role = plan[index];
+  // Длину окна хода решаем здесь и записываем в шаг: у мёртвой роли она
+  // случайная, и перезапуск ws не должен её переигрывать.
+  const actMs = role === "sleep" ? 0 : nightStepActMs(snap, role);
+  const ms = role === "sleep" ? NIGHT_SLEEP_MS : NIGHT_ANNOUNCE_MS;
+  await setNightStep(ns, code, { role, stage: "announce", index, actMs }, ms);
+}
+
+/**
+ * Следующая стадия ночного шага. Порядок такой:
+ *
+ *   sleep/announce ──► следующий шаг
+ *   роль/announce  ──► act  (окно хода)
+ *   роль/act       ──► gap  (тишина, закрываем глаза)
+ *   роль/gap       ──► следующий шаг или разыгрываем ночь
+ */
+async function advanceNightStage(ns: MafiaNamespace, code: string): Promise<void> {
+  const snap = await load(code);
+  if (!snap || snap.phase !== "NIGHT") return;
+  const step = snap.night.step;
+  if (!step) {
+    await resolveNightPhase(ns, code);
+    return;
+  }
+
+  if (step.stage === "announce" && step.role !== "sleep") {
+    // После снятия паузы шаг откатывается к объявлению, и роль могла сходить
+    // ещё до неё — тогда открывать окно хода второй раз незачем.
+    if (nightStepDone(snap, step.role)) {
+      await setNightStep(ns, code, { ...step, stage: "gap" }, nightGapMs(step.role));
+      return;
+    }
+    await setNightStep(ns, code, { ...step, stage: "act" }, step.actMs);
+    return;
+  }
+
+  if (step.stage === "act") {
+    await setNightStep(ns, code, { ...step, stage: "gap" }, nightGapMs(step.role));
+    return;
+  }
+
+  await enterNightStep(ns, code, step.index + 1);
+}
+
+/**
+ * Роль сходила — закрываем её окно досрочно и уходим в тишину. Это и есть те
+ * три секунды, за которые сходивший закрывает глаза перед вызовом следующего.
+ */
+export async function maybeEndNightStepEarly(
+  ns: MafiaNamespace,
+  code: string,
+  action: MafiaNightAction,
+): Promise<void> {
+  const snap = await load(code);
+  if (!snap || snap.phase !== "NIGHT") return;
+  const step = snap.night.step;
+  if (!step || step.stage !== "act" || step.role !== action) return;
+  if (!nightStepDone(snap, action)) return;
+  clearTimer(code);
+  await setNightStep(ns, code, { ...step, stage: "gap" }, nightGapMs(step.role));
 }
 
 async function enterMorning(ns: MafiaNamespace, code: string): Promise<void> {
@@ -196,7 +316,8 @@ export async function onTimeout(ns: MafiaNamespace, code: string): Promise<void>
   if (!snap) return;
   switch (snap.phase) {
     case "NIGHT":
-      await resolveNightPhase(ns, code);
+      if (snap.settings.narrator) await advanceNightStage(ns, code);
+      else await resolveNightPhase(ns, code);
       break;
     case "MORNING":
       await enterDiscussion(ns, code);
@@ -252,7 +373,9 @@ export async function ensurePhaseTimer(
     await onTimeout(ns, code);
     return;
   }
-  startTimer(ns, code, msLeft, () => onTimeout(ns, code));
+  // Ночью в режиме ведущего тики не рассылаем и после восстановления.
+  const silent = snap.phase === "NIGHT" && Boolean(snap.settings.narrator);
+  startTimer(ns, code, msLeft, () => onTimeout(ns, code), silent);
 }
 
 // ─────────── Пауза ───────────
@@ -277,7 +400,14 @@ export async function pausePhase(
   return true;
 }
 
-/** Продолжить с того же остатка. */
+/**
+ * Продолжить с того же остатка.
+ *
+ * В режиме ведущего ночью — с оговоркой: стол сидит с закрытыми глазами и
+ * молча продолжить не может, роль надо вызвать заново. Поэтому шаг
+ * откатывается к объявлению. Ключ реплики при этом совпал бы с уже
+ * произнесённым, и все промолчали бы — отсюда счётчик повторов.
+ */
 export async function resumePhase(
   ns: MafiaNamespace,
   code: string,
@@ -285,18 +415,24 @@ export async function resumePhase(
   const current = await load(code);
   if (!current || !current.timerPaused) return false;
 
-  const remaining = current.timerRemainingMs ?? 0;
+  const recall =
+    current.phase === "NIGHT" &&
+    Boolean(current.settings.narrator) &&
+    Boolean(current.night.step);
+  const remaining = recall ? NIGHT_ANNOUNCE_MS : (current.timerRemainingMs ?? 0);
   const snap = await mutate(code, (s) => {
     s.timerPaused = false;
     s.timerRemainingMs = undefined;
     s.timerEndsAt = Date.now() + remaining;
+    s.narrationEpoch = (s.narrationEpoch ?? 0) + 1;
+    if (recall && s.night.step) s.night.step = { ...s.night.step, stage: "announce" };
   });
   if (!snap) return false;
   await broadcastStateNow(ns, code);
   if (remaining <= 0) {
     await onTimeout(ns, code);
   } else {
-    startTimer(ns, code, remaining, () => onTimeout(ns, code));
+    startTimer(ns, code, remaining, () => onTimeout(ns, code), recall);
   }
   return true;
 }
@@ -416,6 +552,9 @@ export async function maybeResolveNightEarly(
 ): Promise<void> {
   const snap = await load(code);
   if (!snap || snap.phase !== "NIGHT") return;
+  // В режиме ведущего ночь ведут шаги: досрочный резолв здесь оборвал бы её
+  // на середине, не вызвав оставшиеся роли.
+  if (snap.settings.narrator) return;
   if (allNightActorsDone(snap)) {
     clearTimer(code);
     await resolveNightPhase(ns, code);
