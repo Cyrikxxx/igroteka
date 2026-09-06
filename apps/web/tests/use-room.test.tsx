@@ -63,6 +63,18 @@ describe("useRoom", () => {
     expect(result.current.snapshot?.code).toBe("ABCDEF");
   });
 
+  it("отправка работает сразу после монтирования", () => {
+    // Скрытый дефект: хук отдавал сокет через ref, а чтение ref при рендере
+    // не вызывает перерисовку. Потребитель получал null на первом рендере и
+    // оживал только потому, что его перерисовывало что-то другое — приход
+    // снапшота. Нажатие в первые мгновения молча не доходило до сервера.
+    const { result } = renderHook(() => useRoom(OPTS));
+    act(() => {
+      result.current.emit("room:leave", {});
+    });
+    expect(sock.lastSent("room:leave")).toBeDefined();
+  });
+
   it("вошёл в комнату на паузе — пауза видна", () => {
     const { result } = mount(snapshot({ timer: { msLeft: 30_000, paused: true } }));
     expect(result.current.tick?.paused).toBe(true);

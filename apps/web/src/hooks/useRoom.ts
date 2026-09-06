@@ -3,7 +3,7 @@
 // Состояние онлайн-комнаты на клиенте. Подключение к WS, snapshot,
 // серверный таймер, приватное слово для explainer'а.
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
 import type {
   RoomSnapshot,
@@ -32,8 +32,20 @@ export interface RoundTickState {
   paused: boolean;
 }
 
+/**
+ * Отправка события на сервер. Хук отдаёт функцию, а не сам сокет: сокет лежит
+ * в ref, а чтение ref при рендере не вызывает перерисовку — потребитель
+ * получал null на первом рендере, и нажатие в первые мгновения молча никуда
+ * не уходило. Функция стабильна и всегда берёт актуальный сокет.
+ */
+export type EmitFn = (
+  event: string,
+  payload?: unknown,
+  ack?: (resp: unknown) => void,
+) => void;
+
 export interface UseRoomResult {
-  socket: Socket | null;
+  emit: EmitFn;
   snapshot: RoomSnapshot | null;
   status: ConnStatus;
   error: string | null;
@@ -62,6 +74,10 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
   const [review, setReview] = useState<RoundReviewPayload | null>(null);
   const [lastCommitted, setLastCommitted] = useState<RoundCommittedPayload | null>(null);
   const socketRef = useRef<Socket | null>(null);
+
+  const emit = useCallback<EmitFn>((event, payload, ack) => {
+    socketRef.current?.emit(event, payload, ack);
+  }, []);
 
   useEffect(() => {
     if (!opts) return;
@@ -193,7 +209,7 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
   }, []);
 
   return {
-    socket: socketRef.current,
+    emit,
     snapshot,
     status,
     error,

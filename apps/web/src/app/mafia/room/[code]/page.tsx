@@ -41,7 +41,7 @@ export default function MafiaLobbyPage() {
     [creds],
   );
 
-  const { socket, view, error, closedReason } = useMafiaRoom(opts);
+  const { emit, view, error, closedReason } = useMafiaRoom(opts);
   // Вызываем до ранних return'ов: порядок хуков не должен зависеть от того,
   // загрузились ли уже креды и состояние комнаты.
   const claim = useHostClaim(view?.hostOfflineSince, view?.you.isHost ?? false);
@@ -96,7 +96,7 @@ export default function MafiaLobbyPage() {
   const players = view?.players ?? [];
   const count = players.length;
   const claimHost = () =>
-    socket?.emit("mafia:claim_host", {}, (resp: unknown) => {
+    emit("mafia:claim_host", {}, (resp: unknown) => {
       if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
         // Обычно значит, что хост успел вернуться между показом кнопки и
         // нажатием — состояние поправит следующий broadcast.
@@ -113,7 +113,7 @@ export default function MafiaLobbyPage() {
     const next = input.value.trim().slice(0, 50);
     setEditingName(false);
     if (!next || next === myName) return;
-    socket?.emit("mafia:set_name", { displayName: next }, () => {});
+    emit("mafia:set_name", { displayName: next }, () => {});
     // Запоминаем и глобально: следующий вход подставит новое имя сам.
     saveDisplayName(next);
   };
@@ -141,15 +141,15 @@ export default function MafiaLobbyPage() {
     } catch {}
   };
 
-  const start = () => socket?.emit("mafia:start", {}, () => {});
+  const start = () => emit("mafia:start", {}, () => {});
   // Кик и передача хоста обратимы, поэтому делаются сразу: лишний вопрос на
   // каждое нажатие только мешал.
-  const kick = (userId: string) => socket?.emit("mafia:kick", { userId }, () => {});
-  const unban = (userId: string) => socket?.emit("mafia:unban", { userId }, () => {});
+  const kick = (userId: string) => emit("mafia:kick", { userId }, () => {});
+  const unban = (userId: string) => emit("mafia:unban", { userId }, () => {});
   const makeHost = (userId: string) =>
-    socket?.emit("mafia:transfer_host", { userId }, () => {});
+    emit("mafia:transfer_host", { userId }, () => {});
   const leave = () => {
-    socket?.emit("mafia:leave", {}, () => {});
+    emit("mafia:leave", {}, () => {});
     clearRoomCreds(code);
     router.replace("/");
   };
@@ -157,12 +157,12 @@ export default function MafiaLobbyPage() {
   // выхода. Раньше кнопка выхода у хоста делала именно это: он уходил — и
   // комната разваливалась под всеми остальными.
   const closeRoom = () => {
-    socket?.emit("mafia:close", {}, () => {});
+    emit("mafia:close", {}, () => {});
     clearRoomCreds(code);
     router.replace("/");
   };
   const saveSettings = () => {
-    if (draft) socket?.emit("mafia:settings", draft, () => {});
+    if (draft) emit("mafia:settings", draft, () => {});
     setSettingsOpen(false);
   };
 

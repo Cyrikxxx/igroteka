@@ -1,7 +1,7 @@
 // Хук комнаты Мафии: живой остаток фазы и различение «связь моргнула» и
 // «комнаты больше нет».
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import type { MafiaView } from "@alias/shared/mafia";
 import { FakeSocket } from "./helpers/fake-socket";

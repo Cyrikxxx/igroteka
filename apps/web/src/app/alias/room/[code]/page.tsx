@@ -95,7 +95,7 @@ export default function LobbyPage() {
     () => (creds ? { wsUrl: creds.wsUrl, token: creds.wsToken, code: creds.code } : null),
     [creds],
   );
-  const { socket, snapshot, status, error, closedReason } = useRoom(roomOpts);
+  const { emit, snapshot, status, error, closedReason } = useRoom(roomOpts);
   // Вызываем до ранних return'ов: порядок хуков не должен зависеть от того,
   // загрузились ли уже креды и снапшот.
   const claim = useHostClaim(
@@ -162,27 +162,27 @@ export default function LobbyPage() {
     } catch {}
   };
   const handleLeave = () => {
-    socket?.emit("room:leave", {}, () => {});
+    emit("room:leave", {}, () => {});
     clearRoomCreds(creds.code);
     router.push("/alias");
   };
   const setFormat = (format: GameFormat) =>
-    socket?.emit("room:format", { format }, (resp: unknown) => {
+    emit("room:format", { format }, (resp: unknown) => {
       if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
         setActionError(`Не удалось сменить формат: ${(resp as { error: string }).error}`);
       }
     });
-  const createTeam = () => socket?.emit("team:create", {}, () => {});
+  const createTeam = () => emit("team:create", {}, () => {});
   const renameTeam = (teamId: number, name: string) =>
-    socket?.emit("team:rename", { teamId, name }, () => {});
-  const removeTeam = (teamId: number) => socket?.emit("team:remove", { teamId }, () => {});
-  const joinTeam = (teamId: number | null) => socket?.emit("team:join", { teamId }, () => {});
+    emit("team:rename", { teamId, name }, () => {});
+  const removeTeam = (teamId: number) => emit("team:remove", { teamId }, () => {});
+  const joinTeam = (teamId: number | null) => emit("team:join", { teamId }, () => {});
   // Кик и передача хоста обратимы, поэтому делаются сразу: лишний вопрос на
   // каждое нажатие только мешал.
-  const kickPlayer = (userId: string) => socket?.emit("room:kick", { userId }, () => {});
-  const unban = (userId: string) => socket?.emit("room:unban", { userId }, () => {});
+  const kickPlayer = (userId: string) => emit("room:kick", { userId }, () => {});
+  const unban = (userId: string) => emit("room:unban", { userId }, () => {});
   const makeHost = (userId: string) =>
-    socket?.emit("room:transfer_host", { userId }, () => {});
+    emit("room:transfer_host", { userId }, () => {});
 
   // Своя запись в снапшоте — она же источник актуального ника: его мог
   // поменять и сам игрок, и другая вкладка.
@@ -196,7 +196,7 @@ export default function LobbyPage() {
   const inLobby = snapshot?.phase === "LOBBY";
 
   const claimHost = () =>
-    socket?.emit("room:claim_host", {}, (resp: unknown) => {
+    emit("room:claim_host", {}, (resp: unknown) => {
       if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
         // Обычно это значит, что хост успел вернуться между показом кнопки и
         // нажатием — снапшот сам себя поправит следующим broadcast'ом.
@@ -208,7 +208,7 @@ export default function LobbyPage() {
     const next = input.value.trim().slice(0, 50);
     setEditingName(false);
     if (!next || next === myName) return;
-    socket?.emit("room:set_name", { displayName: next }, () => {});
+    emit("room:set_name", { displayName: next }, () => {});
     // Запоминаем и глобально: следующий вход подставит новое имя сам.
     saveDisplayName(next);
   };
@@ -517,7 +517,7 @@ export default function LobbyPage() {
                 className="btn btn-primary btn-lg"
                 disabled={!canStart}
                 onClick={() => {
-                  socket?.emit("round:start_game", {}, (resp: unknown) => {
+                  emit("round:start_game", {}, (resp: unknown) => {
                     if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
                       setActionError(`Не удалось стартовать: ${(resp as { error: string }).error}`);
                     }
@@ -553,7 +553,7 @@ export default function LobbyPage() {
           settings={snapshot.settings}
           onClose={() => setSettingsOpen(false)}
           onSave={(next) => {
-            socket?.emit("room:settings", next, () => {});
+            emit("room:settings", next, () => {});
             setSettingsOpen(false);
           }}
         />

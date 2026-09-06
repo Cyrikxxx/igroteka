@@ -58,7 +58,7 @@ export default function MafiaPlayPage() {
         : null,
     [creds],
   );
-  const { socket, view: rawView, timer, status, error, closedReason } = useMafiaRoom(opts);
+  const { emit, view: rawView, timer, status, error, closedReason } = useMafiaRoom(opts);
 
   // Экраны фаз показывают view.timer — а это цифра из последней рассылки
   // состояния, и между рассылками она стояла на месте: таймер выглядел
@@ -128,8 +128,8 @@ export default function MafiaPlayPage() {
   // права достаются тому, кто на связи.
   const leaveToHome = () => {
     const closesRoom = view.you.isHost && view.phase === "FINISHED";
-    if (closesRoom) socket?.emit("mafia:close", {}, () => {});
-    else socket?.emit("mafia:leave", {}, () => {});
+    if (closesRoom) emit("mafia:close", {}, () => {});
+    else emit("mafia:leave", {}, () => {});
     clearRoomCreds(code);
     router.push("/mafia");
   };
@@ -157,9 +157,9 @@ export default function MafiaPlayPage() {
             ready={view.you.ready}
             readyCount={view.readyCount}
             total={view.players.length}
-            onReady={() => socket?.emit("mafia:ready", {}, () => {})}
+            onReady={() => emit("mafia:ready", {}, () => {})}
             isHost={view.you.isHost}
-            onStartNight={() => socket?.emit("mafia:start_night", {}, () => {})}
+            onStartNight={() => emit("mafia:start_night", {}, () => {})}
             onEndGame={() => setEndGameAsk(true)}
           />
         </MafiaShell>
@@ -173,7 +173,7 @@ export default function MafiaPlayPage() {
           <FinaleScreen
             view={view}
             isHost={view.you.isHost}
-            onRematch={() => socket?.emit("mafia:restart", {}, () => {})}
+            onRematch={() => emit("mafia:restart", {}, () => {})}
             onHome={() => {
               // Раньше отсюда просто уходили со страницы: комната
               // оставалась висеть в Redis до дворника, а игроки — в ней.
@@ -221,7 +221,7 @@ export default function MafiaPlayPage() {
           <NightScreen
             view={view}
             onAction={(action, targetId) =>
-              socket?.emit("mafia:night_action", { action, targetId }, () => {})
+              emit("mafia:night_action", { action, targetId }, () => {})
             }
           />
         </MafiaShell>
@@ -242,7 +242,7 @@ export default function MafiaPlayPage() {
           <DiscussionScreen
             view={view}
             isHost={view.you.isHost}
-            onEnd={() => socket?.emit("mafia:end_discussion", {}, () => {})}
+            onEnd={() => emit("mafia:end_discussion", {}, () => {})}
           />
         </MafiaShell>
       );
@@ -253,7 +253,7 @@ export default function MafiaPlayPage() {
         <MafiaShell>
           <VoteScreen
             view={view}
-            onVote={(targetId) => socket?.emit("mafia:vote", { targetId }, () => {})}
+            onVote={(targetId) => emit("mafia:vote", { targetId }, () => {})}
           />
         </MafiaShell>
       );
@@ -273,7 +273,7 @@ export default function MafiaPlayPage() {
           <LastWordScreen
             view={view}
             isHost={view.you.isHost}
-            onDone={() => socket?.emit("mafia:last_word_done", {}, () => {})}
+            onDone={() => emit("mafia:last_word_done", {}, () => {})}
           />
         </MafiaShell>
       );
@@ -294,7 +294,7 @@ export default function MafiaPlayPage() {
         <button
           type="button"
           aria-label="Поставить на паузу"
-          onClick={() => socket?.emit("mafia:pause", {}, () => {})}
+          onClick={() => emit("mafia:pause", {}, () => {})}
           style={{
             position: "fixed",
             left: 16,
@@ -319,7 +319,7 @@ export default function MafiaPlayPage() {
       {paused ? (
         <PauseOverlay
           isHost={view.you.isHost}
-          onResume={() => socket?.emit("mafia:resume", {}, () => {})}
+          onResume={() => emit("mafia:resume", {}, () => {})}
           onEndGame={() => setEndGameAsk(true)}
         />
       ) : null}
@@ -344,7 +344,7 @@ export default function MafiaPlayPage() {
         confirmLabel="Завершить"
         onConfirm={() => {
           setEndGameAsk(false);
-          socket?.emit("mafia:end_game", {}, () => {});
+          emit("mafia:end_game", {}, () => {});
         }}
         onCancel={() => setEndGameAsk(false)}
       />

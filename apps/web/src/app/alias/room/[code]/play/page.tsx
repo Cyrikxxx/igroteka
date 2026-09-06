@@ -60,7 +60,7 @@ export default function PlayPage() {
     () => (creds ? { wsUrl: creds.wsUrl, token: creds.wsToken, code: creds.code } : null),
     [creds],
   );
-  const { socket, snapshot, tick, currentWord, wordCount, review, error, status, closedReason } =
+  const { emit, snapshot, tick, currentWord, wordCount, review, error, status, closedReason } =
     useRoom(opts);
 
   // Хоста нет в сети — комнату можно забрать. На игровом экране это важнее,
@@ -162,25 +162,25 @@ export default function PlayPage() {
 
   const onGuess = (guessed: boolean) => {
     if (!currentWord) return;
-    socket?.emit("round:guess", { wordId: currentWord.wordId, guessed }, () => {});
+    emit("round:guess", { wordId: currentWord.wordId, guessed }, () => {});
   };
   const onPause = () => {
-    socket?.emit("round:pause", {}, () => {});
+    emit("round:pause", {}, () => {});
     setPauseModalOpen(true);
   };
   const onResume = () => {
-    socket?.emit("round:resume", {}, () => {});
+    emit("round:resume", {}, () => {});
     setPauseModalOpen(false);
   };
   const onEndRequest = () => setEndConfirmOpen(true);
   const onEndConfirm = () => {
-    socket?.emit("round:end", { confirm: true }, () => {});
+    emit("round:end", { confirm: true }, () => {});
     setEndConfirmOpen(false);
     setPauseModalOpen(false);
   };
-  const onReviewToggle = (wordId: number) => socket?.emit("round:review_toggle", { wordId }, () => {});
+  const onReviewToggle = (wordId: number) => emit("round:review_toggle", { wordId }, () => {});
   const onReviewConfirm = () =>
-    socket?.emit("round:review_confirm", {}, (resp: unknown) => {
+    emit("round:review_confirm", {}, (resp: unknown) => {
       if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
         setActionError(
           (resp as { error: string }).error === "next_explainer_offline"
@@ -192,13 +192,13 @@ export default function PlayPage() {
   // Зритель посреди партии выйти может — на ход он не влияет. Игроку команды
   // сервер откажет: состав на время игры заморожен.
   const doLeave = () => {
-    socket?.emit("room:leave", {}, () => {});
+    emit("room:leave", {}, () => {});
     router.push("/alias");
   };
   // Хост обрывает партию — единственный выход, когда ждём того, кто не
   // вернётся. Счёт остаётся, все попадают на итоги, оттуда «Сыграть ещё».
   const doEndGame = () => {
-    socket?.emit("round:end_game", {}, (resp: unknown) => {
+    emit("round:end_game", {}, (resp: unknown) => {
       if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
         setActionError(`Не удалось завершить партию: ${(resp as { error: string }).error}`);
       }
@@ -210,8 +210,8 @@ export default function PlayPage() {
   // игрок уходит один. Это же правило действует и в Мафии.
   const isRoomHost = creds.userId === snapshot.hostId;
   const doLeaveAfterGame = () => {
-    if (isRoomHost) socket?.emit("room:close", {}, () => {});
-    else socket?.emit("room:leave", {}, () => {});
+    if (isRoomHost) emit("room:close", {}, () => {});
+    else emit("room:leave", {}, () => {});
     clearRoomCreds(creds.code);
     router.push("/alias");
   };
@@ -253,7 +253,7 @@ export default function PlayPage() {
   const skip = wordCount?.skip ?? 0;
 
   const claimHost = () =>
-    socket?.emit("room:claim_host", {}, (resp: unknown) => {
+    emit("room:claim_host", {}, (resp: unknown) => {
       if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
         setActionError(`Не удалось забрать комнату: ${(resp as { error: string }).error}`);
       }
@@ -626,7 +626,7 @@ export default function PlayPage() {
                   <button
                     type="button"
                     className="btn btn-primary btn-lg"
-                    onClick={() => socket?.emit("room:restart", {}, () => {})}
+                    onClick={() => emit("room:restart", {}, () => {})}
                   >
                     <RefreshCw /> Сыграть ещё
                   </button>

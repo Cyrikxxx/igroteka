@@ -3,7 +3,7 @@
 // Состояние комнаты Мафии на клиенте. Подключение к неймспейсу /mafia,
 // персональный MafiaView (своя роль видна, чужие — нет), локальный таймер.
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
 import type { MafiaView, MafiaTickPayload } from "@alias/shared/mafia";
 import { connectToRoom, disconnectRoom } from "@/lib/socket-client";
@@ -43,8 +43,20 @@ export function mafiaErrorText(code: string): string {
   return ERROR_TEXT[code] ?? code;
 }
 
+/**
+ * Отправка события на сервер. Хук отдаёт функцию, а не сам сокет: сокет лежит
+ * в ref, а чтение ref при рендере не вызывает перерисовку — потребитель
+ * получал null на первом рендере, и нажатие в первые мгновения молча никуда
+ * не уходило. Функция стабильна и всегда берёт актуальный сокет.
+ */
+export type EmitFn = (
+  event: string,
+  payload?: unknown,
+  ack?: (resp: unknown) => void,
+) => void;
+
 export interface UseMafiaRoomResult {
-  socket: Socket | null;
+  emit: EmitFn;
   view: MafiaView | null;
   timer: MafiaTimerState | null;
   status: MafiaConnStatus;
@@ -66,6 +78,10 @@ export function useMafiaRoom(
   const [error, setError] = useState<string | null>(null);
   const [closedReason, setClosedReason] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
+
+  const emit = useCallback<EmitFn>((event, payload, ack) => {
+    socketRef.current?.emit(event, payload, ack);
+  }, []);
 
   useEffect(() => {
     if (!opts) return;
@@ -170,5 +186,5 @@ export function useMafiaRoom(
     };
   }, []);
 
-  return { socket: socketRef.current, view, timer, status, error, closedReason };
+  return { emit, view, timer, status, error, closedReason };
 }
