@@ -140,3 +140,65 @@ describe("ночные секреты", () => {
     expect(buildView(s, "civ").vote?.votedCount).toBe(2);
   });
 });
+
+describe("ночь по шагам", () => {
+  /** Партия в режиме ведущего, идёт окно хода доктора. */
+  const doctorStep = (players = cast()) => {
+    const base = snapshot(players);
+    const s = snapshot(players, {
+      settings: { ...base.settings, narrator: true },
+      timerEndsAt: Date.now() + 20000,
+    });
+    s.night.plan = ["sleep", "mafia", "doctor", "sheriff"];
+    s.night.step = { role: "doctor", stage: "act", index: 2, actMs: 20000 };
+    return s;
+  };
+
+  it("остаток шага видит только тот, чей ход", () => {
+    const s = doctorStep();
+    // Длина шага — секрет: у мёртвой роли она случайная, и общий отсчёт
+    // выдал бы её всему столу.
+    expect(buildView(s, "doc").timer).toBeDefined();
+    expect(buildView(s, "civ").timer).toBeUndefined();
+    expect(buildView(s, "maf").timer).toBeUndefined();
+  });
+
+  it("шаг мафии зовёт и дона", () => {
+    const s = doctorStep();
+    s.night.step = { role: "mafia", stage: "act", index: 1, actMs: 20000 };
+    expect(buildView(s, "maf").night?.yourTurn).toBe(true);
+    expect(buildView(s, "don").night?.yourTurn).toBe(true);
+    expect(buildView(s, "doc").night?.yourTurn).toBe(false);
+  });
+
+  it("мёртвого роль не зовёт", () => {
+    const players = cast();
+    players[3].alive = false;
+    const s = doctorStep(players);
+    expect(buildView(s, "doc").night?.yourTurn).toBe(false);
+    expect(buildView(s, "doc").timer).toBeUndefined();
+  });
+
+  it("паузу видно всем, даже когда таймер скрыт", () => {
+    const s = doctorStep();
+    s.timerPaused = true;
+    s.timerRemainingMs = 5000;
+    expect(buildView(s, "civ").paused).toBe(true);
+    expect(buildView(s, "civ").timer).toBeUndefined();
+  });
+
+  it("реплика ведущего одинакова у всех — иначе она раскрыла бы чужие роли", () => {
+    const s = doctorStep();
+    s.night.step = { role: "doctor", stage: "announce", index: 2, actMs: 20000 };
+    const forDoctor = buildView(s, "doc").narration;
+    const forCivilian = buildView(s, "civ").narration;
+    expect(forDoctor).toEqual(forCivilian);
+    expect(forDoctor?.text).toContain("Просыпается доктор");
+  });
+
+  it("в обычном режиме шагов нет и таймер общий", () => {
+    const s = snapshot(cast(), { timerEndsAt: Date.now() + 20000 });
+    expect(buildView(s, "civ").night).toBeUndefined();
+    expect(buildView(s, "civ").timer).toBeDefined();
+  });
+});

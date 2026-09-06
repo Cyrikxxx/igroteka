@@ -19,7 +19,8 @@
     "smoke:host": "tsx scripts/smoke-host.ts",
     "smoke:ingame": "tsx scripts/smoke-ingame.ts",
     "smoke:reconnect": "tsx scripts/smoke-reconnect.ts",
-    "smoke:mafia": "tsx scripts/smoke-mafia.ts"
+    "smoke:mafia": "tsx scripts/smoke-mafia.ts",
+    "smoke:narrator": "tsx scripts/smoke-narrator.ts"
   },
   "dependencies": {
     "@alias/shared": "*",
