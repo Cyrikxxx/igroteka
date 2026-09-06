@@ -8,6 +8,7 @@ import { Crown, Search, HeartPulse, Skull, Minus, Plus, Mic, Volume2 } from "luc
 import {
   computeComposition,
   describeComposition,
+  MAFIA_TIMER_LIMITS,
   type MafiaSettings,
 } from "@alias/shared/mafia";
 import { primeSpeech, speak, russianVoiceState } from "@/lib/narrator";
@@ -108,42 +109,41 @@ function ToggleRow({
   );
 }
 
-function PresetChips({
-  options,
-  value,
-  onChange,
-}: {
-  options: { label: string; v: number }[];
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-      {options.map((o) => (
-        <button
-          key={o.v}
-          type="button"
-          className={"mf-preset" + (value === o.v ? " on" : "")}
-          onClick={() => onChange(o.v)}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
+/**
+ * Строка таймера: готовые варианты плюс «Своё» с ручным вводом секунд.
+ *
+ * Границы берутся из общей константы — те же, по которым сервер клампит
+ * присланное. Разойдись они, введённое число молча заменялось бы на другое.
+ */
 function TimerRow({
   label,
   options,
   value,
   onChange,
+  limits,
 }: {
   label: string;
   options: { label: string; v: number }[];
   value: number;
   onChange: (v: number) => void;
+  limits: { min: number; max: number };
 }) {
+  // Значение не из списка — значит его уже задали руками, и поле должно быть
+  // открыто сразу.
+  const [manual, setManual] = useState(() => !options.some((o) => o.v === value));
+  // Пока человек печатает, держим строку как есть: клампить на каждой букве
+  // нельзя — набирая «120», после первой цифры получишь минимум.
+  const [draft, setDraft] = useState<string | null>(null);
+
+  const commit = () => {
+    const raw = draft;
+    setDraft(null);
+    if (raw === null) return;
+    const n = Number(raw.replace(",", "."));
+    if (!Number.isFinite(n) || n <= 0) return;
+    onChange(Math.max(limits.min, Math.min(limits.max, Math.round(n))));
+  };
+
   return (
     <div
       style={{
@@ -155,9 +155,64 @@ function TimerRow({
       }}
     >
       <div className="mf-setting-label">{label}</div>
-      <PresetChips options={options} value={value} onChange={onChange} />
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        {options.map((o) => (
+          <button
+            key={o.v}
+            type="button"
+            className={"mf-preset" + (!manual && value === o.v ? " on" : "")}
+            onClick={() => {
+              setManual(false);
+              setDraft(null);
+              onChange(o.v);
+            }}
+          >
+            {o.label}
+          </button>
+        ))}
+        {manual ? (
+          <input
+            className="mf-num"
+            type="number"
+            inputMode="numeric"
+            min={limits.min}
+            max={limits.max}
+            aria-label={`${label}: своё время в секундах`}
+            value={draft ?? String(value)}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+            }}
+          />
+        ) : (
+          <button
+            type="button"
+            className="mf-preset"
+            onClick={() => {
+              setManual(true);
+              setDraft(null);
+            }}
+          >
+            Своё
+          </button>
+        )}
+      </div>
+      {manual ? (
+        <div className="mf-setting-sub">
+          Секунды, от {limits.min} до {limits.max}. Сейчас — {fmtTime(value)}.
+        </div>
+      ) : null}
     </div>
   );
+}
+
+/** «2 мин 30 с» — чтобы по секундам не считать в уме. */
+function fmtTime(sec: number): string {
+  if (sec < 60) return `${sec} с`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return s === 0 ? `${m} мин` : `${m} мин ${s} с`;
 }
 
 const NIGHT_STEP_OPTS = [
@@ -270,6 +325,7 @@ export default function MafiaSettingsForm({
             options={NIGHT_STEP_OPTS}
             value={s.timers.nightStep}
             onChange={setTimer("nightStep")}
+            limits={MAFIA_TIMER_LIMITS.nightStep}
           />
           <VoiceCheck />
           <div className="mf-setting-sub" style={{ paddingBottom: 4 }}>
@@ -362,11 +418,35 @@ export default function MafiaSettingsForm({
 
       <SectionLabel>Таймеры</SectionLabel>
       {s.narrator ? null : (
-        <TimerRow label="Ночь" options={NIGHT_OPTS} value={s.timers.night} onChange={setTimer("night")} />
+        <TimerRow
+          label="Ночь"
+          options={NIGHT_OPTS}
+          value={s.timers.night}
+          onChange={setTimer("night")}
+          limits={MAFIA_TIMER_LIMITS.night}
+        />
       )}
-      <TimerRow label="Обсуждение" options={DISCUSSION_OPTS} value={s.timers.discussion} onChange={setTimer("discussion")} />
-      <TimerRow label="Голосование" options={VOTE_OPTS} value={s.timers.vote} onChange={setTimer("vote")} />
-      <TimerRow label="Последнее слово" options={LASTWORD_OPTS} value={s.timers.lastWord} onChange={setTimer("lastWord")} />
+      <TimerRow
+        label="Обсуждение"
+        options={DISCUSSION_OPTS}
+        value={s.timers.discussion}
+        onChange={setTimer("discussion")}
+        limits={MAFIA_TIMER_LIMITS.discussion}
+      />
+      <TimerRow
+        label="Голосование"
+        options={VOTE_OPTS}
+        value={s.timers.vote}
+        onChange={setTimer("vote")}
+        limits={MAFIA_TIMER_LIMITS.vote}
+      />
+      <TimerRow
+        label="Последнее слово"
+        options={LASTWORD_OPTS}
+        value={s.timers.lastWord}
+        onChange={setTimer("lastWord")}
+        limits={MAFIA_TIMER_LIMITS.lastWord}
+      />
 
       <SectionLabel>Правила</SectionLabel>
       <ToggleRow label="Первый день без голосования" on={s.rules.firstDayNoVote} onChange={setRule("firstDayNoVote")} />

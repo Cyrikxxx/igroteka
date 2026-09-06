@@ -119,6 +119,22 @@ export interface MafiaSettings {
   };
 }
 
+/**
+ * Допустимые границы таймеров, секунды. Одни и те же и для формы, и для
+ * сервера: разойдись они — введённое хостом число тихо заменялось бы на
+ * другое, и он бы не понял, почему.
+ */
+export const MAFIA_TIMER_LIMITS: Record<
+  keyof MafiaSettings["timers"],
+  { min: number; max: number }
+> = {
+  night: { min: 15, max: 180 },
+  discussion: { min: 30, max: 600 },
+  vote: { min: 15, max: 120 },
+  lastWord: { min: 10, max: 90 },
+  nightStep: { min: 8, max: 60 },
+};
+
 export const MIN_MAFIA_PLAYERS = 5;
 export const MAX_MAFIA_PLAYERS = 16;
 
@@ -172,13 +188,12 @@ export function normalizeMafiaSettings(
 
   if (x.timers && typeof x.timers === "object") {
     const t = x.timers as Record<string, unknown>;
-    const clamp = (v: unknown, lo: number, hi: number, d: number) =>
-      typeof v === "number" ? Math.max(lo, Math.min(hi, Math.round(v))) : d;
-    out.timers.night = clamp(t.night, 15, 180, out.timers.night);
-    out.timers.discussion = clamp(t.discussion, 30, 600, out.timers.discussion);
-    out.timers.vote = clamp(t.vote, 15, 120, out.timers.vote);
-    out.timers.lastWord = clamp(t.lastWord, 10, 90, out.timers.lastWord);
-    out.timers.nightStep = clamp(t.nightStep, 8, 60, out.timers.nightStep);
+    for (const key of Object.keys(MAFIA_TIMER_LIMITS) as (keyof MafiaSettings["timers"])[]) {
+      const v = t[key];
+      if (typeof v !== "number" || !Number.isFinite(v)) continue;
+      const { min, max } = MAFIA_TIMER_LIMITS[key];
+      out.timers[key] = Math.max(min, Math.min(max, Math.round(v)));
+    }
   }
 
   if (x.rules && typeof x.rules === "object") {

@@ -1364,6 +1364,12 @@ html { scrollbar-color: var(--bg-4) transparent; }
   /* Пресет-чипы (моно) */
   .mf-preset { font-family: var(--font-mono); font-size: 13px; font-weight: 700; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--mf-border); background: transparent; color: var(--mf-text-dim); cursor: pointer; transition: all 0.12s; }
   .mf-preset.on { background: var(--mf-crimson); border-color: var(--mf-crimson); color: #fff; }
+
+  /* Поле «своё время» — тот же чип, только с вводом. Стрелки счётчика
+     убраны: поле узкое, и они съедают половину. */
+  .mf-num { font-family: var(--font-mono); font-size: 13px; font-weight: 700; width: 88px; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--mf-crimson); background: transparent; color: var(--mf-text); outline: none; -moz-appearance: textfield; appearance: textfield; }
+  .mf-num:focus { box-shadow: var(--sh-glow-crimson); }
+  .mf-num::-webkit-outer-spin-button, .mf-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 }
 
 /* ============================================================
