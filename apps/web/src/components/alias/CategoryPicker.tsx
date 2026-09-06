@@ -91,7 +91,7 @@ export default function CategoryPicker({ catalog, selected, onChange, onWordCoun
    */
   useEffect(() => {
     if (selected.length === 0) {
-      setWordCount(0);
+      // Ноль знаем и без сервера — сообщаем экрану и не ходим в сеть.
       reportRef.current?.(0);
       return;
     }

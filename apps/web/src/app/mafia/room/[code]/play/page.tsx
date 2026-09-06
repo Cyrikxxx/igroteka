@@ -92,13 +92,14 @@ export default function MafiaPlayPage() {
 
   const hostToast = useHostToast(view?.you.isHost ?? false);
   // Экран «ты убит» показываем один раз, пока игрок сам не уйдёт в зрители.
-  const [deathSeen, setDeathSeen] = useState(false);
+  const [deathSeenAt, setDeathSeenAt] = useState<number | null>(null);
   const [endGameAsk, setEndGameAsk] = useState(false);
   const [closeAsk, setCloseAsk] = useState(false);
   const alive = view?.you.alive ?? true;
-  useEffect(() => {
-    if (alive) setDeathSeen(false);
-  }, [alive]);
+  // Живому экран смерти не показываем, а отметка «уже посмотрел» действует
+  // только для той смерти, на которой её поставили.
+  const deathSeen = !alive && deathSeenAt === (view?.day ?? 0);
+  const markDeathSeen = () => setDeathSeenAt(view?.day ?? 0);
 
   // Выгнали или комнату закрыли — на главный экран Мафии с объяснением.
   useEffect(() => {
@@ -204,7 +205,7 @@ export default function MafiaPlayPage() {
     if (dead && !deathSeen) {
       return (
         <MafiaShell vignette vignetteLevel={0.2}>
-          <YouDeadScreen exiled={exiled} onWatch={() => setDeathSeen(true)} />
+          <YouDeadScreen exiled={exiled} onWatch={markDeathSeen} />
         </MafiaShell>
       );
     }

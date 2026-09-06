@@ -104,18 +104,18 @@ export default function PlayPage() {
 
   // Итоги финала: снапшот комнаты знает только счёт, а подиуму нужны
   // составы команд — берём готовую Game по её id.
-  const [finalGame, setFinalGame] = useState<GameFromAPI | null>(null);
+  const [loadedGame, setLoadedGame] = useState<{ id: string; game: GameFromAPI } | null>(null);
   const finishedGameId = snapshot?.phase === "FINISHED" ? snapshot.gameId : null;
+  // Пока id не совпал с загруженным — партии для нас нет. Сбрасывать её
+  // отдельным действием в эффекте не за чем.
+  const finalGame = loadedGame && loadedGame.id === finishedGameId ? loadedGame.game : null;
   useEffect(() => {
-    if (!finishedGameId) {
-      setFinalGame(null);
-      return;
-    }
+    if (!finishedGameId) return;
     let alive = true;
     fetch(`/api/games/${finishedGameId}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((g: GameFromAPI | null) => {
-        if (alive) setFinalGame(g);
+        if (alive && g) setLoadedGame({ id: finishedGameId, game: g });
       })
       .catch(() => {});
     return () => {
