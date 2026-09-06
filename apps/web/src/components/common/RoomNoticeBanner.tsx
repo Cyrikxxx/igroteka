@@ -4,13 +4,14 @@
 // один раз после того, как человека выгнали или комнату закрыли, и убирается
 // крестиком.
 //
-// Читаем в эффекте, а не при рендере: на сервере sessionStorage нет, и
-// обращение к нему прямо в теле компонента разошлось бы с серверной
-// разметкой при гидратации.
+// Содержимое монтируем только в браузере: на сервере sessionStorage нет, а
+// само сообщение одноразовое — takeRoomNotice его стирает при чтении.
 
-import { useEffect, useState } from "react";
+
+import { useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import { takeRoomNotice, type RoomNotice } from "@/lib/room-notice";
+import { useHydrated } from "@/hooks/useHydrated";
 
 export default function RoomNoticeBanner({
   variant = "alias",
@@ -18,11 +19,17 @@ export default function RoomNoticeBanner({
   /** Оформление под зону: у Мафии своя палитра, она не зависит от темы. */
   variant?: "alias" | "mafia";
 }) {
-  const [notice, setNotice] = useState<RoomNotice | null>(null);
+  // На сервере хранилища нет, а сообщение к тому же одноразовое — поэтому
+  // содержимое монтируем только в браузере.
+  const hydrated = useHydrated();
+  if (!hydrated) return null;
+  return <Banner variant={variant} />;
+}
 
-  useEffect(() => {
-    setNotice(takeRoomNotice());
-  }, []);
+function Banner({ variant }: { variant: "alias" | "mafia" }) {
+  // Читаем один раз при монтировании: takeRoomNotice стирает сообщение, и
+  // второй раз его уже не будет.
+  const [notice, setNotice] = useState<RoomNotice | null>(() => takeRoomNotice());
 
   if (!notice) return null;
 

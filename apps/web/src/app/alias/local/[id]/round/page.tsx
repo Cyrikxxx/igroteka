@@ -28,7 +28,7 @@ export default function LocalRoundPage() {
   const [game, setGame] = useState<GameFromAPI | null>(null);
   const [words, setWords] = useState<WordInRound[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [phase, setPhase] = useState<Phase>("loading");
+  const [rawPhase, setPhase] = useState<Phase>("loading");
   const [error, setError] = useState<string | null>(null);
   const [pauseOpen, setPauseOpen] = useState(false);
   const [flash, setFlash] = useState<"got" | "skip" | null>(null);
@@ -95,6 +95,15 @@ export default function LocalRoundPage() {
   // Пускаем таймер ровно один раз, когда игра загрузилась. Через ref, а не
   // через сравнение timeLeft с длительностью раунда: иначе пауза, поставленная
   // в первые доли секунды, тут же снималась бы этим эффектом.
+  // Слова кончились раньше таймера — раунд закрыт. Это видно из самих
+  // данных, поэтому выводим, а не храним отдельно; эффекту остаётся только
+  // остановить таймер.
+  const outOfWords = words.length > 0 && currentIndex >= words.length;
+  const phase = outOfWords && rawPhase === "active" ? "summary" : rawPhase;
+  useEffect(() => {
+    if (outOfWords && rawPhase === "active") pause();
+  }, [outOfWords, rawPhase, pause]);
+
   const startedRef = useRef(false);
   useEffect(() => {
     if (phase === "active" && game && !startedRef.current) {
@@ -102,16 +111,6 @@ export default function LocalRoundPage() {
       start();
     }
   }, [phase, game, start]);
-
-  // Слова кончились раньше таймера — закрываем раунд. Раньше это делалось
-  // прямо внутри updater'а setCurrentIndex, а updater обязан быть чистым:
-  // в dev-режиме React вызывает его дважды.
-  useEffect(() => {
-    if (phase === "active" && words.length > 0 && currentIndex >= words.length) {
-      pause();
-      setPhase("summary");
-    }
-  }, [phase, currentIndex, words.length, pause]);
 
   const guess = (guessed: boolean) => {
     setFlash(guessed ? "got" : "skip");
