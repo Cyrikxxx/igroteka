@@ -19,11 +19,15 @@ import {
 } from "@/constants/game";
 import type { CatalogFromAPI, CreateRoomResponse } from "@/types";
 import { loadDisplayName, saveDisplayName, saveRoomCreds } from "@/lib/room-session";
+import { useHydrated } from "@/hooks/useHydrated";
 import { plural, pluralize, CATEGORIES, WORDS } from "@/lib/plural";
 
 export default function RoomNewPage() {
   const router = useRouter();
-  const [hostName, setHostName] = useState("");
+  const hydrated = useHydrated();
+  const [typedName, setTypedName] = useState<string | null>(null);
+  const hostName = typedName ?? (hydrated ? loadDisplayName() : "");
+  const setHostName = setTypedName;
   const [title, setTitle] = useState("");
   const [roundTime, setRoundTime] = useState<number>(ROUND_TIME_DEFAULT);
   const [winScore, setWinScore] = useState<number>(WIN_SCORE_DEFAULT);
@@ -34,7 +38,6 @@ export default function RoomNewPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setHostName(loadDisplayName());
     fetch("/api/categories")
       .then((r) => r.json())
       .then((data: CatalogFromAPI) => setCatalog(data))

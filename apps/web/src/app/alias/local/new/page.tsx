@@ -2,7 +2,7 @@
 
 // Локальная игра — шаг 1: команды. Дизайн — TeamsScreen из редизайна.
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Plus, Trash2, X } from "lucide-react";
 import {
@@ -22,20 +22,23 @@ import { TRIO_TURNS } from "@alias/shared/trio";
 import { nextUnusedTeamName } from "@alias/shared/snapshot-builders";
 import { plural, pluralize, PLAYERS, TEAMS, TEAMS_IN } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
+import { useHydrated } from "@/hooks/useHydrated";
 import Stepper from "@/components/common/Stepper";
 import Chip from "@/components/common/Chip";
 import Avatar from "@/components/common/Avatar";
 
 export default function LocalNewPage() {
   const router = useRouter();
-  const [state, setState] = useState<LocalSetupState>(DEFAULT_LOCAL_SETUP);
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useHydrated();
+  const [edited, setEdited] = useState<LocalSetupState | null>(null);
+  const stored = useMemo(
+    () => (hydrated ? loadLocalSetup() : DEFAULT_LOCAL_SETUP),
+    [hydrated],
+  );
+  const state = edited ?? stored;
+  const setState = (next: LocalSetupState | ((prev: LocalSetupState) => LocalSetupState)) =>
+    setEdited(typeof next === "function" ? next(state) : next);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setState(loadLocalSetup());
-    setHydrated(true);
-  }, []);
 
   useEffect(() => {
     if (hydrated) saveLocalSetup(state);

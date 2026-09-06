@@ -2,7 +2,7 @@
 
 // Создание комнаты Мафии: шаг 1 — ник, шаг 2 — настройки партии.
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import {
@@ -10,6 +10,7 @@ import {
   type MafiaSettings,
   type MafiaCreateRoomResponse,
 } from "@alias/shared/mafia";
+import { useHydrated } from "@/hooks/useHydrated";
 import MafiaShell from "@/components/mafia/MafiaShell";
 import MafiaAvatar from "@/components/mafia/MafiaAvatar";
 import MafiaSettingsForm from "@/components/mafia/MafiaSettingsForm";
@@ -22,7 +23,10 @@ import {
 export default function MafiaNewPage() {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
-  const [name, setName] = useState("");
+  const hydrated = useHydrated();
+  const [typedName, setTypedName] = useState<string | null>(null);
+  const name = typedName ?? (hydrated ? loadDisplayName() : "");
+  const setName = setTypedName;
   const [settings, setSettings] = useState<MafiaSettings>(() => ({
     mafiaCount: DEFAULT_MAFIA_SETTINGS.mafiaCount,
     roles: { ...DEFAULT_MAFIA_SETTINGS.roles },
@@ -31,10 +35,6 @@ export default function MafiaNewPage() {
   }));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setName(loadDisplayName());
-  }, []);
 
   const create = async () => {
     const trimmed = name.trim().slice(0, 50);

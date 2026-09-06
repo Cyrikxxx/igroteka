@@ -3,7 +3,7 @@
 // Локальная игра — шаг 2: настройки. Дизайн — SettingsScreen из редизайна.
 // Логика реальная: /api/categories → POST /api/games → /local/[id]/turn.
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Clock, Minus, Play, Target } from "lucide-react";
 import {
@@ -18,6 +18,7 @@ import { ROUND_TIME_OPTIONS, WIN_SCORE_OPTIONS } from "@/constants/game";
 import { pluralize, WORDS, CATEGORIES } from "@/lib/plural";
 import type { CatalogFromAPI, GameFromAPI } from "@/types";
 import AppShell from "@/components/common/AppShell";
+import { useHydrated } from "@/hooks/useHydrated";
 import Stepper from "@/components/common/Stepper";
 import Chip from "@/components/common/Chip";
 import Toggle from "@/components/common/Toggle";
@@ -25,15 +26,20 @@ import CategoryPicker from "@/components/alias/CategoryPicker";
 
 export default function LocalSettingsPage() {
   const router = useRouter();
-  const [state, setState] = useState<LocalSetupState>(DEFAULT_LOCAL_SETUP);
+  const hydrated = useHydrated();
+  const [edited, setEdited] = useState<LocalSetupState | null>(null);
+  const stored = useMemo(
+    () => (hydrated ? loadLocalSetup() : DEFAULT_LOCAL_SETUP),
+    [hydrated],
+  );
+  const state = edited ?? stored;
+  const setState = (next: LocalSetupState | ((prev: LocalSetupState) => LocalSetupState)) =>
+    setEdited(typeof next === "function" ? next(state) : next);
   const [catalog, setCatalog] = useState<CatalogFromAPI | null>(null);
-  const [hydrated, setHydrated] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setState(loadLocalSetup());
-    setHydrated(true);
     fetch("/api/categories")
       .then((r) => r.json())
       .then((data: CatalogFromAPI) => setCatalog(data))
