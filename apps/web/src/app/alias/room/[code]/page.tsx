@@ -37,6 +37,7 @@ import { resumeRoom } from "@/lib/room-resume";
 import { setRoomNotice } from "@/lib/room-notice";
 import { useRoom } from "@/hooks/useRoom";
 import { useHostClaim } from "@/hooks/useHostClaim";
+import { useHydrated } from "@/hooks/useHydrated";
 import { pluralize, PLAYERS, SPECTATORS } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
 import Avatar from "@/components/common/Avatar";
@@ -57,8 +58,6 @@ export default function LobbyPage() {
   const params = useParams();
   const router = useRouter();
   const rawCode = (params.code as string).toUpperCase();
-  const [creds, setCreds] = useState<Creds | null>(null);
-  const [mounted, setMounted] = useState(false);
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -66,30 +65,29 @@ export default function LobbyPage() {
   // Ошибки действий показываем строкой в лобби, а не системным alert.
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const hydrated = useHydrated();
+  const stored = useMemo(
+    () => (hydrated ? loadRoomCreds(rawCode) : null),
+    [hydrated, rawCode],
+  );
+  const [resumed, setResumed] = useState<Creds | null>(null);
+  const creds = resumed ?? stored;
+
   // Креды живут во вкладке и умирают вместе с ней, а человек в комнате — нет:
-  // сервер помнит его по куке. Поэтому сначала пробуем вернуться молча, и
-  // только если сервер не узнал — отправляем на экран входа.
+  // сервер помнит его по куке. Поэтому если их нет — пробуем вернуться молча,
+  // и только если сервер не узнал, отправляем на экран входа.
   useEffect(() => {
-    const stored = loadRoomCreds(rawCode);
-    if (stored) {
-      setCreds(stored);
-      setMounted(true);
-      return;
-    }
+    if (!hydrated || stored) return;
     let alive = true;
-    resumeRoom(rawCode, "alias").then((resumed) => {
+    resumeRoom(rawCode, "alias").then((back) => {
       if (!alive) return;
-      if (resumed) {
-        setCreds(resumed);
-        setMounted(true);
-      } else {
-        router.replace(`/alias/join?code=${rawCode}`);
-      }
+      if (back) setResumed(back);
+      else router.replace(`/alias/join?code=${rawCode}`);
     });
     return () => {
       alive = false;
     };
-  }, [rawCode, router]);
+  }, [hydrated, stored, rawCode, router]);
 
   const roomOpts = useMemo(
     () => (creds ? { wsUrl: creds.wsUrl, token: creds.wsToken, code: creds.code } : null),
@@ -129,7 +127,7 @@ export default function LobbyPage() {
     }
   }, [snapshot?.phase, creds, router]);
 
-  if (!mounted || !creds) {
+  if (!creds) {
     return (
       <AppShell centered>
         <p className="muted" style={{ textAlign: "center" }}>

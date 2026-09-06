@@ -29,6 +29,7 @@ import {
   useHostToast,
 } from "@/components/mafia/Overlays";
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
+import { useHydrated } from "@/hooks/useHydrated";
 import { loadRoomCreds, clearRoomCreds, type RoomCredentials } from "@/lib/room-session";
 import { resumeRoom } from "@/lib/room-resume";
 import { setRoomNotice } from "@/lib/room-notice";
@@ -48,9 +49,29 @@ export default function MafiaPlayPage() {
   const params = useParams();
   const code = String(params.code ?? "").toUpperCase();
 
-  // Креды читаем в эффекте: sessionStorage на сервере нет, и чтение прямо в
-  // теле компонента разъезжалось с серверной разметкой при гидратации.
-  const [creds, setCreds] = useState<RoomCredentials | null>(null);
+  const hydrated = useHydrated();
+  const stored = useMemo(
+    () => (hydrated ? loadRoomCreds(code) : null),
+    [hydrated, code],
+  );
+  const [resumed, setResumed] = useState<RoomCredentials | null>(null);
+  const creds = resumed ?? stored;
+
+  // Креды живут во вкладке и умирают вместе с ней, а человек в комнате — нет:
+  // сервер помнит его по куке. Поэтому если их нет — пробуем вернуться молча,
+  // и только если сервер не узнал, отправляем на экран входа.
+  useEffect(() => {
+    if (!hydrated || stored) return;
+    let alive = true;
+    resumeRoom(code, "mafia").then((back) => {
+      if (!alive) return;
+      if (back) setResumed(back);
+      else router.replace(`/mafia/join?code=${code}`);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [hydrated, stored, code, router]);
   const opts = useMemo(
     () =>
       creds
@@ -78,25 +99,6 @@ export default function MafiaPlayPage() {
   useEffect(() => {
     if (alive) setDeathSeen(false);
   }, [alive]);
-
-  // Вкладку могли закрыть и открыть заново — сначала пробуем вернуться молча.
-  useEffect(() => {
-    if (!code) return;
-    const stored = loadRoomCreds(code);
-    if (stored) {
-      setCreds(stored);
-      return;
-    }
-    let alive = true;
-    resumeRoom(code, "mafia").then((resumed) => {
-      if (!alive) return;
-      if (resumed) setCreds(resumed);
-      else router.replace(`/mafia/join?code=${code}`);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [code, router]);
 
   // Выгнали или комнату закрыли — на главный экран Мафии с объяснением.
   useEffect(() => {

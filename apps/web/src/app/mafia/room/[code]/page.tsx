@@ -20,6 +20,7 @@ import QrCode from "@/components/common/QrCode";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
 import { useHostClaim } from "@/hooks/useHostClaim";
+import { useHydrated } from "@/hooks/useHydrated";
 import { loadRoomCreds, clearRoomCreds, saveDisplayName, type RoomCredentials } from "@/lib/room-session";
 import { resumeRoom } from "@/lib/room-resume";
 import { setRoomNotice } from "@/lib/room-notice";
@@ -29,10 +30,29 @@ export default function MafiaLobbyPage() {
   const params = useParams();
   const code = String(params.code ?? "").toUpperCase();
 
-  // Креды читаем в эффекте, а не при рендере: sessionStorage на сервере нет,
-  // и обращение к нему в теле компонента разъезжалось с серверной разметкой —
-  // на гидратации React ругался на несовпадение.
-  const [creds, setCreds] = useState<RoomCredentials | null>(null);
+  const hydrated = useHydrated();
+  const stored = useMemo(
+    () => (hydrated ? loadRoomCreds(code) : null),
+    [hydrated, code],
+  );
+  const [resumed, setResumed] = useState<RoomCredentials | null>(null);
+  const creds = resumed ?? stored;
+
+  // Креды живут во вкладке и умирают вместе с ней, а человек в комнате — нет:
+  // сервер помнит его по куке. Поэтому если их нет — пробуем вернуться молча,
+  // и только если сервер не узнал, отправляем на экран входа.
+  useEffect(() => {
+    if (!hydrated || stored) return;
+    let alive = true;
+    resumeRoom(code, "mafia").then((back) => {
+      if (!alive) return;
+      if (back) setResumed(back);
+      else router.replace(`/mafia/join?code=${code}`);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [hydrated, stored, code, router]);
   const opts = useMemo(
     () =>
       creds
@@ -51,27 +71,6 @@ export default function MafiaLobbyPage() {
   const [closeAsk, setCloseAsk] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [draft, setDraft] = useState<MafiaSettings | null>(null);
-
-  // Креды живут во вкладке и умирают вместе с ней, а человек в комнате — нет.
-  // Поэтому сначала пробуем вернуться молча, и только если сервер не узнал —
-  // отправляем на экран входа.
-  useEffect(() => {
-    if (!code) return;
-    const stored = loadRoomCreds(code);
-    if (stored) {
-      setCreds(stored);
-      return;
-    }
-    let alive = true;
-    resumeRoom(code, "mafia").then((resumed) => {
-      if (!alive) return;
-      if (resumed) setCreds(resumed);
-      else router.replace(`/mafia/join?code=${code}`);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [code, router]);
 
   // Выгнали или комнату закрыли — уводим на главный экран Мафии и объясняем
   // там, что случилось. Раньше интерфейс комнаты оставался на месте, и любое

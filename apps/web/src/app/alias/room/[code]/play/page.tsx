@@ -13,6 +13,7 @@ import { resumeRoom } from "@/lib/room-resume";
 import { setRoomNotice } from "@/lib/room-notice";
 import { useRoom } from "@/hooks/useRoom";
 import { useHostClaim } from "@/hooks/useHostClaim";
+import { useHydrated } from "@/hooks/useHydrated";
 import { pluralize, WORDS } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
 import Avatar from "@/components/common/Avatar";
@@ -36,25 +37,29 @@ export default function PlayPage() {
   const params = useParams();
   const router = useRouter();
   const rawCode = (params.code as string).toUpperCase();
-  const [creds, setCreds] = useState<Creds | null>(null);
+  const hydrated = useHydrated();
+  const stored = useMemo(
+    () => (hydrated ? loadRoomCreds(rawCode) : null),
+    [hydrated, rawCode],
+  );
+  const [resumed, setResumed] = useState<Creds | null>(null);
+  const creds = resumed ?? stored;
 
-  // Вкладку могли закрыть и открыть заново — сначала пробуем вернуться молча.
+  // Креды живут во вкладке и умирают вместе с ней, а человек в комнате — нет:
+  // сервер помнит его по куке. Поэтому если их нет — пробуем вернуться молча,
+  // и только если сервер не узнал, отправляем на экран входа.
   useEffect(() => {
-    const stored = loadRoomCreds(rawCode);
-    if (stored) {
-      setCreds(stored);
-      return;
-    }
+    if (!hydrated || stored) return;
     let alive = true;
-    resumeRoom(rawCode, "alias").then((resumed) => {
+    resumeRoom(rawCode, "alias").then((back) => {
       if (!alive) return;
-      if (resumed) setCreds(resumed);
+      if (back) setResumed(back);
       else router.replace(`/alias/join?code=${rawCode}`);
     });
     return () => {
       alive = false;
     };
-  }, [rawCode, router]);
+  }, [hydrated, stored, rawCode, router]);
 
   const opts = useMemo(
     () => (creds ? { wsUrl: creds.wsUrl, token: creds.wsToken, code: creds.code } : null),
