@@ -1,5 +1,8 @@
-// Страница «О нас»: зачем сделано, как работает, кто делает, планы,
-// контакты и данные. Порт mafia-design/platform/screen-about.jsx.
+// Страница «О нас»: зачем сделано, как работает, кто делает, контакты,
+// данные и планы. Порт mafia-design/platform/screen-about.jsx.
+//
+// «Что дальше» стоит последним разделом намеренно: это и история проекта, и
+// планы, а читать её интереснее, когда уже понятно, о чём вообще речь.
 
 import {
   Smartphone,
@@ -38,11 +41,54 @@ const HOW: [LucideIcon, string, string][] = [
 
 type RoadmapState = "done" | "now" | "next";
 const ROADMAP: [RoadmapState, string, string, string][] = [
-  ["done", "Алиас", "Локальные и онлайн-партии, наборы слов", "var(--alias-green)"],
-  ["done", "Мафия", "Онлайн-партии с ведущим и без", "var(--mf-crimson)"],
-  ["now", "Общая история игр", "Архив партий обеих игр в одном списке", "var(--mf-gold)"],
-  ["next", "Новые игры", "Игротека пополняется — следующая игра в работе", "var(--role-civilian)"],
-  ["next", "Профили и статистика", "Личный счёт побед и любимые наборы", "var(--role-civilian)"],
+  [
+    "done",
+    "Алиас на одном устройстве",
+    "С этого всё начиналось: телефон по кругу, интернет не нужен",
+    "var(--alias-green)",
+  ],
+  [
+    "done",
+    "Алиас онлайн",
+    "Комнаты по коду: у каждого свой телефон, слово видит только объясняющий",
+    "var(--alias-green)",
+  ],
+  [
+    "done",
+    "Мафия",
+    "Роли на экранах, ночь и голосование без живого ведущего",
+    "var(--mf-crimson)",
+  ],
+  [
+    "done",
+    "Общая история",
+    "Партии обеих игр в одном списке, итоги и «сыграть так же»",
+    "var(--mf-gold)",
+  ],
+  [
+    "now",
+    "Звук в Мафии",
+    "Ведущий говорит голосом устройства — дорабатываем реплики и выбор голоса",
+    "var(--mf-gold)",
+  ],
+  [
+    "now",
+    "Новые игры",
+    "Игротека пополняется. Хотите конкретную игру — напишите в поддержку, такие письма и решают, что делать дальше",
+    "var(--mf-gold)",
+  ],
+  [
+    "next",
+    "Контакты",
+    "Телеграм, почта, форма для багов и донат — сейчас это заглушки",
+    "var(--role-civilian)",
+  ],
+  [
+    "next",
+    "Профиль по желанию",
+    "Регистрация, чтобы история не терялась при смене устройства. Обязательной не станет — и, может быть, к ней придумается что-то поинтереснее статистики",
+    "var(--role-civilian)",
+  ],
 ];
 
 const MARKS: Record<RoadmapState, [LucideIcon, string]> = {
@@ -53,7 +99,7 @@ const MARKS: Record<RoadmapState, [LucideIcon, string]> = {
 
 const CONTACTS: [LucideIcon, string, string, string][] = [
   [Send, "Телеграм", "Скоро", "Канал с обновлениями и чат для вопросов"],
-  [Mail, "Почта", "Скоро", "Для длинных писем: баги, идеи, сотрудничество"],
+  [Mail, "Почта", "Скоро", "Для длинных писем: баги, идеи, какую игру добавить"],
   [Bug, "Сообщить о баге", "Форма в разработке", "Что случилось, на каком экране, какая игра"],
   [Heart, "Поддержать донатом", "Скоро", "По желанию — на доступ к играм не влияет"],
 ];
@@ -77,14 +123,15 @@ export default function AboutPage() {
         <InkCard style={{ gap: 14 }}>
           <SectionTitle>Зачем это сделано</SectionTitle>
           <p className="pl-text">
-            Настольные игры для компании обычно живут в трёх разных приложениях: одно
-            для слов, другое для ролей, третье просто с таймером. Игротека собирает их
-            в одном месте — с общим входом по коду, общей историей партий и одинаковыми
-            правилами интерфейса.
+            Игры для компании обычно лежат в коробках — а компания собирается там,
+            где коробки нет: в гостях, в поезде, на даче, на кухне у друзей. Карточки
+            остались дома, фишки потерялись, до магазина ехать. Игротека заменяет
+            коробку: нужен только телефон и ссылка.
           </p>
           <p className="pl-text">
-            Ничего не нужно устанавливать и регистрировать: открыл ссылку, назвал имя,
-            начал играть.
+            В Мафию так можно играть большой компанией и без ведущего. Роли раздаёт
+            сайт, ночь он же и ведёт — вслух, по шагам. Никто не сидит в стороне,
+            зачитывая чужие роли: играют все.
           </p>
         </InkCard>
 
@@ -94,7 +141,7 @@ export default function AboutPage() {
               Бесплатно
             </span>
             <span className="mf-chip" style={{ fontSize: 13 }}>Без рекламы</span>
-            <span className="mf-chip" style={{ fontSize: 13 }}>Без аккаунта</span>
+            <span className="mf-chip" style={{ fontSize: 13 }}>Можно без аккаунта</span>
           </div>
           <div className="pl-claim">
             Игры бесплатны целиком — платных наборов и подписки нет
@@ -143,9 +190,45 @@ export default function AboutPage() {
         </InkCard>
       </section>
 
-      {/* Что дальше */}
+      {/* Связаться */}
+      <section className="pl-section" id="contacts">
+        <SectionTitle note="ПОКА НЕ РАБОТАЮТ">Связаться</SectionTitle>
+        <div className="pl-grid-2">
+          {CONTACTS.map(([Icon, title, badge, text]) => (
+            <InkCard key={title} className="pl-contact-off">
+              <div className="pl-contact-head">
+                <span className="pl-contact-name">
+                  <Icon size={18} color="var(--mf-text-dim)" /> {title}
+                </span>
+                <span className="mf-mono pl-badge">{badge}</span>
+              </div>
+              <p className="pl-text">{text}</p>
+            </InkCard>
+          ))}
+        </div>
+        <p className="pl-text pl-text-faint pl-contacts-note">
+          Ни одна из кнопок пока никуда не ведёт: почта и канал появятся вместе с
+          доменом. Это ближайшее, чем займёмся после звука в Мафии.
+        </p>
+      </section>
+
+      {/* Данные */}
       <section className="pl-section">
-        <SectionTitle note="БЕЗ ТОЧНЫХ ДАТ">Что дальше</SectionTitle>
+        <SectionTitle>Данные и приватность</SectionTitle>
+        <div className="pl-grid-3">
+          {DATA.map(([Icon, title, text]) => (
+            <InkCard key={title} style={{ gap: 8 }}>
+              <Icon size={20} color="var(--mf-text-dim)" />
+              <div className="pl-card-title">{title}</div>
+              <p className="pl-text">{text}</p>
+            </InkCard>
+          ))}
+        </div>
+      </section>
+
+      {/* Что дальше — последним: сначала история, потом планы */}
+      <section className="pl-section">
+        <SectionTitle note="БЕЗ ТОЧНЫХ ДАТ">Что уже есть и что дальше</SectionTitle>
         <InkCard className="pl-roadmap">
           {ROADMAP.map(([state, title, text, color]) => {
             const [Icon, label] = MARKS[state];
@@ -168,38 +251,6 @@ export default function AboutPage() {
             );
           })}
         </InkCard>
-      </section>
-
-      {/* Связаться */}
-      <section className="pl-section">
-        <SectionTitle note="ССЫЛКИ ПОЯВЯТСЯ ПОЗЖЕ">Связаться</SectionTitle>
-        <div className="pl-grid-2">
-          {CONTACTS.map(([Icon, title, badge, text]) => (
-            <InkCard key={title} style={{ gap: 8 }}>
-              <div className="pl-contact-head">
-                <span className="pl-contact-name">
-                  <Icon size={18} color="var(--mf-text-dim)" /> {title}
-                </span>
-                <span className="mf-mono pl-badge">{badge}</span>
-              </div>
-              <p className="pl-text">{text}</p>
-            </InkCard>
-          ))}
-        </div>
-      </section>
-
-      {/* Данные */}
-      <section className="pl-section">
-        <SectionTitle>Данные и приватность</SectionTitle>
-        <div className="pl-grid-3">
-          {DATA.map(([Icon, title, text]) => (
-            <InkCard key={title} style={{ gap: 8 }}>
-              <Icon size={20} color="var(--mf-text-dim)" />
-              <div className="pl-card-title">{title}</div>
-              <p className="pl-text">{text}</p>
-            </InkCard>
-          ))}
-        </div>
       </section>
 
       <PageFooter />

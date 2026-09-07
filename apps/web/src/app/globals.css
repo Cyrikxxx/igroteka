@@ -1582,6 +1582,10 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .al-pack-count { font-size: 12px; font-weight: 700; color: var(--mf-text-faint); }
   .al-pack-desc { font-weight: 600; font-size: 13px; color: var(--mf-text-dim); line-height: 1.45; text-wrap: pretty; }
 
+  /* Приписка под сеткой наборов: числа на карточках складывать нельзя,
+     и честнее сказать об этом сразу, чем удивлять на экране выбора. */
+  .al-packs-note { margin: 14px 0 0; font-weight: 600; font-size: 13px; line-height: 1.55; color: var(--mf-text-faint); text-wrap: pretty; }
+
   .al-landing-foot { display: flex; justify-content: center; padding: 0 20px clamp(20px, 3vw, 32px); }
   .al-landing-foot .mf-btn { text-decoration: none; min-width: 200px; }
 }
@@ -1654,6 +1658,11 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .pl-contact-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .pl-contact-name { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16.5px; }
   .pl-badge { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mf-text-faint); border: 1px dashed var(--ink-border); border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+
+  /* Контакты пока ничего не открывают: почты и канала нет. Карточка гасится,
+     чтобы это было видно глазом, а не только по подписи «скоро». */
+  .pl-contact-off { gap: 8px; opacity: 0.62; }
+  .pl-contacts-note { margin: 14px 0 0; }
 
   .pl-footer { border-top: 1px solid var(--ink-border); margin-top: 12px; padding-top: 20px; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: space-between; color: var(--mf-text-faint); font-size: 13px; font-weight: 700; }
   @media (min-width: 900px) { .pl-footer { flex-direction: row; } }

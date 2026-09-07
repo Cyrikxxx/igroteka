@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import SiteTopBar from "@/components/common/SiteTopBar";
-import { NAV_LINKS, supportMailto } from "@/constants/site";
+import { NAV_LINKS, SUPPORT_HREF } from "@/constants/site";
 
 export function PageHead({ title, lead }: { title: string; lead: string }) {
   return (
@@ -63,7 +63,7 @@ export function PageFooter() {
             {label}
           </Link>
         ))}
-        <a href={supportMailto()}>Поддержка</a>
+        <a href={SUPPORT_HREF}>Поддержка</a>
       </div>
     </div>
   );

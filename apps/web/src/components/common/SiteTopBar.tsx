@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import { NavMenu } from "./Nav";
-import { NAV_LINKS, supportMailto } from "@/constants/site";
+import { NAV_LINKS, SUPPORT_HREF } from "@/constants/site";
 
 interface SiteTopBarProps {
   /** Подсветить активный пункт навигации (подпись ссылки). */
@@ -35,7 +35,7 @@ export function SiteTopBar({ active, right }: SiteTopBarProps) {
               {label}
             </Link>
           ))}
-          <a href={supportMailto()}>Поддержка</a>
+          <a href={SUPPORT_HREF}>Поддержка</a>
         </nav>
         {/* Ниже 900px ряд ссылок скрыт — там навигация живёт в бургере. */}
         <NavMenu />
