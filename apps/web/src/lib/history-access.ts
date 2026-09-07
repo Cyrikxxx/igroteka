@@ -17,6 +17,25 @@ import type { Prisma } from "@prisma/client";
  */
 export function visibleGamesWhere(userId: string): Prisma.GameWhereInput {
   return {
-    OR: [{ ownerKey: userId }, { room: { participants: { some: { userId } } } }],
+    AND: [
+      { OR: [{ ownerKey: userId }, { room: { participants: { some: { userId } } } }] },
+      // Убранное из своей истории. Онлайн-партию видят все участники, поэтому
+      // «удалить» не может значить «стереть у всех»: каждый прячет её у себя.
+      { hiddenBy: { none: { userId } } },
+    ],
+  };
+}
+
+/**
+ * Завершённые партии Мафии, которые человек вправе видеть.
+ *
+ * Правило другое, чем у Алиаса: видит тот, кто ИГРАЛ (у него есть запись с
+ * ролью), а не всякий, кто заходил в комнату. Зритель партию не увидит.
+ */
+export function visibleMafiaGamesWhere(userId: string): Prisma.MafiaGameWhereInput {
+  return {
+    status: "FINISHED",
+    OR: [{ hostId: userId }, { players: { some: { userId } } }],
+    hiddenBy: { none: { userId } },
   };
 }

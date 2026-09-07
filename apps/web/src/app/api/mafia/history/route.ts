@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireUserId } from "@/lib/identity";
 import { loadMafiaSnapshot } from "@/lib/mafia-snapshot";
+import { visibleMafiaGamesWhere } from "@/lib/history-access";
 import type { MafiaPhase, MafiaSettings } from "@alias/shared/mafia";
 
 export interface MafiaHistoryGame {
@@ -57,12 +58,10 @@ export async function GET() {
 
     const [finished, liveRooms] = await Promise.all([
       prisma.mafiaGame.findMany({
-        where: {
-          status: "FINISHED",
-          // Хостов меньшинство: показывать только свои комнаты значило бы
-          // прятать историю от большинства игроков.
-          OR: [{ hostId: userId }, { players: { some: { userId } } }],
-        },
+        // Хостов меньшинство: показывать только свои комнаты значило бы
+        // прятать историю от большинства игроков. Убранное из своей истории
+        // отбор тоже отсекает.
+        where: visibleMafiaGamesWhere(userId),
         orderBy: { endedAt: "desc" },
         take: 30,
         select: {

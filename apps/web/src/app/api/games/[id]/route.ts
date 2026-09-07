@@ -1,5 +1,5 @@
 // GET /api/games/[id]?includeRounds=true — снимок локальной игры.
-// DELETE /api/games/[id] — удалить.
+// DELETE /api/games/[id] — убрать партию из своей истории.
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
@@ -55,14 +55,49 @@ export async function GET(request: NextRequest, { params }: Ctx) {
   }
 }
 
+/**
+ * Убрать партию из истории.
+ *
+ * Локальную удаляем по-настоящему: она и правда только твоя. Онлайн-партию
+ * видят все участники, поэтому «удалить» тут значит «спрятать у себя» — стереть
+ * чужую историю не может никто, включая бывшего хоста.
+ */
 export async function DELETE(_request: NextRequest, { params }: Ctx) {
   try {
     const userId = await requireUserId();
     const { id } = await params;
-    const game = await prisma.game.findUnique({ where: { id }, select: { ownerKey: true } });
+    const game = await prisma.game.findUnique({
+      where: { id },
+      select: { ownerKey: true, mode: true, roomId: true },
+    });
     if (!game) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (game.ownerKey !== userId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    await prisma.game.delete({ where: { id } });
+
+    if (game.mode === "LOCAL") {
+      if (game.ownerKey !== userId) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      await prisma.game.delete({ where: { id } });
+      return new NextResponse(null, { status: 204 });
+    }
+
+    // Прятать можно только то, что тебе и так видно, — иначе чужие партии
+    // копились бы в таблице скрытого.
+    let allowed = game.ownerKey === userId;
+    if (!allowed && game.roomId) {
+      const part = await prisma.participant.findUnique({
+        where: { roomId_userId: { roomId: game.roomId, userId } },
+        select: { id: true },
+      });
+      allowed = Boolean(part);
+    }
+    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    // upsert, а не create: повторное нажатие не должно падать.
+    await prisma.hiddenGame.upsert({
+      where: { userId_gameId: { userId, gameId: id } },
+      create: { userId, gameId: id },
+      update: {},
+    });
     return new NextResponse(null, { status: 204 });
   } catch (e) {
     if ((e as Error).message === "NO_AID_COOKIE") {

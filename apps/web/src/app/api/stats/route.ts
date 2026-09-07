@@ -4,7 +4,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireUserId } from "@/lib/identity";
-import { visibleGamesWhere } from "@/lib/history-access";
+import { visibleGamesWhere, visibleMafiaGamesWhere } from "@/lib/history-access";
 
 const EMPTY = { games: 0, guessedWords: 0, successRate: 0, mafiaGames: 0, mafiaWins: 0 };
 
@@ -17,6 +17,7 @@ export async function GET() {
     // сколько их было в партии, а не только угаданные тобой лично: связать
     // раунд с человеком нечем — в Round лежит имя строкой, а не ссылка.
     const visible = visibleGamesWhere(userId);
+    const visibleMafia = visibleMafiaGamesWhere(userId);
     const [games, guessedWords, totalAnswered, mafiaGames, mafiaWins] =
       await Promise.all([
         prisma.game.count({ where: visible }),
@@ -26,14 +27,12 @@ export async function GET() {
         prisma.roundWord.count({
           where: { round: { game: visible } },
         }),
-        prisma.mafiaGame.count({
-          where: { status: "FINISHED", players: { some: { userId } } },
-        }),
+        prisma.mafiaGame.count({ where: visibleMafia }),
         // «Мои победы за мафию»: партии, где я играл за мафию или дона
         // и победила мафия. Роль хранится строкой в MafiaPlayerRecord.
         prisma.mafiaGame.count({
           where: {
-            status: "FINISHED",
+            ...visibleMafia,
             winner: "MAFIA",
             players: { some: { userId, role: { in: ["mafia", "don"] } } },
           },
