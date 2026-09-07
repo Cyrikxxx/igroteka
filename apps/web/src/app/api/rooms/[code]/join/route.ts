@@ -105,15 +105,6 @@ export async function POST(request: NextRequest, { params }: Ctx) {
       select: { id: true, joinOrder: true, leftAt: true, role: true, teamId: true },
     });
 
-    // 409 только для новых игроков, если игра уже идёт. Существующие
-    // (или сам хост) могут переподключаться в любой момент.
-    if (!existing && !isHost && room.status === "IN_GAME") {
-      return NextResponse.json(
-        { error: "Game already started — late joins are not supported" },
-        { status: 409 },
-      );
-    }
-
     let joinOrder: number;
     if (existing) {
       joinOrder = existing.joinOrder;
@@ -139,6 +130,10 @@ export async function POST(request: NextRequest, { params }: Ctx) {
     // тут, применяем заново введённое имя — раньше оно молча терялось, и в
     // комнате оставалось то, под которым человек зашёл в первый раз. Меняем
     // только в лобби: переименование посреди партии всех запутает.
+    //
+    // Пришедшего посреди партии тоже пускаем — зрителем, как в Мафии. Раньше
+    // он получал отказ «игра уже идёт», хотя смотреть за партией никому не
+    // мешает, а команды из зрителей всё равно не собираются до конца партии.
     if (snapshot) {
       if (!entry) {
         snapshot.spectators.push({

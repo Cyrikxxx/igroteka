@@ -150,6 +150,32 @@ async function main() {
   const explainerId = s0.currentPlayerId!;
   console.log(`  · объясняет ${nameOf(explainerId)}`);
 
+  // ─── Пришедший посреди партии становится зрителем ───
+  // Раньше REST отвечал ему 409 «войти нельзя», хотя смотреть за партией
+  // никому не мешает: в состав его всё равно не берут до конца партии.
+  const lateTab = tab();
+  await lateTab.prime();
+  const lateRes = await lateTab.post(`/api/rooms/${code}/join`, {
+    displayName: "Опоздавший",
+  });
+  assert(lateRes.ok, `опоздавшего пускают в комнату (${lateRes.status})`);
+  const late = (await lateRes.json()) as { user: { id: string }; wsToken: string };
+  const lateSock = await connect(late.wsToken, code);
+  await emitAck(lateSock, "room:hello", {});
+  await sleep(300);
+  const sLate = await snap();
+  assert(
+    sLate.spectators.some((p) => p.userId === late.user.id),
+    "опоздавший попал в зрители",
+  );
+  assert(
+    sLate.teams.every((t) => t.players.every((p) => p.userId !== late.user.id)),
+    "и не оказался в команде — состав посреди партии заморожен",
+  );
+  await emitAck(lateSock, "room:leave", {});
+  lateSock.disconnect();
+  await sleep(300);
+
   // ─── Выйти посреди партии игрок команды не может ───
   const leaveTry = await emitAck<{ error?: string }>(socks[0], "room:leave", {});
   assert(leaveTry.error === "game_in_progress", "игрок команды не может выйти посреди партии");

@@ -137,7 +137,6 @@ function JoinPageInner() {
         const body = await res.json().catch(() => ({}));
         if (res.status === 404) setError("Комната не найдена. Проверь код.");
         else if (res.status === 410) setError("Комната уже закончилась");
-        else if (res.status === 409) setError("Игра уже идёт — войти нельзя");
         else setError(body?.error ?? "Не удалось войти");
         setSubmitting(false);
         return;
