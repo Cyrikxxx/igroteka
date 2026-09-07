@@ -114,7 +114,7 @@ model Room {
   startedAt DateTime?
   endedAt   DateTime?
 
-  game         Game?
+  games        Game[]
   mafiaGame    MafiaGame?
   participants Participant[]
   categories   RoomCategory[]
@@ -179,7 +179,9 @@ model Game {
   status   GameStatus @default(IN_PROGRESS)
   ownerKey String
 
-  roomId String? @unique
+  /// Одна комната — много партий: «Сыграть ещё» заводит новую строку, старая
+  /// остаётся в истории. Уникальным этот ключ быть не может.
+  roomId String?
   room   Room?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
 
   roundTime          Int     @default(60)
@@ -207,6 +209,7 @@ model Game {
 
   @@index([ownerKey])
   @@index([status])
+  @@index([roomId])
 }
 
 enum GameMode {
