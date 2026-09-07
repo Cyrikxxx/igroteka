@@ -188,7 +188,12 @@ export default function HistoryPage() {
       ),
       // Удалять можно всё, кроме идущей онлайн-партии: её состояние живёт ещё
       // и в Redis, и в открытых сокетах, поэтому строка в базе — не вся игра.
-      onDelete: online && live ? undefined : () => askDelete(g.id, online),
+      // И только свою: онлайн-партию видят все участники, но стирает её у всех
+      // сразу — значит, право остаётся у того, кто её завёл.
+      onDelete:
+        (online && live) || g.mine === false
+          ? undefined
+          : () => askDelete(g.id, online),
       onAgain: live ? undefined : () => againAlias(g),
     };
   });
@@ -264,7 +269,7 @@ export default function HistoryPage() {
           <div className="mf-mono hist-stat-value" style={{ color: "var(--alias-green)" }}>
             {stats ? stats.guessedWords.toLocaleString("ru") : "—"}
           </div>
-          <div className="hist-stat-label">Угадано слов в Алиасе</div>
+          <div className="hist-stat-label">Угадано слов в партиях</div>
         </div>
         <div className="pl-card hist-stat">
           <div className="mf-mono hist-stat-value" style={{ color: "var(--mf-crimson)" }}>

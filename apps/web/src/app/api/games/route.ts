@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { ensureUser, requireUserId } from "@/lib/identity";
+import { visibleGamesWhere } from "@/lib/history-access";
 import {
   MIN_TEAMS,
   MAX_TEAMS,
@@ -18,13 +19,13 @@ import {
 } from "@/constants/game";
 import type { GameFormat } from "@/types";
 
-// GET /api/games — история игр устройства (по cookie aid): локальные +
-// онлайн-партии, которые пользователь хостил (Game.ownerKey = hostId).
+// GET /api/games — история игр человека (по cookie aid): локальные плюс
+// онлайн-партии, в которых он участвовал, — не только те, что хостил.
 export async function GET() {
   try {
     const userId = await requireUserId();
     const games = await prisma.game.findMany({
-      where: { ownerKey: userId },
+      where: visibleGamesWhere(userId),
       include: {
         teams: {
           include: { players: { orderBy: { order: "asc" } } },
@@ -36,7 +37,12 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       take: 30,
     });
-    return NextResponse.json(games);
+    // `mine` — можно ли удалять: удаление стирает партию у всех, кто в ней
+    // играл, поэтому оно остаётся за владельцем. Без этой отметки клиент
+    // рисовал бы корзину и гостю, а сервер отвечал бы ему 403.
+    return NextResponse.json(
+      games.map((g) => ({ ...g, mine: g.ownerKey === userId })),
+    );
   } catch (e) {
     if ((e as Error).message === "NO_AID_COOKIE") {
       return NextResponse.json([], { status: 200 });

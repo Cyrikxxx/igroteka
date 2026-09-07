@@ -161,6 +161,9 @@ model Participant {
 
   @@unique([roomId, userId])
   @@index([roomId])
+  // История спрашивает «в каких комнатах был этот человек»: составной ключ
+  // начинается с roomId и такому запросу не помогает.
+  @@index([userId])
 }
 
 enum ParticipantRole {

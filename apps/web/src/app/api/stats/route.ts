@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireUserId } from "@/lib/identity";
+import { visibleGamesWhere } from "@/lib/history-access";
 
 const EMPTY = { games: 0, guessedWords: 0, successRate: 0, mafiaGames: 0, mafiaWins: 0 };
 
@@ -11,14 +12,19 @@ export async function GET() {
   try {
     const userId = await requireUserId();
 
+    // Тот же отбор, что и у списка партий: иначе плитка «Сыграно партий»
+    // спорила бы с длиной списка прямо на одном экране. Слова считаем все,
+    // сколько их было в партии, а не только угаданные тобой лично: связать
+    // раунд с человеком нечем — в Round лежит имя строкой, а не ссылка.
+    const visible = visibleGamesWhere(userId);
     const [games, guessedWords, totalAnswered, mafiaGames, mafiaWins] =
       await Promise.all([
-        prisma.game.count({ where: { ownerKey: userId } }),
+        prisma.game.count({ where: visible }),
         prisma.roundWord.count({
-          where: { guessed: true, round: { game: { ownerKey: userId } } },
+          where: { guessed: true, round: { game: visible } },
         }),
         prisma.roundWord.count({
-          where: { round: { game: { ownerKey: userId } } },
+          where: { round: { game: visible } },
         }),
         prisma.mafiaGame.count({
           where: { status: "FINISHED", players: { some: { userId } } },
