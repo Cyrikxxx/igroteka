@@ -349,23 +349,46 @@ async function main() {
   if (!seen) throw new Error("гость не видит партию, в которой играл");
   if (seen.mine !== false) throw new Error("гостю отдали право удалять чужую партию");
 
-  // Удаление стирает итоги у всех — значит, оно только у владельца.
-  const delTry = await fetch(`${WEB}/api/games/${gameId}`, {
-    method: "DELETE",
-    headers: guestHeaders,
-  });
-  if (delTry.status !== 403) {
-    throw new Error(`гость смог удалить чужую партию: ${delTry.status}`);
-  }
-
   // Плитки считают по тому же отбору, что и список: иначе «сыграно партий»
   // спорило бы с длиной списка на одном экране.
   const guestStats = (await (
     await fetch(`${WEB}/api/stats`, { headers: guestHeaders })
   ).json()) as { games: number; guessedWords: number };
   if (guestStats.games < 1) throw new Error("плитка не увидела партию гостя");
+
+  // 12b. «Убрать из своей истории»: онлайн-партию видят все участники, поэтому
+  //      кнопка прячет карточку только у нажавшего. Стереть её у остальных не
+  //      может никто — в том числе хост.
+  const hideRes = await fetch(`${WEB}/api/games/${gameId}`, {
+    method: "DELETE",
+    headers: guestHeaders,
+  });
+  if (hideRes.status !== 204) {
+    throw new Error(`гость не смог убрать партию у себя: ${hideRes.status}`);
+  }
+
+  const guestList = (await (
+    await fetch(`${WEB}/api/games`, { headers: guestHeaders })
+  ).json()) as { id: string }[];
+  if (guestList.some((g) => g.id === gameId)) {
+    throw new Error("убранная партия осталась в истории гостя");
+  }
+
+  const hostList = (await (
+    await fetch(`${WEB}/api/games`, { headers: { cookie: hostJar.header() } })
+  ).json()) as { id: string }[];
+  if (!hostList.some((g) => g.id === gameId)) {
+    throw new Error("партия пропала и у хоста — убирали только у гостя");
+  }
+
+  const guestStatsAfter = (await (
+    await fetch(`${WEB}/api/stats`, { headers: guestHeaders })
+  ).json()) as { games: number };
+  if (guestStatsAfter.games !== guestStats.games - 1) {
+    throw new Error("плитка не заметила, что партию убрали");
+  }
   console.log(
-    `[history] гость видит партию и не может её удалить; плитки: ${guestStats.games} партий, ${guestStats.guessedWords} слов`,
+    `[history] гость видит партию и убирает её только у себя; плитки: ${guestStats.games} → ${guestStatsAfter.games}`,
   );
 
   const restart = await emitAck<{ ok: true } | { error: string }>(
