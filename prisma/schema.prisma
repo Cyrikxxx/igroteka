@@ -115,7 +115,7 @@ model Room {
   endedAt   DateTime?
 
   games        Game[]
-  mafiaGame    MafiaGame?
+  mafiaGames   MafiaGame[]
   participants Participant[]
   categories   RoomCategory[]
 
@@ -206,6 +206,7 @@ model Game {
   teams          Team[]
   rounds         Round[]
   gameCategories GameCategory[]
+  hiddenBy       HiddenGame[]
 
   @@index([ownerKey])
   @@index([status])
@@ -309,9 +310,13 @@ model RoundWord {
 // завершённой партии для экрана истории и статистики.
 
 model MafiaGame {
-  id     String          @id @default(cuid())
-  roomId String?         @unique
-  room   Room?           @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  id String @id @default(cuid())
+
+  /// Одна комната — много партий: «Сыграть ещё» заводит вторую. Уникальным
+  /// этот ключ быть не может — persistFinishedGame падал на нём молча, и
+  /// вторая партия просто не доезжала до истории.
+  roomId String?
+  room   Room?  @relation(fields: [roomId], references: [id], onDelete: SetNull)
   hostId String
   status MafiaGameStatus @default(IN_PROGRESS)
   winner MafiaWinnerDb?
@@ -331,10 +336,12 @@ model MafiaGame {
   startedAt DateTime?
   endedAt   DateTime?
 
-  players MafiaPlayerRecord[]
+  players  MafiaPlayerRecord[]
+  hiddenBy HiddenGame[]
 
   @@index([hostId])
   @@index([status])
+  @@index([roomId])
 }
 
 enum MafiaGameStatus {
@@ -346,6 +353,35 @@ enum MafiaWinnerDb {
   CITY
   MAFIA
   MANIAC
+}
+
+/**
+ * Партия, убранная человеком из своей истории.
+ *
+ * Онлайн-партию видят все участники, поэтому «удалить» не может значить
+ * «стереть у всех»: каждый прячет карточку только у себя. Локальные партии
+ * сюда не попадают — там удаление настоящее, игра и правда только твоя.
+ *
+ * Одна таблица на обе игры: смысл строки один и тот же, а внешние ключи дают
+ * каскад — партию удалили по-настоящему, и отметки уходят вместе с ней.
+ * Заполнено ровно одно из двух полей; в Postgres NULL в уникальном ключе не
+ * конфликтует, поэтому обе пары работают.
+ */
+model HiddenGame {
+  id     Int    @id @default(autoincrement())
+  userId String
+
+  gameId String?
+  game   Game?   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  mafiaGameId String?
+  mafiaGame   MafiaGame? @relation(fields: [mafiaGameId], references: [id], onDelete: Cascade)
+
+  hiddenAt DateTime @default(now())
+
+  @@unique([userId, gameId])
+  @@unique([userId, mafiaGameId])
+  @@index([userId])
 }
 
 model MafiaPlayerRecord {
