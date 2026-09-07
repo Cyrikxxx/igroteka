@@ -12,42 +12,55 @@ import {
   MessageSquareText,
   Zap,
   Trophy,
-  Book,
-  Flame,
-  ToyBrick,
-  Clapperboard,
+  Home,
+  Trees,
+  HeartHandshake,
   Briefcase,
-  Skull,
+  Clapperboard,
+  Brain,
+  PartyPopper,
+  ToyBrick,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import SiteTopBar from "@/components/common/SiteTopBar";
 import RoomNoticeBanner from "@/components/common/RoomNoticeBanner";
+import {
+  MAX_TEAMS,
+  MAX_PLAYERS_PER_TEAM,
+  TRIO_TEAMS,
+  ROUND_TIME_OPTIONS,
+} from "@alias/shared/constants";
+import { WORD_PACKS, WORD_LEVELS, WORDS_TOTAL } from "@/constants/word-packs";
+
+// Втроём хватает трёх человек, командами набирается шесть на шесть.
+const MIN_PLAYERS = TRIO_TEAMS;
+const MAX_PLAYERS = MAX_TEAMS * MAX_PLAYERS_PER_TEAM;
+const ROUND_MIN = ROUND_TIME_OPTIONS[0];
+const ROUND_MAX = ROUND_TIME_OPTIONS[ROUND_TIME_OPTIONS.length - 1];
 
 const STEPS: [LucideIcon, string, string][] = [
-  [Users2, "Собери команды", "Два и больше — раздели друзей поровну"],
+  [Users2, "Разделитесь", `Команды по 2–${MAX_PLAYERS_PER_TEAM} человек или режим втроём`],
   [MessageSquareText, "Объясняй слово", "Любыми словами, кроме однокоренных"],
   [Zap, "Команда угадывает", "Свайп вправо — верно, влево — пропуск"],
-  [Trophy, "Считай очки", "Первая команда до 50 очков забирает партию"],
+  [Trophy, "Считай очки", "Круг доигрывают все, потом сайт объявляет победителя"],
 ];
 
 /**
- * Витрина наборов слов. Пока это статичный список из макета: в базе лежат
- * другие категории, их наполнение будет переделано под эти наборы отдельно.
+ * Подборки словаря. Названия, описания и числа — из
+ * apps/web/src/constants/word-packs.ts, то есть из настоящего каталога;
+ * здесь к ним подбирается иконка (в базе у подборок эмодзи, а карточка
+ * нарисована под lucide).
  */
-const PACKS: [string, LucideIcon, string, string, string][] = [
-  [
-    "Классика",
-    Book,
-    "var(--pack-classic)",
-    "1200 слов",
-    "Простые слова на каждый день",
-  ],
-  ["Для своих", Flame, "var(--pack-friends)", "640 слов", "Мемы, сленг и неловкие темы"],
-  ["Детский", ToyBrick, "var(--pack-kids)", "480 слов", "Без сложных понятий, от 6 лет"],
-  ["Кино", Clapperboard, "var(--pack-movies)", "520 слов", "Фильмы, сериалы и герои"],
-  ["Профессии", Briefcase, "var(--pack-pro)", "350 слов", "Кем работают и что делают"],
-  ["Хардкор", Skull, "var(--pack-hard)", "300 слов", "Абстракции, термины, редкие слова"],
-];
+const PACK_STYLE: Record<string, [LucideIcon, string]> = {
+  classic: [Home, "var(--pack-classic)"],
+  world: [Trees, "var(--pack-kids)"],
+  people: [HeartHandshake, "var(--pack-friends)"],
+  daily: [Briefcase, "var(--pack-pro)"],
+  popculture: [Clapperboard, "var(--pack-movies)"],
+  challenge: [Brain, "var(--pack-hard)"],
+  holidays: [PartyPopper, "var(--pack-friends)"],
+  "kids-mix": [ToyBrick, "var(--pack-kids)"],
+};
 
 /** Наклонённая карточка слова — витрина того, что видит объясняющий. */
 function WordCard() {
@@ -101,13 +114,13 @@ export default function AliasLandingPage() {
 
           <div className="al-hero-facts">
             <span>
-              <Users size={14} /> 2–6 команд
+              <Users size={14} /> {MIN_PLAYERS}–{MAX_PLAYERS} человек
             </span>
             <span>
               <Smartphone size={14} /> Один телефон или онлайн
             </span>
             <span>
-              <Timer size={14} /> Раунд 60 сек
+              <Timer size={14} /> Раунд {ROUND_MIN}–{ROUND_MAX} сек
             </span>
           </div>
         </div>
@@ -136,28 +149,37 @@ export default function AliasLandingPage() {
       <section className="al-section al-section-last">
         <h2 className="al-section-title">Наборы слов</h2>
         <div className="al-packs">
-          {PACKS.map(([name, Icon, color, count, desc]) => (
-            <div
-              key={name}
-              className="al-card al-pack"
-              style={{ borderColor: `color-mix(in srgb, ${color} 35%, transparent)` }}
-            >
-              <span
-                className="al-pack-ic"
-                style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color }}
+          {WORD_PACKS.map((pack) => {
+            const [Icon, color] = PACK_STYLE[pack.slug];
+            return (
+              <div
+                key={pack.slug}
+                className="al-card al-pack"
+                style={{ borderColor: `color-mix(in srgb, ${color} 35%, transparent)` }}
               >
-                <Icon size={22} strokeWidth={1.8} />
-              </span>
-              <div className="al-pack-head">
-                <span className="al-pack-name" style={{ color }}>
-                  {name}
+                <span
+                  className="al-pack-ic"
+                  style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color }}
+                >
+                  <Icon size={22} strokeWidth={1.8} />
                 </span>
-                <span className="mf-mono al-pack-count">{count}</span>
+                <div className="al-pack-head">
+                  <span className="al-pack-name" style={{ color }}>
+                    {pack.name}
+                  </span>
+                  <span className="mf-mono al-pack-count">{pack.words} слов</span>
+                </div>
+                <div className="al-pack-desc">{pack.desc}</div>
               </div>
-              <div className="al-pack-desc">{desc}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+        <p className="al-packs-note">
+          Всего {WORDS_TOTAL} слов. Темы комбинируются между собой и с уровнями
+          сложности ({WORD_LEVELS.join(", ").toLowerCase()}), а счётчик при выборе
+          показывает уникальные слова: одно и то же слово живёт сразу в нескольких
+          наборах.
+        </p>
       </section>
 
       <div className="al-landing-foot">
