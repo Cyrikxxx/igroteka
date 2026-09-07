@@ -1,4 +1,4 @@
-// Лендинг Мафии: нуар-хиро, «как играть» и сетка ролей.
+// Лендинг Мафии: нуар-хиро, «как играть», режим ведущего и сетка ролей.
 // Порт MafiaLanding из project-context/mafia-design/mafia/screen-landing.
 
 import Link from "next/link";
@@ -11,6 +11,9 @@ import {
   Users,
   Wifi,
   Bot,
+  ListOrdered,
+  Volume2,
+  Armchair,
   type LucideIcon,
 } from "lucide-react";
 import type { MafiaRole } from "@alias/shared/mafia";
@@ -22,7 +25,8 @@ import { ROLE_META } from "@/components/mafia/roleMeta";
 
 export const metadata = {
   title: "Мафия — Игротека",
-  description: "Найди мафию раньше, чем она найдёт тебя. Онлайн на 5–16 игроков.",
+  description:
+    "Найди мафию раньше, чем она найдёт тебя. Онлайн на 5–16 игроков, с режимом ведущего: сайт ведёт ночь и говорит вслух.",
 };
 
 const STEPS: [LucideIcon, string, string][] = [
@@ -32,12 +36,31 @@ const STEPS: [LucideIcon, string, string][] = [
   [Vote, "Днём — спор и голосование", "Обсуждайте голосом и изгоняйте подозреваемых"],
 ];
 
+/** Режим ведущего: ради него в мафию можно играть, сидя за одним столом. */
+const NARRATOR: [LucideIcon, string, string][] = [
+  [
+    ListOrdered,
+    "Ночь по шагам",
+    "Роли просыпаются по очереди, а не все разом. Мёртвую роль сайт зовёт так же, как живую, — иначе её смерть была бы слышна.",
+  ],
+  [
+    Volume2,
+    "Сайт говорит вслух",
+    "Голосом устройства: «Просыпается мафия». Голос выбирается в лобби, а озвучку можно включить у себя на любом телефоне.",
+  ],
+  [
+    Armchair,
+    "За одним столом",
+    "Ведущий-человек не нужен, и никто не сидит в стороне. Телефон нужен только на свой ход — остальное время глаза закрыты.",
+  ],
+];
+
 const ROLES: [MafiaRole, string][] = [
-  ["mafia", "Ночью убирает горожан"],
-  ["don", "Решающий голос мафии при ничьей"],
-  ["sheriff", "Каждую ночь проверяет одного игрока"],
-  ["doctor", "Лечит одного за ночь, себя — один раз"],
-  ["maniac", "Играет сам за себя, убивает по ночам"],
+  ["mafia", "Ночью убирает горожан — примерно один на трёх игроков"],
+  ["don", "Появляется при двух и более мафиях, его голос решающий"],
+  ["sheriff", "Каждую ночь проверяет одного: мафия или нет"],
+  ["doctor", "Лечит одного за ночь, себя — один раз за партию"],
+  ["maniac", "Играет сам за себя. Включается в настройках"],
   ["civilian", "Слушает, спорит, вычисляет мафию днём"],
 ];
 
@@ -70,7 +93,7 @@ export default function MafiaLandingPage() {
               <Wifi size={14} /> Онлайн
             </span>
             <span>
-              <Bot size={14} /> Автоведущий
+              <Bot size={14} /> Режим ведущего
             </span>
           </div>
         </section>
@@ -88,6 +111,35 @@ export default function MafiaLandingPage() {
                   <div className="mf-step-title">{title}</div>
                   <div className="mf-step-sub">{sub}</div>
                 </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mf-section">
+          <h2>Режим ведущего</h2>
+          {/* Сетка ролей на три колонки — три карточки ложатся в неё ровно.
+              Пятым шагом это не сделать: .mf-steps жёстко четырёхколоночная. */}
+          <div className="mf-roles">
+            {NARRATOR.map(([Icon, title, desc]) => (
+              <div
+                key={title}
+                className="mf-role-card"
+                style={{ borderColor: "color-mix(in srgb, var(--mf-gold) 35%, transparent)" }}
+              >
+                <div
+                  className="mf-role-icon"
+                  style={{
+                    background: "color-mix(in srgb, var(--mf-gold) 12%, transparent)",
+                    color: "var(--mf-gold)",
+                  }}
+                >
+                  <Icon size={22} strokeWidth={1.8} />
+                </div>
+                <div className="mf-role-name" style={{ color: "var(--mf-gold)" }}>
+                  {title}
+                </div>
+                <div className="mf-role-desc">{desc}</div>
               </div>
             ))}
           </div>

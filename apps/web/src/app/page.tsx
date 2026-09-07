@@ -9,6 +9,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Users, Loader2 } from "lucide-react";
 import type { MafiaRole } from "@alias/shared/mafia";
+import { MIN_MAFIA_PLAYERS, MAX_MAFIA_PLAYERS } from "@alias/shared/mafia";
+import {
+  MAX_TEAMS,
+  MAX_PLAYERS_PER_TEAM,
+  TRIO_TEAMS,
+} from "@alias/shared/constants";
 import { ROLE_META } from "@/components/mafia/roleMeta";
 import SiteTopBar from "@/components/common/SiteTopBar";
 import {
@@ -94,8 +100,9 @@ const ALIAS: GameCardProps = {
   ctaDark: true,
   title: "Алиас",
   tagline: "Объясняй слова на время",
-  badges: ["Онлайн", "Локально"],
-  meta: "2–6 команд",
+  badges: ["Онлайн", "Локально", "Втроём"],
+  // Втроём хватает трёх человек, командами набирается шесть на шесть.
+  meta: `${TRIO_TEAMS}–${MAX_TEAMS * MAX_PLAYERS_PER_TEAM} человек`,
   filler: <AliasFiller />,
 };
 
@@ -104,8 +111,8 @@ const MAFIA: GameCardProps = {
   accent: "var(--mf-crimson)",
   title: "Мафия",
   tagline: "Найди мафию раньше, чем она найдёт тебя",
-  badges: ["Онлайн"],
-  meta: "5–16 игроков",
+  badges: ["Онлайн", "Режим ведущего"],
+  meta: `${MIN_MAFIA_PLAYERS}–${MAX_MAFIA_PLAYERS} игроков`,
   filler: <MafiaFiller />,
 };
 
