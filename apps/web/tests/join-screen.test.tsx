@@ -9,10 +9,13 @@ import { act, render, screen } from "@testing-library/react";
 import { resetNavigation, setSearch } from "./stubs/next-navigation";
 
 // Вход в уже знакомую комнату идёт в сеть — здесь это лишнее.
+// Вернуться молча не вышло, но и «комнаты нет» сервер не сказал — экран
+// входа должен показать форму кода.
 vi.mock("@/lib/room-resume", () => ({
-  resumeRoom: vi.fn(async () => null),
+  resumeRoom: vi.fn(async () => ({ creds: null, gone: false })),
 }));
 
+import { resumeRoom } from "@/lib/room-resume";
 import JoinPage from "@/app/alias/join/page";
 
 beforeEach(() => {
@@ -54,6 +57,19 @@ describe("вход по коду (Алиас)", () => {
     setSearch("code=K7F2QD");
     await renderJoin();
     expect(codeCells()).toBe("K7F2QD");
+  });
+
+  it("по ссылке в закрытую комнату сразу объясняет, что случилось", async () => {
+    // Иначе человек введёт имя, нажмёт «Войти» и только тогда узнает, что
+    // комнаты нет: форма выглядит рабочей.
+    vi.mocked(resumeRoom).mockResolvedValueOnce({
+      creds: null,
+      gone: true,
+      notice: "Эта комната уже закрыта.",
+    });
+    setSearch("code=K7F2QD");
+    await renderJoin();
+    expect(screen.getByText("Эта комната уже закрыта.")).toBeTruthy();
   });
 
   it("код из ссылки в русской раскладке всё равно подставляется", async () => {

@@ -53,8 +53,18 @@ export default function PlayPage() {
     let alive = true;
     resumeRoom(rawCode, "alias").then((back) => {
       if (!alive) return;
-      if (back) setResumed(back);
-      else router.replace(`/alias/join?code=${rawCode}`);
+      if (back.creds) {
+        setResumed(back.creds);
+        return;
+      }
+      // Комнаты уже нет — экран входа тут бесполезен: человек введёт имя и
+      // получит тот же отказ. Объясняем на главной, что случилось.
+      if (back.gone) {
+        setRoomNotice({ text: back.notice ?? "Комната недоступна", tone: "danger" });
+        router.replace("/alias");
+        return;
+      }
+      router.replace(`/alias/join?code=${rawCode}`);
     });
     return () => {
       alive = false;

@@ -61,8 +61,14 @@ function Inner() {
     let alive = true;
     resumeRoom(codeFromUrl, "mafia").then((resumed) => {
       if (!alive) return;
-      if (resumed) router.replace(`/mafia/room/${resumed.code}`);
-      else setResumeFailed(true);
+      if (resumed.creds) {
+        router.replace(`/mafia/room/${resumed.creds.code}`);
+        return;
+      }
+      // Комнаты нет или вход закрыт — говорим об этом сразу, а не после того,
+      // как человек введёт имя и получит отказ.
+      if (resumed.gone && resumed.notice) setError(resumed.notice);
+      setResumeFailed(true);
     });
     return () => {
       alive = false;

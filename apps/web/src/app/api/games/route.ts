@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { ensureUser, requireUserId } from "@/lib/identity";
 import { visibleGamesWhere } from "@/lib/history-access";
+import { loadRoomSnapshot } from "@/lib/room-snapshot";
+import { closeAbandonedRoom } from "@/lib/room-cleanup";
 import {
   MIN_TEAMS,
   MAX_TEAMS,
@@ -37,6 +39,21 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       take: 30,
     });
+    // Онлайн-партия «идёт» по строке в Postgres, а на деле её живое состояние
+    // могло протухнуть в Redis — тогда доигрывать нечего: там нет ни очереди
+    // слов, ни чьего хода. Такие партии закрываем прямо здесь, иначе карточка
+    // до скончания века зовёт «продолжить» в комнату, которой нет.
+    await Promise.all(
+      games.map(async (g) => {
+        const code = g.room?.code;
+        if (g.mode !== "ONLINE" || g.status !== "IN_PROGRESS" || !code) return;
+        if (await loadRoomSnapshot(code)) return;
+        await closeAbandonedRoom(code);
+        g.status = "FINISHED";
+        g.finishedAt = g.finishedAt ?? new Date();
+      }),
+    );
+
     // `mine` — можно ли удалять: удаление стирает партию у всех, кто в ней
     // играл, поэтому оно остаётся за владельцем. Без этой отметки клиент
     // рисовал бы корзину и гостю, а сервер отвечал бы ему 403.

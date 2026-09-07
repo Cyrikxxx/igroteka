@@ -47,8 +47,18 @@ export default function MafiaLobbyPage() {
     let alive = true;
     resumeRoom(code, "mafia").then((back) => {
       if (!alive) return;
-      if (back) setResumed(back);
-      else router.replace(`/mafia/join?code=${code}`);
+      if (back.creds) {
+        setResumed(back.creds);
+        return;
+      }
+      // Комнаты уже нет — экран входа тут бесполезен: человек введёт имя и
+      // получит тот же отказ. Объясняем на главной, что случилось.
+      if (back.gone) {
+        setRoomNotice({ text: back.notice ?? "Комната недоступна", tone: "danger" });
+        router.replace("/mafia");
+        return;
+      }
+      router.replace(`/mafia/join?code=${code}`);
     });
     return () => {
       alive = false;

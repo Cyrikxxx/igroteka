@@ -8,6 +8,7 @@ import { ensureUser, requireUserId } from "@/lib/identity";
 import { isValidRoomCode } from "@/lib/room-code";
 import { issueWsToken, wsConnectUrlFor } from "@/lib/ws-token";
 import { loadMafiaSnapshot, saveMafiaSnapshot } from "@/lib/mafia-snapshot";
+import { closeAbandonedRoom } from "@/lib/room-cleanup";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { MAX_MAFIA_PLAYERS, type MafiaJoinRoomResponse } from "@alias/shared/mafia";
 
@@ -58,19 +59,9 @@ export async function POST(request: NextRequest, { params }: Ctx) {
     const snapshot = await loadMafiaSnapshot(code);
 
     // Живое состояние комнаты протухло, а строка осталась в LOBBY — код стал
-    // зомби: сюда пускали с 200, а WS сразу отвечал «комнаты нет». Закрываем
-    // её честно и здесь же: отдельный дворник ради этого не нужен.
+    // зомби: сюда пускали с 200, а WS сразу отвечал «комнаты нет».
     if (!snapshot) {
-      await prisma.room
-        .updateMany({ where: { code }, data: { status: "FINISHED", endedAt: new Date() } })
-        .catch(() => {});
-      // Партия из этой комнаты иначе навсегда осталась бы «в процессе».
-      await prisma.game
-        .updateMany({
-          where: { room: { code }, status: "IN_PROGRESS" },
-          data: { status: "FINISHED", finishedAt: new Date() },
-        })
-        .catch(() => {});
+      await closeAbandonedRoom(code);
       return NextResponse.json({ error: "Room is finished" }, { status: 410 });
     }
 

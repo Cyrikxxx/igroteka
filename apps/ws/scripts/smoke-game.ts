@@ -6,6 +6,8 @@
 
 import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
+import { roomKey } from "@alias/shared/redis-keys";
+import { redis } from "../src/redis";
 import type {
   RoomSnapshot,
   RoundReviewPayload,
@@ -394,6 +396,45 @@ async function main() {
   if (!rejoin.ok) throw new Error(`комната не открылась заново: ${rejoin.status}`);
   console.log(`[restart] LOBBY, счёт 0, состав ${rosterBefore}, вход по коду → ${rejoin.status}`);
 
+  // 14. Брошенная партия: живое состояние протухло, а строка осталась.
+  //     Комната сейчас снова в лобби тем же составом — начинаем вторую
+  //     партию и стираем снимок из Redis, как это делает TTL через десять
+  //     минут в комнате, где никого не осталось.
+  const second = await emitAck<{ ok: true } | { error: string }>(
+    host.sock,
+    "round:start_game",
+    {},
+  );
+  if (!("ok" in second)) throw new Error(`вторая партия не началась: ${JSON.stringify(second)}`);
+  await new Promise((r) => setTimeout(r, 400));
+  const live = await snapshotNow();
+  if (!live.gameId) throw new Error("у второй партии нет gameId");
+  const abandonedId = live.gameId;
+
+  await redis.del(roomKey(created.room.code));
+
+  // История обязана заметить это сама: доигрывать нечего — ни очереди слов,
+  // ни чьего хода в Redis больше нет.
+  const afterDrop = (await (
+    await fetch(`${WEB}/api/games`, { headers: { cookie: hostJar.header() } })
+  ).json()) as { id: string; status: string }[];
+  const abandoned = afterDrop.find((g) => g.id === abandonedId);
+  if (!abandoned) throw new Error("брошенная партия пропала из истории");
+  if (abandoned.status !== "FINISHED") {
+    throw new Error(`брошенная партия всё ещё ${abandoned.status} — карточка снова позовёт «продолжить»`);
+  }
+
+  // И код больше не пускает: комната закрыта вместе с партией.
+  const stranger = jar();
+  await primeCookie(stranger);
+  const zombie = await fetch(`${WEB}/api/rooms/${created.room.code}/join`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", cookie: stranger.header() },
+    body: JSON.stringify({ displayName: "Поздний" }),
+  });
+  if (zombie.status !== 410) throw new Error(`зомби-комната пустила с ${zombie.status}`);
+  console.log("[abandoned] партия без живого состояния закрыта, код освобождён");
+
   // 13. Cleanup: закрываем
   host.sock.disconnect();
   pSockets.forEach((s) => s.disconnect());
@@ -401,6 +442,7 @@ async function main() {
     method: "DELETE",
     headers: { cookie: hostJar.header() },
   });
+  await redis.quit().catch(() => {});
   console.log("[ok] smoke-game done");
   process.exit(0);
 }
