@@ -10,6 +10,7 @@ import {
   type LocalSetupState,
 } from "@/lib/local-setup";
 import { loadDisplayName, saveRoomCreds } from "@/lib/room-session";
+import type { MafiaSettings, MafiaCreateRoomResponse } from "@alias/shared/mafia";
 
 /** Настройки партии в том виде, в каком их принимают /api/games и /api/rooms. */
 function settingsOf(game: GameFromAPI) {
@@ -73,6 +74,35 @@ export async function createRoomLike(game: GameFromAPI): Promise<string> {
     wsToken: data.wsToken,
     userId: data.user.id,
     displayName: data.user.displayName,
+  });
+  return data.room.code;
+}
+
+/**
+ * Мафия: новая комната с теми же правилами. Состав тоже не переносим — он у
+ * Мафии и не хранится отдельно от партии.
+ *
+ * Возвращает код комнаты; креды хоста уже сохранены.
+ */
+export async function createMafiaRoomLike(settings: MafiaSettings): Promise<string> {
+  const hostName = loadDisplayName().trim() || "Хост";
+  const res = await fetch("/api/mafia/rooms", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ hostName, settings }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? "Не удалось создать комнату");
+  }
+  const data: MafiaCreateRoomResponse = await res.json();
+  saveRoomCreds({
+    code: data.room.code,
+    wsUrl: data.wsUrl,
+    wsToken: data.wsToken,
+    userId: data.user.id,
+    displayName: data.user.displayName,
+    game: "mafia",
   });
   return data.room.code;
 }

@@ -97,7 +97,7 @@ export default function HistoryPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const router = useRouter();
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
   // Ошибки показываем плашкой на странице, а не системным alert.
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -116,20 +116,32 @@ export default function HistoryPage() {
       .catch(() => setStats(null));
   }, []);
 
-  // `shared` — партия онлайн: её итоги открываются не только хосту, но и
-  // всем участникам комнаты, поэтому такое удаление спрашиваем.
-  const [deleteAsk, setDeleteAsk] = useState<string | null>(null);
-  const askDelete = (id: string, shared = false) => {
-    if (shared) setDeleteAsk(id);
-    else void onDelete(id);
+  // Локальную партию удаляем по-настоящему — она и правда только твоя.
+  // Онлайн-партию видят все участники, поэтому «убрать» прячет карточку
+  // только у тебя, и об этом честно спрашиваем.
+  interface Pending {
+    key: string;
+    id: string;
+    game: "alias" | "mafia";
+  }
+  const [deleteAsk, setDeleteAsk] = useState<Pending | null>(null);
+  const askDelete = (p: Pending, confirm: boolean) => {
+    if (confirm) setDeleteAsk(p);
+    else void remove(p);
   };
-  const onDelete = async (id: string) => {
-    setDeletingId(id);
+  const remove = async (p: Pending) => {
+    setDeletingKey(p.key);
     try {
-      const res = await fetch(`/api/games/${id}`, { method: "DELETE" });
-      if (res.ok) setGames((g) => (g ?? []).filter((x) => x.id !== id));
+      const url = p.game === "mafia" ? `/api/mafia/games/${p.id}` : `/api/games/${p.id}`;
+      const res = await fetch(url, { method: "DELETE" });
+      if (!res.ok) {
+        setActionError("Не удалось убрать партию из истории");
+        return;
+      }
+      if (p.game === "mafia") setMafia((m) => m.filter((x) => x.id !== p.id));
+      else setGames((g) => (g ?? []).filter((x) => x.id !== p.id));
     } finally {
-      setDeletingId(null);
+      setDeletingKey(null);
     }
   };
 
@@ -206,14 +218,14 @@ export default function HistoryPage() {
           ))}
         </div>
       ),
-      // Удалять можно всё, кроме идущей онлайн-партии: её состояние живёт ещё
-      // и в Redis, и в открытых сокетах, поэтому строка в базе — не вся игра.
-      // И только свою: онлайн-партию видят все участники, но стирает её у всех
-      // сразу — значит, право остаётся у того, кто её завёл.
+      // Убрать можно всё, кроме идущей онлайн-партии: её состояние живёт ещё
+      // и в Redis, и в открытых сокетах, а из идущей партии выходят, а не
+      // прячут её. У онлайновой кнопка есть у всех участников: она убирает
+      // карточку только из своей истории.
       onDelete:
-        (online && live) || g.mine === false
+        online && live
           ? undefined
-          : () => askDelete(g.id, online),
+          : () => askDelete({ key: `alias-${g.id}`, id: g.id, game: "alias" }, online),
       onAgain: live ? undefined : () => againAlias(g),
     };
   });
@@ -233,8 +245,13 @@ export default function HistoryPage() {
       game: "mafia",
       online: true,
       live,
-      href: live && m.code ? `/mafia/room/${m.code}` : "/history",
+      href: live && m.code ? `/mafia/room/${m.code}` : `/mafia/results/${m.id}`,
       onAgain: !live && m.settings ? () => againMafia(m.settings!) : undefined,
+      // Идущую партию не прячем — из неё выходят. Завершённую убирает у себя
+      // любой, кто в ней играл.
+      onDelete: live
+        ? undefined
+        : () => askDelete({ key: `mafia-${m.id}`, id: m.id, game: "mafia" }, true),
       meta: `${m.dayCount} ${m.dayCount === 1 ? "ночь" : "ночи"}`,
       body: (
         <div className="hist-lines">
@@ -411,9 +428,9 @@ export default function HistoryPage() {
                       <button
                         type="button"
                         onClick={r.onDelete}
-                        disabled={deletingId === r.key.replace("alias-", "")}
+                        disabled={deletingKey === r.key}
                         className="hist-card-del"
-                        aria-label="Удалить партию"
+                        aria-label="Убрать из истории"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -428,13 +445,13 @@ export default function HistoryPage() {
 
       <ConfirmDialog
         open={deleteAsk !== null}
-        title="Удалить партию?"
-        text="Итоги пропадут у всех, кто в ней играл."
-        confirmLabel="Удалить"
+        title="Убрать из своей истории?"
+        text="У остальных участников партия останется — чужую историю это не трогает."
+        confirmLabel="Убрать"
         onConfirm={() => {
-          const id = deleteAsk;
+          const p = deleteAsk;
           setDeleteAsk(null);
-          if (id) void onDelete(id);
+          if (p) void remove(p);
         }}
         onCancel={() => setDeleteAsk(null)}
       />
