@@ -20,6 +20,7 @@ import {
   Brain,
   PartyPopper,
   ToyBrick,
+  Gauge,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import SiteTopBar from "@/components/common/SiteTopBar";
@@ -30,7 +31,12 @@ import {
   TRIO_TEAMS,
   ROUND_TIME_OPTIONS,
 } from "@alias/shared/constants";
-import { WORD_PACKS, WORD_LEVELS, WORDS_TOTAL } from "@/constants/word-packs";
+import {
+  WORD_PACKS,
+  WORD_LEVELS,
+  LEVELS_TOTAL,
+  WORDS_TOTAL,
+} from "@/constants/word-packs";
 
 // Втроём хватает трёх человек, командами набирается шесть на шесть.
 const MIN_PLAYERS = TRIO_TEAMS;
@@ -173,12 +179,36 @@ export default function AliasLandingPage() {
               </div>
             );
           })}
+          {/* Уровни сложности — девятый набор: их берут вместо тем или вместе
+              с ними, и в сетке из трёх колонок карточка встаёт последней. */}
+          <div
+            className="al-card al-pack"
+            style={{ borderColor: "color-mix(in srgb, var(--mf-gold) 35%, transparent)" }}
+          >
+            <span
+              className="al-pack-ic"
+              style={{
+                background: "color-mix(in srgb, var(--mf-gold) 12%, transparent)",
+                color: "var(--mf-gold)",
+              }}
+            >
+              <Gauge size={22} strokeWidth={1.8} />
+            </span>
+            <div className="al-pack-head">
+              <span className="al-pack-name" style={{ color: "var(--mf-gold)" }}>
+                Уровни сложности
+              </span>
+              <span className="mf-mono al-pack-count">{LEVELS_TOTAL} слов</span>
+            </div>
+            <div className="al-pack-desc">
+              От простых слов до редких — вместо тем или вместе с ними
+            </div>
+          </div>
         </div>
         <p className="al-packs-note">
           Всего {WORDS_TOTAL} слов. Темы комбинируются между собой и с уровнями
-          сложности ({WORD_LEVELS.join(", ").toLowerCase()}), а счётчик при выборе
-          показывает уникальные слова: одно и то же слово живёт сразу в нескольких
-          наборах.
+          сложности ({WORD_LEVELS.map((l) => l.name.toLowerCase()).join(", ")}), а
+          счётчик при выборе показывает уникальные слова.
         </p>
       </section>
 

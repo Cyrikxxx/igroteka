@@ -79,8 +79,18 @@ export const WORD_PACKS: readonly WordPack[] = [
   },
 ];
 
-/** Уровни сложности живут вне подборок и пересекаются с темами. */
-export const WORD_LEVELS = ["Лёгкий", "Обычный", "Сложный"] as const;
+/**
+ * Уровни сложности живут вне подборок: их берут вместо тем или вместе с ними.
+ * На витрине это девятая карточка — набор такой же настоящий, как остальные.
+ */
+export const WORD_LEVELS: readonly { slug: string; name: string; words: number }[] = [
+  { slug: "level-easy", name: "Лёгкий", words: 1302 },
+  { slug: "level-normal", name: "Обычный", words: 1282 },
+  { slug: "level-hard", name: "Сложный", words: 1280 },
+];
+
+/** Уникальных слов во всех трёх уровнях: они между собой не пересекаются. */
+export const LEVELS_TOTAL = 3864;
 
 /** Всего уникальных слов в словаре. */
 export const WORDS_TOTAL = 8134;

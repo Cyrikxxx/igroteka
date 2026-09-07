@@ -1662,7 +1662,6 @@ html { scrollbar-color: var(--bg-4) transparent; }
   /* Контакты пока ничего не открывают: почты и канала нет. Карточка гасится,
      чтобы это было видно глазом, а не только по подписи «скоро». */
   .pl-contact-off { gap: 8px; opacity: 0.62; }
-  .pl-contacts-note { margin: 14px 0 0; }
 
   .pl-footer { border-top: 1px solid var(--ink-border); margin-top: 12px; padding-top: 20px; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: space-between; color: var(--mf-text-faint); font-size: 13px; font-weight: 700; }
   @media (min-width: 900px) { .pl-footer { flex-direction: row; } }

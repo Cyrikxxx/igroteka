@@ -8,7 +8,12 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
-import { WORD_PACKS, WORD_LEVELS, WORDS_TOTAL } from "../src/constants/word-packs";
+import {
+  WORD_PACKS,
+  WORD_LEVELS,
+  LEVELS_TOTAL,
+  WORDS_TOTAL,
+} from "../src/constants/word-packs";
 
 interface CatalogCategory {
   slug: string;
@@ -63,13 +68,22 @@ describe("витрина наборов слов", () => {
     },
   );
 
-  it("уровни сложности и общий счёт слов не разошлись", () => {
+  it("уровни сложности перечислены все и с настоящими числами", () => {
     const levels = catalog.categories.filter((c) => c.kind === "LEVEL");
-    expect(WORD_LEVELS).toHaveLength(levels.length);
-    for (const label of WORD_LEVELS) {
-      expect(levels.some((l) => l.name.startsWith(label))).toBe(true);
+    expect(WORD_LEVELS.map((l) => l.slug)).toEqual(levels.map((l) => l.slug));
+
+    for (const level of WORD_LEVELS) {
+      const real = levels.find((l) => l.slug === level.slug)!;
+      // В каталоге название с приставкой «уровень», на карточке — без неё.
+      expect(real.name).toContain(level.name);
+      expect(level.words).toBe(real.words.length);
     }
 
+    const unique = new Set(levels.flatMap((l) => l.words));
+    expect(LEVELS_TOTAL).toBe(unique.size);
+  });
+
+  it("общий счёт слов не разошёлся со словарём", () => {
     const all = new Set(catalog.categories.flatMap((c) => c.words));
     expect(WORDS_TOTAL).toBe(all.size);
   });
