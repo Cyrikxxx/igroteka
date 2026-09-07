@@ -1717,7 +1717,14 @@ html { scrollbar-color: var(--bg-4) transparent; }
 
   .hist-lines { display: flex; flex-direction: column; gap: 8px; }
   .hist-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255, 255, 255, 0.035); border-radius: 12px; padding: 10px 14px; }
-  .hist-line-name { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 14.5px; }
+  .hist-line-name { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 14.5px; min-width: 0; }
+  .hist-line-nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist-line-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .hist-line-team { font-size: 12px; font-weight: 700; color: var(--mf-text-faint); white-space: nowrap; max-width: 96px; overflow: hidden; text-overflow: ellipsis; }
+  /* Состав может быть длинным, а карточка растягиваться от этого не должна:
+     высота фиксированная, список листается внутри. overscroll-behavior не даёт
+     странице поехать под пальцем, когда список докручен до края. */
+  .hist-lines-scroll { max-height: 168px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
   .hist-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .hist-line-value { font-weight: 700; font-size: 15px; }
   .hist-line-faint { font-size: 13px; color: var(--mf-text-faint); }

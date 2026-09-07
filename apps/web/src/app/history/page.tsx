@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import type { GameFromAPI } from "@/types";
+import { historyLines } from "@/lib/history-rows";
 import type { MafiaSettings, MafiaCreateRoomResponse } from "@alias/shared/mafia";
 import { prepareLocalRematch, createRoomLike } from "@/lib/rematch";
 import { loadDisplayName, saveRoomCreds } from "@/lib/room-session";
@@ -60,14 +61,32 @@ interface Row {
   onAgain?: () => void;
 }
 
-function TeamRow({ name, score, dot }: { name: string; score: number; dot: string }) {
+/**
+ * Строка карточки: игрок слева, его команда и счёт справа. Названия команд
+ * сами по себе ни о чём не говорят — через неделю не вспомнить, кто в «Лисах»
+ * играл. Втроём команда и есть игрок, и вторая колонка тогда пустая.
+ */
+function PlayerRow({
+  name,
+  team,
+  score,
+  color,
+}: {
+  name: string;
+  team: string | null;
+  score: number;
+  color: string;
+}) {
   return (
     <div className="hist-line">
       <span className="hist-line-name">
-        <span className="hist-dot" style={{ background: dot }} />
-        {name}
+        <span className="hist-dot" style={{ background: `var(${color})` }} />
+        <span className="hist-line-nm">{name}</span>
       </span>
-      <span className="mf-mono hist-line-value">{score}</span>
+      <span className="hist-line-right">
+        {team ? <span className="hist-line-team">{team}</span> : null}
+        <span className="mf-mono hist-line-value">{score}</span>
+      </span>
     </div>
   );
 }
@@ -175,13 +194,14 @@ export default function HistoryPage() {
       href,
       meta: `${g.currentRoundNumber} ${g.currentRoundNumber === 1 ? "раунд" : "раунда"}`,
       body: (
-        <div className="hist-lines">
-          {g.teams.slice(0, 3).map((t, i) => (
-            <TeamRow
-              key={t.id}
-              name={t.name}
-              score={t.score}
-              dot={i === 0 ? "var(--alias-green)" : i === 1 ? "var(--mf-gold)" : "var(--role-maniac)"}
+        <div className="hist-lines hist-lines-scroll">
+          {historyLines(g).map((l) => (
+            <PlayerRow
+              key={l.key}
+              name={l.name}
+              team={l.team}
+              score={l.score}
+              color={l.color}
             />
           ))}
         </div>
