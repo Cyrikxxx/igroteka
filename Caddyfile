@@ -14,13 +14,19 @@
 	# Socket.io: и рукопожатие, и апгрейд до WebSocket. Caddy проксирует
 	# Upgrade/Connection сам, отдельные заголовки прописывать не нужно.
 	handle /socket.io/* {
-		reverse_proxy ws:3001
+		reverse_proxy ws:3001 {
+			header_up X-Forwarded-For {remote_host}
+		}
 	}
 
 	# /health сервера ws наружу не выставляем — он нужен только внутри
 	# сети compose, для healthcheck'ов.
 
+	# X-Forwarded-For перезаписываем, а не дописываем: иначе в заголовке
+	# остаётся то, что прислал клиент, и по нему нельзя считать rate limit.
 	handle {
-		reverse_proxy web:3000
+		reverse_proxy web:3000 {
+			header_up X-Forwarded-For {remote_host}
+		}
 	}
 }

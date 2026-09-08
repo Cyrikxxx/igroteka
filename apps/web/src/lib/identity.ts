@@ -4,15 +4,20 @@
 
 import { cookies } from "next/headers";
 import prisma from "./prisma";
+import { verifyAid } from "./aid-cookie";
 
 export const AID_COOKIE = "aid";
 
 export type Identity = { userId: string };
 
-/** Чтение userId из cookie. Cookie всегда установлена proxy.ts. */
+/**
+ * Чтение userId из cookie. Подпись проверяется здесь, а не только в proxy.ts:
+ * прокси может быть обойдён, а этот хелпер — единственная дверь, через которую
+ * личность попадает в роуты. Кука без верной подписи считается отсутствующей.
+ */
 export async function readUserId(): Promise<string | null> {
   const store = await cookies();
-  return store.get(AID_COOKIE)?.value ?? null;
+  return verifyAid(store.get(AID_COOKIE)?.value);
 }
 
 /**

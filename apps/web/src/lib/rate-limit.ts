@@ -34,9 +34,16 @@ function sweep(now: number): void {
  * Caddy его проставляет. Без заголовка все анонимы схлопнутся в один
  * ключ — на домашнем масштабе это приемлемо.
  */
-function clientKey(request: NextRequest): string {
+export function clientKey(request: NextRequest): string {
   const fwd = request.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0]!.trim();
+  // Последний элемент, а не первый. X-Forwarded-For клиент может прислать сам,
+  // и Caddy не вычищает присланное, а дописывает настоящий адрес в конец.
+  // Раньше брался первый — то есть тот, что выбрал атакующий, и лимит
+  // обходился сменой заголовка на каждый запрос.
+  if (fwd) {
+    const chain = fwd.split(",");
+    return chain[chain.length - 1]!.trim();
+  }
   return request.headers.get("x-real-ip") ?? "unknown";
 }
 

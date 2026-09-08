@@ -6,7 +6,9 @@
 #   docker compose down      # остановить (данные сохранятся в volume)
 #   docker compose down -v   # остановить и стереть данные начисто
 #
-# Креды нарочно простые — базы доступны только с твоего компьютера.
+# Креды нарочно простые, поэтому порты привязаны к 127.0.0.1: без этого
+# Docker слушал бы на всех интерфейсах и пробивал firewall, и Postgres
+# с паролем alias/alias был бы открыт всей сети Wi-Fi.
 
 services:
   postgres:
@@ -18,7 +20,7 @@ services:
       POSTGRES_PASSWORD: alias
       POSTGRES_DB: alias
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - alias-pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -32,7 +34,7 @@ services:
     container_name: alias-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - alias-redisdata:/data
     healthcheck:

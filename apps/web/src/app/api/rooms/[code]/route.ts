@@ -1,78 +1,18 @@
-// GET /api/rooms/[code] — снимок комнаты (для страницы /alias/room/[code]).
 // DELETE /api/rooms/[code] — закрыть комнату (только хост).
+//
+// GET здесь был раньше и отдавал снимок комнаты кому угодно, без куки и без
+// лимита, — вместе с userId всех участников. Читать его давно некому: страница
+// комнаты берёт состояние по WebSocket. Удалён как мёртвый код и заодно как
+// открытый справочник личностей: код комнаты показывают на экране и шлют в
+// мессенджеры, то есть публичен по своей природе.
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { readUserId } from "@/lib/identity";
 import { isValidRoomCode } from "@/lib/room-code";
-import {
-  buildLobbySnapshot,
-  deleteRoomSnapshot,
-  loadRoomSnapshot,
-  saveRoomSnapshot,
-} from "@/lib/room-snapshot";
-import type { RoomSnapshot } from "@/types";
+import { deleteRoomSnapshot } from "@/lib/room-snapshot";
 
 type Ctx = { params: Promise<{ code: string }> };
-
-export async function GET(_request: NextRequest, { params }: Ctx) {
-  try {
-    const { code: rawCode } = await params;
-    const code = rawCode.toUpperCase();
-    if (!isValidRoomCode(code)) {
-      return NextResponse.json({ error: "Invalid room code" }, { status: 400 });
-    }
-
-    let snapshot = await loadRoomSnapshot(code);
-    if (snapshot) return NextResponse.json(snapshot);
-
-    // Redis-снимок мог утечь по TTL. Восстанавливаем минимум из Postgres
-    // (host + settings + статус). Команды и игроки в Redis не восстанавливаются —
-    // WS-сервер при подключении хоста положит снимок заново.
-    const room = await prisma.room.findUnique({
-      where: { code },
-      select: {
-        code: true,
-        title: true,
-        status: true,
-        hostId: true,
-        roundTime: true,
-        winScore: true,
-        penaltySkip: true,
-        categories: { select: { categoryId: true } },
-        host: { select: { displayName: true } },
-      },
-    });
-    if (!room) {
-      return NextResponse.json({ error: "Room not found" }, { status: 404 });
-    }
-
-    const rebuilt: RoomSnapshot = buildLobbySnapshot({
-      code: room.code,
-      title: room.title,
-      hostId: room.hostId,
-      hostDisplayName: room.host.displayName,
-      settings: {
-        roundTime: room.roundTime,
-        winScore: room.winScore,
-        penaltySkip: room.penaltySkip,
-        categoryIds: room.categories.map((c) => c.categoryId),
-      },
-    });
-    rebuilt.status = room.status;
-    // FINISHED-комнаты не кэшируем — экономим место в Redis. Активные
-    // (LOBBY/IN_GAME) кладём, чтобы WS-сервер мог их подхватить.
-    if (room.status !== "FINISHED") {
-      await saveRoomSnapshot(rebuilt);
-    }
-    snapshot = rebuilt;
-
-    return NextResponse.json(snapshot);
-  } catch (e) {
-    console.error("[GET /api/rooms/[code]]", e);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-  }
-}
 
 export async function DELETE(_request: NextRequest, { params }: Ctx) {
   try {
