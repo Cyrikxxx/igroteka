@@ -144,7 +144,12 @@ export const DEFAULT_MAFIA_SETTINGS: MafiaSettings = {
   roles: { don: true, sheriff: true, doctor: true, maniac: false },
   timers: { night: 60, discussion: 120, vote: 45, lastWord: 30, nightStep: 20 },
   rules: {
-    firstDayNoVote: true,
+    // Выключено намеренно. При шести игроках мафии двое, и без голосования в
+    // первый день город не успевает сделать ни одного хода: после двух ночей
+    // остаётся двое на двое — паритет, победа мафии. Партия заканчивалась, а
+    // люди так и не голосовали ни разу. Кому нужен классический вариант,
+    // включает его в настройках.
+    firstDayNoVote: false,
     revealRoles: true,
     openVotes: true,
     donHiddenFromSheriff: false,

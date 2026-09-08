@@ -492,7 +492,12 @@ export default function MafiaSettingsForm({
       />
 
       <SectionLabel>Правила</SectionLabel>
-      <ToggleRow label="Первый день без голосования" on={s.rules.firstDayNoVote} onChange={setRule("firstDayNoVote")} />
+      <ToggleRow
+        label="Первый день без голосования"
+        sub="Классический вариант. Вшестером опасен: мафия успевает победить за две ночи, и город не проголосует ни разу"
+        on={s.rules.firstDayNoVote}
+        onChange={setRule("firstDayNoVote")}
+      />
       <ToggleRow label="Раскрывать роль погибших" on={s.rules.revealRoles} onChange={setRule("revealRoles")} />
       <ToggleRow label="Голоса видны при голосовании" on={s.rules.openVotes} onChange={setRule("openVotes")} />
       <ToggleRow label="Дон скрыт от шерифа" on={s.rules.donHiddenFromSheriff} onChange={setRule("donHiddenFromSheriff")} />

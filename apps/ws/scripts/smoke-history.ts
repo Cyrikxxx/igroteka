@@ -20,7 +20,10 @@ function assert(ok: boolean, what: string) {
   console.log(`  ok · ${what}`);
 }
 
-/** Вкладка со своей кукой: значение `aid` и есть userId. */
+/**
+ * Вкладка со своей кукой. Кука подписана — `<uuid>.<подпись>`, — а userId это
+ * часть до точки: ровно её сервер и достаёт из куки.
+ */
 function tab() {
   const jar = new Map<string, string>();
   const read = (res: Response) => {
@@ -32,7 +35,7 @@ function tab() {
   };
   const cookie = () => [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
   return {
-    userId: () => jar.get("aid") ?? "",
+    userId: () => (jar.get("aid") ?? "").split(".")[0] ?? "",
     cookie,
     async prime() {
       read(await fetch(`${WEB}/api/categories`));
