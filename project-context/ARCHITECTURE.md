@@ -211,7 +211,7 @@ VOTE_RESULT → LAST_WORD → FINISHED`.
 npm install
 npm run db:up      # поднять Postgres и Redis в Docker
 npm run db:deploy  # применить миграции
-npm run db:seed    # залить словарь (10 категорий, 629 слов)
+npm run db:seed    # залить словарь (8 подборок, 38 категорий, 8134 слова)
 npm run dev        # web :3000 + ws :3001
 ```
 
