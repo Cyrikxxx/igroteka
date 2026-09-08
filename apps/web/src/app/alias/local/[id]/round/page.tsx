@@ -10,8 +10,10 @@ import type { GameFromAPI, WordInRound } from "@/types";
 import { useTimer } from "@/hooks/useTimer";
 import { teamColorVar } from "@/constants/game";
 import { trioRoles } from "@alias/shared/trio";
+import { remainingMs } from "@alias/shared/countdown";
 import { formatTime } from "@/lib/utils";
 import { pluralize, WORDS } from "@/lib/plural";
+import { clearRound, loadRound, saveRound, type SavedRound } from "@/lib/local-round";
 import AppShell from "@/components/common/AppShell";
 import Avatar from "@/components/common/Avatar";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -25,9 +27,16 @@ export default function LocalRoundPage() {
   const params = useParams();
   const gameId = params.id as string;
 
+  // Читаем сохранённый раунд один раз, лениво: до первого рендера, иначе
+  // таймер успеет создать свой отсчёт с нуля, и восстанавливать будет поздно.
+  const [restored] = useState<SavedRound | null>(() => {
+    if (typeof window === "undefined") return null;
+    return loadRound(gameId);
+  });
+
   const [game, setGame] = useState<GameFromAPI | null>(null);
-  const [words, setWords] = useState<WordInRound[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [words, setWords] = useState<WordInRound[]>(restored?.words ?? []);
+  const [currentIndex, setCurrentIndex] = useState(restored?.currentIndex ?? 0);
   const [rawPhase, setPhase] = useState<Phase>("loading");
   const [error, setError] = useState<string | null>(null);
   const [pauseOpen, setPauseOpen] = useState(false);
@@ -55,9 +64,10 @@ export default function LocalRoundPage() {
     setPhase("summary");
   }, []);
 
-  const { timeLeft, start, pause } = useTimer({
+  const { timeLeft, start, pause, snapshot } = useTimer({
     initialTime: game?.roundTime ?? 60,
     onTimeUp: handleTimeUp,
+    restore: restored?.countdown ?? null,
   });
 
   // Загрузка
@@ -66,18 +76,28 @@ export default function LocalRoundPage() {
     fetchedRef.current = true;
     (async () => {
       try {
-        const [gameRes, wordsRes] = await Promise.all([
-          fetch(`/api/games/${gameId}`),
-          fetch(`/api/games/${gameId}/words`),
-        ]);
+        // Раунд восстановлен — слова уже есть, новую пачку просить нельзя:
+        // она затёрла бы ответы, которые как раз и надо сохранить.
+        const gameRes = await fetch(`/api/games/${gameId}`);
         if (!gameRes.ok) throw new Error("Игра не найдена");
-        if (!wordsRes.ok) throw new Error("Не удалось загрузить слова");
         const g = (await gameRes.json()) as GameFromAPI;
-        const ws = (await wordsRes.json()) as { id: number; text: string }[];
         if (g.status === "FINISHED") {
+          clearRound(gameId);
           router.replace(`/alias/local/${gameId}/results`);
           return;
         }
+
+        if (restored) {
+          setGame(g);
+          // Пока вкладки не было, время шло. Если оно вышло — сразу итоги.
+          const expired = remainingMs(restored.countdown, Date.now()) === 0;
+          setPhase(expired || restored.phase === "summary" ? "summary" : "active");
+          return;
+        }
+
+        const wordsRes = await fetch(`/api/games/${gameId}/words`);
+        if (!wordsRes.ok) throw new Error("Не удалось загрузить слова");
+        const ws = (await wordsRes.json()) as { id: number; text: string }[];
         if (ws.length === 0) {
           setError("Слова в выбранных категориях закончились.");
           setPhase("summary");
@@ -90,7 +110,7 @@ export default function LocalRoundPage() {
         setError((e as Error).message);
       }
     })();
-  }, [gameId, router]);
+  }, [gameId, router, restored]);
 
   // Пускаем таймер ровно один раз, когда игра загрузилась. Через ref, а не
   // через сравнение timeLeft с длительностью раунда: иначе пауза, поставленная
@@ -111,6 +131,20 @@ export default function LocalRoundPage() {
       start();
     }
   }, [phase, game, start]);
+
+  // Раунд переживает перезагрузку вкладки. Пишем после каждого ответа и на
+  // смене фазы — этого достаточно: внутри отсчёта лежит момент окончания,
+  // и пока раунд идёт, он не меняется.
+  useEffect(() => {
+    if (!game || words.length === 0) return;
+    if (phase !== "active" && phase !== "summary") return;
+    saveRound(gameId, {
+      words,
+      currentIndex,
+      phase,
+      countdown: snapshot(),
+    });
+  }, [gameId, game, words, currentIndex, phase, snapshot]);
 
   const guess = (guessed: boolean) => {
     setFlash(guessed ? "got" : "skip");
@@ -145,6 +179,9 @@ export default function LocalRoundPage() {
         }),
       });
       if (!res.ok) throw new Error("Не удалось сохранить раунд");
+      // Раунд уехал на сервер — черновик во вкладке больше не нужен, иначе
+      // следующий раунд восстановился бы поверх этого.
+      clearRound(gameId);
       const result = (await res.json()) as { gameFinished: boolean };
       router.replace(result.gameFinished ? `/alias/local/${gameId}/results` : `/alias/local/${gameId}/turn`);
     } catch (e) {
@@ -407,6 +444,9 @@ export default function LocalRoundPage() {
           cancelLabel="Остаться"
           onConfirm={() => {
             setExitAsk(false);
+            // Обещали, что раунд не сохранится, — значит и черновик убираем,
+            // иначе он подхватился бы при следующем заходе в партию.
+            clearRound(gameId);
             router.push("/alias");
           }}
           onCancel={() => {

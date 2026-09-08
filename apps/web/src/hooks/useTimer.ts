@@ -24,10 +24,24 @@ interface UseTimerOptions {
   initialTime: number;
   onTimeUp?: () => void;
   autoStart?: boolean;
+  /**
+   * Отсчёт, восстановленный после перезагрузки вкладки. Передаётся один раз,
+   * при первом рендере; дальше меняется только через start/pause/reset.
+   */
+  restore?: Countdown | null;
 }
 
-export function useTimer({ initialTime, onTimeUp, autoStart = false }: UseTimerOptions) {
-  const [timeLeft, setTimeLeft] = useState(initialTime);
+export function useTimer({
+  initialTime,
+  onTimeUp,
+  autoStart = false,
+  restore = null,
+}: UseTimerOptions) {
+  // При восстановлении показываем сохранённый остаток сразу: иначе на экране
+  // на четверть секунды загорелся бы полный раунд и только потом сменился.
+  const [timeLeft, setTimeLeft] = useState(() =>
+    restore ? remainingSeconds(restore, Date.now()) : initialTime,
+  );
   const [isRunning, setIsRunning] = useState(autoStart);
 
   const onTimeUpRef = useRef(onTimeUp);
@@ -37,7 +51,13 @@ export function useTimer({ initialTime, onTimeUp, autoStart = false }: UseTimerO
     onTimeUpRef.current = onTimeUp;
   });
 
-  const countdownRef = useRef<Countdown>(createCountdown(initialTime));
+  const countdownRef = useRef<Countdown>(restore ?? createCountdown(initialTime));
+  /**
+   * Восстановленный отсчёт не сбрасываем, когда доедет длительность раунда.
+   * Состояние, а не ref: флаг читается прямо при рендере, а рефы там трогать
+   * нельзя. Значение берётся один раз при монтировании и больше не меняется.
+   */
+  const [isRestored] = useState(restore !== null);
   /** Чтобы onTimeUp не выстрелил дважды на одном раунде. */
   const firedRef = useRef(false);
 
@@ -48,14 +68,15 @@ export function useTimer({ initialTime, onTimeUp, autoStart = false }: UseTimerO
   // React разрешает такую подгонку и советует её вместо эффекта с setState:
   // лишней перерисовки не будет. Эффекту остаются только ссылки.
   const [seed, setSeed] = useState(initialTime);
-  if (seed !== initialTime) {
+  if (seed !== initialTime && !isRestored) {
     setSeed(initialTime);
     setTimeLeft(initialTime);
   }
   useEffect(() => {
+    if (isRestored) return;
     countdownRef.current = createCountdown(initialTime);
     firedRef.current = false;
-  }, [initialTime]);
+  }, [initialTime, isRestored]);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -93,5 +114,11 @@ export function useTimer({ initialTime, onTimeUp, autoStart = false }: UseTimerO
     setTimeLeft(initialTime);
   }, [initialTime]);
 
-  return { timeLeft, isRunning, start, pause, reset };
+  /**
+   * Текущий отсчёт как есть — чтобы его можно было сохранить и восстановить.
+   * Функция, а не значение: отсчёт живёт в ref и на перерисовки не влияет.
+   */
+  const snapshot = useCallback(() => countdownRef.current, []);
+
+  return { timeLeft, isRunning, start, pause, reset, snapshot };
 }

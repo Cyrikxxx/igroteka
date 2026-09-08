@@ -97,4 +97,63 @@ describe("useTimer", () => {
     expect(result.current.timeLeft).toBe(45);
     expect(result.current.isRunning).toBe(false);
   });
+
+  // ── Восстановление после перезагрузки вкладки ──
+  //
+  // Длительность раунда приезжает вместе с игрой, то есть позже первого
+  // рендера. Пока восстановления не было, хук просто пересоздавал отсчёт на
+  // новую длительность — и восстановленный остаток был бы затёрт полным
+  // раундом. Ровно из-за этого перезагрузка посреди раунда начинала всё
+  // заново.
+  describe("восстановление", () => {
+    it("продолжает с сохранённого остатка, а не с полного раунда", () => {
+      const { result } = renderHook(() =>
+        useTimer({
+          initialTime: 60,
+          restore: { endsAt: null, remainingMs: 12_000 },
+        }),
+      );
+      act(() => {
+        result.current.start();
+      });
+      expect(result.current.timeLeft).toBeLessThanOrEqual(12);
+      expect(result.current.timeLeft).toBeGreaterThan(0);
+    });
+
+    it("поздно приехавшая длительность раунда не затирает остаток", () => {
+      const { result, rerender } = renderHook(
+        ({ time }: { time: number }) =>
+          useTimer({
+            initialTime: time,
+            restore: { endsAt: null, remainingMs: 12_000 },
+          }),
+        { initialProps: { time: 60 } },
+      );
+      // Игра загрузилась и принесла настоящую длительность.
+      rerender({ time: 90 });
+      act(() => {
+        result.current.start();
+      });
+      expect(result.current.timeLeft).toBeLessThanOrEqual(12);
+    });
+
+    it("отдаёт свой отсчёт наружу — его и сохраняют", () => {
+      const { result } = renderHook(() => useTimer({ initialTime: 45 }));
+      expect(result.current.snapshot().remainingMs).toBe(45_000);
+      act(() => {
+        result.current.start();
+      });
+      expect(result.current.snapshot().endsAt).not.toBeNull();
+    });
+
+    it("истёкший отсчёт не запускается заново", () => {
+      const { result } = renderHook(() =>
+        useTimer({ initialTime: 60, restore: { endsAt: null, remainingMs: 0 } }),
+      );
+      act(() => {
+        result.current.start();
+      });
+      expect(result.current.isRunning).toBe(false);
+    });
+  });
 });
