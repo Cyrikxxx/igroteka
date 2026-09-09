@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Pause, Volume2, VolumeX } from "lucide-react";
+import { Volume2, VolumeX } from "lucide-react";
 import MafiaShell from "@/components/mafia/MafiaShell";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import RoleReveal from "@/components/mafia/RoleReveal";
@@ -21,17 +21,21 @@ import {
   LastWordScreen,
 } from "@/components/mafia/DayScreens";
 import FinaleScreen from "@/components/mafia/FinaleScreen";
+import GameMenu from "@/components/mafia/GameMenu";
 import {
   PauseOverlay,
   ReconnectOverlay,
   ClosedOverlay,
   HostToast,
   useHostToast,
+  LeftToast,
+  useLeftToast,
 } from "@/components/mafia/Overlays";
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
 import { useNarrator } from "@/hooks/useNarrator";
 import { useVoicePref } from "@/hooks/useVoicePref";
 import { useHydrated } from "@/hooks/useHydrated";
+import { useHostClaim } from "@/hooks/useHostClaim";
 import { loadRoomCreds, clearRoomCreds, type RoomCredentials } from "@/lib/room-session";
 import { resumeRoom } from "@/lib/room-resume";
 import { setRoomNotice } from "@/lib/room-notice";
@@ -114,9 +118,15 @@ export default function MafiaPlayPage() {
   });
 
   const hostToast = useHostToast(view?.you.isHost ?? false);
+  const leftToast = useLeftToast(view?.players ?? []);
+  // Хост может пропасть и посреди партии — тогда комнату забирают прямо
+  // отсюда, а не только из лобби.
+  const claim = useHostClaim(view?.hostOfflineSince, view?.you.isHost ?? false);
+  const claimHost = () => emit("mafia:claim_host", {}, () => {});
   // Экран «ты убит» показываем один раз, пока игрок сам не уйдёт в зрители.
   const [deathSeen, setDeathSeen] = useState(false);
   const [endGameAsk, setEndGameAsk] = useState(false);
+  const [leaveAsk, setLeaveAsk] = useState(false);
   const [closeAsk, setCloseAsk] = useState(false);
   const alive = view?.you.alive ?? true;
   // Живому экран смерти не показываем, а отметка «уже посмотрел» действует
@@ -339,31 +349,21 @@ export default function MafiaPlayPage() {
     <>
       {screen()}
 
-      {canPause ? (
-        <button
-          type="button"
-          aria-label="Поставить на паузу"
-          onClick={() => emit("mafia:pause", {}, () => {})}
-          style={{
-            position: "fixed",
-            left: 16,
-            bottom: 16,
-            zIndex: 70,
-            width: 44,
-            height: 44,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "var(--mf-surface-2)",
-            border: "1px solid var(--mf-border)",
-            color: "var(--mf-text-dim)",
-            cursor: "pointer",
-          }}
-        >
-          <Pause size={19} />
-        </button>
-      ) : null}
+      {/* Служебное меню: пауза, завершение партии, захват комнаты и выход.
+          Раньше здесь была одна кнопка паузы, и выйти из партии было нечем. */}
+      <GameMenu
+        isHost={view.you.isHost}
+        canPause={canPause}
+        paused={paused}
+        canClaimHost={claim.canClaim}
+        claimSecondsLeft={claim.secondsLeft}
+        hostGone={claim.hostGone}
+        onPause={() => emit("mafia:pause", {}, () => {})}
+        onResume={() => emit("mafia:resume", {}, () => {})}
+        onEndGame={() => setEndGameAsk(true)}
+        onClaimHost={claimHost}
+        onLeave={() => setLeaveAsk(true)}
+      />
 
       {narratorMode ? (
         <button
@@ -452,7 +452,21 @@ export default function MafiaPlayPage() {
         onCancel={() => setEndGameAsk(false)}
       />
 
+      <ConfirmDialog
+        open={leaveAsk}
+        variant="mafia"
+        title="Выйти из игры?"
+        text="Для тебя партия закончится: вернуться в неё будет нельзя. Остальные доиграют без тебя."
+        confirmLabel="Выйти"
+        onConfirm={() => {
+          setLeaveAsk(false);
+          leaveToHome();
+        }}
+        onCancel={() => setLeaveAsk(false)}
+      />
+
       <HostToast show={hostToast.show} onClose={hostToast.close} />
+      <LeftToast name={leftToast.name} inLobby={leftToast.inLobby} onClose={leftToast.close} />
     </>
   );
 }
