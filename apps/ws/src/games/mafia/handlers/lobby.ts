@@ -13,6 +13,7 @@ import { pickHeir, nextHostOfflineSince, canClaimHost } from "@alias/shared/host
 import { mutate, load } from "../snapshot";
 import { assignRoles } from "../roles";
 import {
+  enterDiscussion,
   enterNight,
   ensurePhaseTimer,
   finishGame,
@@ -447,8 +448,9 @@ export function registerMafiaLobbyHandlers(
     });
     if (!snap) return ack?.({ error: "room_not_found" });
     ack?.({ ok: true });
-    // Все готовы → первая ночь (engine ставит таймер).
-    if (allReady) await enterNight(ns, roomCode);
+    // Все готовы → вступительное обсуждение, и только потом первая ночь:
+    // компании нужно поговорить до того, как кто-то начнёт погибать.
+    if (allReady) await enterDiscussion(ns, roomCode);
     else await broadcastStateNow(ns, roomCode);
   });
 

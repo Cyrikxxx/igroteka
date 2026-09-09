@@ -13,7 +13,7 @@ import type {
   MafiaRole,
   MafiaNightStep,
 } from "@alias/shared/mafia";
-import { roleTeam } from "@alias/shared/mafia";
+import { roleTeam, SKIP_VOTE } from "@alias/shared/mafia";
 import { narrationFor } from "@alias/shared/mafia-narration";
 
 function findSelf(
@@ -129,12 +129,15 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
     if (showTally) {
       tally = {};
       for (const target of Object.values(snap.vote.votes)) {
-        if (target === "abstain") continue;
+        // Скип считается наравне с игроками и попадает в tally под своим
+        // ключом: на кнопке «никого не изгонять» видно, сколько за неё.
+        if (target === SKIP_VOTE && !snap.settings.rules.allowSkipVote) continue;
         tally[target] = (tally[target] ?? 0) + 1;
       }
     }
     vote = {
       round: snap.vote.round,
+      skipped: snap.vote.skipped,
       tally,
       totalVoters: aliveIds.length,
       votedCount: Object.keys(snap.vote.votes).length,

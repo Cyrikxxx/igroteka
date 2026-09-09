@@ -1,13 +1,14 @@
-// Дневное голосование: оба пути.
+// Дневное голосование: порядок фаз и скип.
 //
-// smoke-mafia играет на своих настройках и до дефолтных не добирается. Из-за
-// этого дыра жила незамеченной: при шести игроках и включённом
-// `firstDayNoVote` мафия побеждала за две ночи, и город не голосовал ни разу
-// за партию. Выглядело так, будто голосования в игре просто нет.
+// Партия начинается со вступительного обсуждения (day 0): люди знакомятся, и
+// изгонять в нём некого. Голосование наступает начиная с первого дня — раньше
+// тут была настройка «первый день без голосования», из-за которой вшестером
+// мафия побеждала за две ночи, а город не голосовал ни разу за партию.
 //
-// Здесь проверяются оба варианта:
-//   1) настройки по умолчанию — голосование наступает в первый же день;
-//   2) `firstDayNoVote: true` — первый день без него, второй с ним.
+// Проверяется:
+//   1) партия открывается обсуждением, из него уходит в ночь без голосования;
+//   2) в первый день голосование есть и заканчивается изгнанием;
+//   3) скип: если большинство за «никого не изгонять», никто не выбывает.
 //
 // Запуск: `npm run smoke:vote -w @alias/ws` при поднятом `npm run dev`.
 
@@ -164,7 +165,7 @@ async function mafiaKills(all: Client[]): Promise<string> {
   return victim.displayName;
 }
 
-/** Поднимает комнату, раздаёт роли и доводит до первой ночи. */
+/** Поднимает комнату, раздаёт роли и доводит до вступительного обсуждения. */
 async function startGame(
   names: string[],
   rules?: Record<string, boolean>,
@@ -181,7 +182,7 @@ async function startGame(
   await host.emit("mafia:start");
   await waitPhase(all, "ROLE_REVEAL");
   for (const c of all) await c.emit("mafia:ready");
-  await waitPhase(all, "NIGHT");
+  await waitPhase(all, "DISCUSSION");
   console.log(`[create] код ${host.code}, игроков ${all.length}`);
   return all;
 }
@@ -207,13 +208,19 @@ async function cityVotes(all: Client[]): Promise<string> {
   return target.displayName;
 }
 
-/** ── 1. Настройки по умолчанию: голосование в первый же день ── */
-async function defaultRules(): Promise<void> {
+/** ── 1. Вступительное обсуждение, потом ночь, потом голосование ── */
+async function openingThenVote(): Promise<void> {
   console.log("");
-  console.log("── по умолчанию, шесть игроков ──");
+  console.log("── знакомство → ночь → день с голосованием ──");
   const all = await startGame(["Хост", "Аня", "Боря", "Вера", "Гена", "Дима"]);
 
+  assert(anyDay(all) === 0, "партия открылась обсуждением до первой ночи");
+  assert(!seenVote(all), "во вступительном обсуждении голосования нет");
+
+  await waitPhase(all, "NIGHT");
+  assert(anyDay(all) === 1, "после знакомства наступила первая ночь");
   const victim = await mafiaKills(all);
+
   await waitPhase(all, "MORNING");
   console.log(`[утро 1] погиб ${victim}`);
 
@@ -229,50 +236,54 @@ async function defaultRules(): Promise<void> {
   await waitPhase(all, "LAST_WORD");
   assert(true, "у изгнанного есть последнее слово");
 
-  for (const c of all) c.sock.disconnect();
-}
-
-/** ── 2. Классический вариант: первый день молчит, второй голосует ── */
-async function classicRules(): Promise<void> {
-  console.log("");
-  console.log("── firstDayNoVote, семь игроков ──");
-  // Семеро, а не шестеро: вшестером с этим правилом мафия побеждает за две
-  // ночи, и до второго дня партия не доживает. Ровно из-за этого правило и
-  // выключено по умолчанию.
-  const all = await startGame(
-    ["Хост", "Аня", "Боря", "Вера", "Гена", "Дима", "Женя"],
-    { firstDayNoVote: true },
-  );
-
-  await mafiaKills(all);
-  await waitPhase(all, "MORNING");
-  await waitPhase(all, "DISCUSSION");
-  assert(anyDay(all) === 1, "первый день: идёт обсуждение");
-
-  await waitPhase(all, "NIGHT");
-  assert(!seenVote(all), "в первый день голосования не было — так и просили");
-  assert(anyDay(all) === 2, "наступила вторая ночь");
-
-  await mafiaKills(all);
-  await waitPhase(all, "MORNING");
-  await waitPhase(all, "DISCUSSION");
-  await waitPhase(all, "VOTE");
-  assert(true, "на второй день голосование наступило");
-
-  await cityVotes(all);
-  await waitPhase(all, "VOTE_RESULT");
-  assert(
-    Boolean(all.map((c) => c.view?.vote?.eliminated).find(Boolean)),
-    "город изгнал игрока",
-  );
-
   console.log(`[фазы] ${all.find((c) => c.alive)?.seen.join(" → ")}`);
   for (const c of all) c.sock.disconnect();
 }
 
+/** ── 2. Скип: город решает никого не изгонять ── */
+async function skipVote(): Promise<void> {
+  console.log("");
+  console.log("── голосование за «никого не изгонять» ──");
+  const all = await startGame(["Хост", "Аня", "Боря", "Вера", "Гена", "Дима"]);
+
+  await waitPhase(all, "NIGHT");
+  await mafiaKills(all);
+  await waitPhase(all, "MORNING");
+  await waitPhase(all, "DISCUSSION");
+  await waitPhase(all, "VOTE");
+
+  // Все живые голосуют за скип.
+  const voters = all.filter((c) => c.alive);
+  for (const c of voters) {
+    const ack = (await c.emit("mafia:vote", { targetId: "abstain" })) as
+      | { ok: true }
+      | { error: string };
+    if (ack && "error" in ack) throw new Error(`скип ${c.name} отклонён: ${ack.error}`);
+  }
+  console.log(`[голосование] ${voters.length} голосов за «никого»`);
+
+  await waitPhase(all, "VOTE_RESULT");
+  const v = all.map((c) => c.view?.vote).find((x) => x?.skipped);
+  assert(Boolean(v?.skipped), "итог голосования — никого не изгоняют");
+  assert(
+    all.every((c) => !c.view?.vote?.eliminated),
+    "изгнанного нет",
+  );
+  assert(
+    (v?.tally?.["abstain"] ?? 0) === voters.length,
+    `голоса за скип видны в подсчёте (${v?.tally?.["abstain"]})`,
+  );
+
+  // Скип не отправляет на переголосование — сразу ночь.
+  await waitPhase(all, "NIGHT");
+  assert(anyDay(all) === 2, "после скипа сразу наступила следующая ночь");
+
+  for (const c of all) c.sock.disconnect();
+}
+
 async function main(): Promise<void> {
-  await defaultRules();
-  await classicRules();
+  await openingThenVote();
+  await skipVote();
   console.log("");
   console.log("[smoke-vote] все проверки зелёные");
 }

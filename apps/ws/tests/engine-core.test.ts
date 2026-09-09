@@ -10,6 +10,7 @@ import {
   applyEnterNight,
 } from "../src/games/mafia/engine-core";
 import { player, snapshot } from "./fixtures";
+import { SKIP_VOTE, DEFAULT_MAFIA_SETTINGS } from "@alias/shared/mafia";
 
 describe("decideMafiaTarget", () => {
   it("берёт большинство голосов мафии", () => {
@@ -125,7 +126,12 @@ describe("tallyVotes", () => {
   it("один лидер — изгнание", () => {
     const s = snapshot([player("a", "civilian"), player("b", "civilian")]);
     s.vote.votes = { a: "b", b: "b" };
-    expect(tallyVotes(s)).toEqual({ leaders: ["b"], eliminated: "b", tie: false });
+    expect(tallyVotes(s)).toEqual({
+      leaders: ["b"],
+      eliminated: "b",
+      skipped: false,
+      tie: false,
+    });
   });
 
   it("поровну — ничья без изгнания", () => {
@@ -137,18 +143,46 @@ describe("tallyVotes", () => {
     expect(res.leaders.sort()).toEqual(["a", "b"]);
   });
 
-  it("воздержавшиеся не считаются", () => {
+  // ── Скип: город решает не только «кого», но и «стоит ли вообще» ──
+
+  it("скип побеждает — никого не изгоняют", () => {
     const s = snapshot([player("a", "civilian"), player("b", "civilian")]);
-    s.vote.votes = { a: "abstain", b: "a" };
-    expect(tallyVotes(s).eliminated).toBe("a");
+    s.vote.votes = { a: SKIP_VOTE, b: SKIP_VOTE };
+    const res = tallyVotes(s);
+    expect(res.skipped).toBe(true);
+    expect(res.eliminated).toBeUndefined();
+    expect(res.tie).toBe(false);
   });
 
-  it("все воздержались — никого не изгоняют", () => {
+  it("скип считается наравне с игроком: поровну — это ничья", () => {
     const s = snapshot([player("a", "civilian"), player("b", "civilian")]);
-    s.vote.votes = { a: "abstain", b: "abstain" };
+    s.vote.votes = { a: SKIP_VOTE, b: "a" };
     const res = tallyVotes(s);
+    expect(res.tie).toBe(true);
     expect(res.eliminated).toBeUndefined();
-    expect(res.leaders).toEqual([]);
+    expect(res.skipped).toBe(false);
+  });
+
+  it("игрок с перевесом над скипом всё равно изгоняется", () => {
+    const s = snapshot([
+      player("a", "civilian"),
+      player("b", "civilian"),
+      player("c", "civilian"),
+    ]);
+    s.vote.votes = { a: "b", c: "b", b: SKIP_VOTE };
+    const res = tallyVotes(s);
+    expect(res.eliminated).toBe("b");
+    expect(res.skipped).toBe(false);
+  });
+
+  it("с выключенным правилом голоса за скип не считаются вовсе", () => {
+    const s = snapshot([player("a", "civilian"), player("b", "civilian")], {
+      settings: { ...DEFAULT_MAFIA_SETTINGS, rules: { ...DEFAULT_MAFIA_SETTINGS.rules, allowSkipVote: false } },
+    });
+    s.vote.votes = { a: SKIP_VOTE, b: "a" };
+    const res = tallyVotes(s);
+    expect(res.eliminated).toBe("a");
+    expect(res.skipped).toBe(false);
   });
 });
 

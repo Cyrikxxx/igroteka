@@ -107,6 +107,7 @@ function voteText(s: MafiaSnapshot): string {
 function voteResultText(s: MafiaSnapshot): string {
   const name = nameOf(s, s.vote.eliminated);
   if (name) return `Голосование окончено. Из игры выбывает ${name}.`;
+  if (s.vote.skipped) return "Город решил никого не изгонять.";
   return s.vote.round === 2
     ? "Голоса разделились. Никто не выбывает."
     : "Голоса разделились.";
@@ -142,9 +143,14 @@ export function narrationFor(s: MafiaSnapshot): MafiaNarration | undefined {
       return { key: key(), text: morningText(s) };
 
     case "DISCUSSION":
+      // День 0 — знакомство до первой ночи: изгонять в нём некого, и обещать
+      // голосование в конце было бы враньём.
       return {
         key: key(),
-        text: `Обсуждение. У вас ${humanDuration(s.settings.timers.discussion)}.`,
+        text:
+          s.day === 0
+            ? `Знакомство. У вас ${humanDuration(s.settings.timers.discussion)}, чтобы поговорить. Этим днём никого не изгоняют.`
+            : `Обсуждение. У вас ${humanDuration(s.settings.timers.discussion)}.`,
       };
 
     case "VOTE":

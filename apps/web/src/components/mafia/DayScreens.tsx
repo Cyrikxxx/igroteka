@@ -13,6 +13,7 @@ import {
   Check,
 } from "lucide-react";
 import type { MafiaView } from "@alias/shared/mafia";
+import { SKIP_VOTE } from "@alias/shared/mafia";
 import Announce from "./Announce";
 import PhaseHead, { fmtClock } from "./PhaseHead";
 import PlayerCard from "./PlayerCard";
@@ -74,11 +75,16 @@ export function DiscussionScreen({
 }) {
   return (
     <>
-      <PhaseHead icon={MessagesSquare} title={`День ${view.day} — обсуждение`} />
+      <PhaseHead
+        icon={MessagesSquare}
+        title={view.day === 0 ? "Знакомство" : `День ${view.day} — обсуждение`}
+      />
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 0 8px" }}>
         <div className="mf-timer" style={{ fontSize: 64, lineHeight: 1 }}>{fmtClock(view.timer?.msLeft ?? 0)}</div>
         <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--mf-text-faint)", marginTop: 6 }}>
-          Говорите голосом — телефон подождёт
+          {view.day === 0
+            ? "Познакомьтесь и договоритесь — этим днём никого не изгоняют"
+            : "Говорите голосом — телефон подождёт"}
         </div>
       </div>
       <div style={{ padding: "14px 20px 0", flex: 1, display: "flex", flexDirection: "column", gap: 7, minHeight: 0, overflowY: "auto" }}>
@@ -135,6 +141,7 @@ export function VoteScreen({
   const candidates = vote?.leaders ?? [];
   const tally = vote?.tally;
   const max = tally ? Math.max(0, ...Object.values(tally)) : 0;
+  const skipVotes = tally?.[SKIP_VOTE] ?? 0;
 
   return (
     <>
@@ -197,16 +204,30 @@ export function VoteScreen({
           );
         })}
       </div>
-      <div style={{ padding: "14px 20px 22px" }}>
-        <button
-          type="button"
-          className="mf-btn mf-btn-ghost"
-          style={{ width: "100%", opacity: you.voted === "abstain" ? 0.6 : 1 }}
-          onClick={() => onVote(you.voted === "abstain" ? null : "abstain")}
-        >
-          {you.voted === "abstain" ? "Воздержался" : "Воздержаться"}
-        </button>
-      </div>
+      {view.settings.rules.allowSkipVote && (
+        <div style={{ padding: "14px 20px 22px" }}>
+          <button
+            type="button"
+            className="mf-btn mf-btn-ghost mf-skip-vote"
+            data-mine={you.voted === SKIP_VOTE ? "" : undefined}
+            onClick={() => onVote(you.voted === SKIP_VOTE ? null : SKIP_VOTE)}
+          >
+            <span>
+              {you.voted === SKIP_VOTE ? "Голос за «никого»" : "Никого не изгонять"}
+            </span>
+            {/* Голоса за скип видны так же, как за игроков: иначе город не
+                понимает, набирается ли большинство. */}
+            {skipVotes > 0 && (
+              <span
+                className="mf-mono mf-skip-count"
+                data-lead={skipVotes === max && max > 0 ? "" : undefined}
+              >
+                {skipVotes}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
     </>
   );
 }
@@ -215,6 +236,21 @@ export function VoteScreen({
 export function VoteResultScreen({ view }: { view: MafiaView }) {
   const sp = view.spotlight?.[0];
   const tie = view.vote?.tie && !view.vote?.eliminated;
+  if (view.vote?.skipped) {
+    return (
+      <Announce
+        icon={Scale}
+        iconColor="var(--mf-text-dim)"
+        kicker="Голосование окончено"
+        title="Город решил никого не изгонять"
+        footer={
+          <div className="mf-mono" style={{ textAlign: "center", fontSize: 13, color: "var(--mf-text-faint)", fontWeight: 700 }}>
+            ночь начнётся скоро
+          </div>
+        }
+      />
+    );
+  }
   if (tie) {
     return (
       <Announce

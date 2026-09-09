@@ -176,6 +176,12 @@ async function enterMorning(ns: MafiaNamespace, code: string): Promise<void> {
   startTimer(ns, code, MORNING_MS, () => onTimeout(ns, code));
 }
 
+/**
+ * Обсуждение. Им же партия и открывается — до первой ночи, с day = 0: люди
+ * успевают познакомиться и договориться, прежде чем кто-то погибнет. Изгонять
+ * в этом обсуждении некого и не за что, поэтому голосование после него не
+ * наступает (см. afterDiscussion).
+ */
 async function enterDiscussion(ns: MafiaNamespace, code: string): Promise<void> {
   const snap = await mutate(code, (s) => {
     s.phase = "DISCUSSION";
@@ -190,7 +196,8 @@ async function enterDiscussion(ns: MafiaNamespace, code: string): Promise<void> 
 async function afterDiscussion(ns: MafiaNamespace, code: string): Promise<void> {
   const snap = await load(code);
   if (!snap) return;
-  if (snap.settings.rules.firstDayNoVote && snap.day === 1) {
+  // day === 0 — то самое вступительное обсуждение до первой ночи.
+  if (snap.day === 0) {
     await enterNight(ns, code);
   } else {
     await enterVote(ns, code, 1, null);
@@ -220,7 +227,9 @@ async function tallyPhase(ns: MafiaNamespace, code: string): Promise<void> {
     s.vote.leaders = res.leaders;
     s.vote.eliminated = res.eliminated;
     s.vote.tie = res.tie;
+    s.vote.skipped = res.skipped;
     if (res.tie) logEvent(s, { kind: "vote_tie" });
+    if (res.skipped) logEvent(s, { kind: "vote_skip" });
     s.phase = "VOTE_RESULT";
     s.timerEndsAt = Date.now() + VOTE_RESULT_MS;
     s.timerPaused = false;
@@ -235,6 +244,9 @@ async function afterVoteResult(ns: MafiaNamespace, code: string): Promise<void> 
   if (!snap) return;
   if (snap.vote.eliminated) {
     await enterLastWord(ns, code);
+  } else if (snap.vote.skipped) {
+    // Город решил никого не изгонять — переголосовывать нечего.
+    await enterNight(ns, code);
   } else if (
     snap.vote.round === 1 &&
     snap.vote.leaders &&

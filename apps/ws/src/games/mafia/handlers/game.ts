@@ -3,6 +3,7 @@
 
 import { mutate, load } from "../snapshot";
 import { logEvent } from "../engine-core";
+import { SKIP_VOTE } from "@alias/shared/mafia";
 import { scheduleStateBroadcast } from "../broadcast";
 import { clearTimer } from "../services/scheduler";
 import {
@@ -117,7 +118,11 @@ export function registerMafiaGameHandlers(
     const me = snap0.players.find((p) => p.userId === userId);
     if (!me || !me.alive) return ack?.({ error: "not_active" });
 
-    if (targetId !== null && targetId !== "abstain") {
+    // Скип — обычный вариант голоса, но только когда правило включено.
+    if (targetId === SKIP_VOTE && !snap0.settings.rules.allowSkipVote) {
+      return ack?.({ error: "skip_not_allowed" });
+    }
+    if (targetId !== null && targetId !== SKIP_VOTE) {
       const t = snap0.players.find((p) => p.userId === targetId && p.alive);
       if (!t) return ack?.({ error: "bad_target" });
       if (targetId === userId) return ack?.({ error: "cant_self" });

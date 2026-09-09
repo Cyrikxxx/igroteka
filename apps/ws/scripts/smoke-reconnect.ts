@@ -236,12 +236,12 @@ async function mafiaScenario() {
   const start = await emitAck<{ ok?: true; error?: string }>(hostSock, "mafia:start", {});
   if (start.error) throw new Error(`start: ${start.error}`);
 
-  // Все подтверждают роль → первая ночь, у неё есть таймер.
+  // Все подтверждают роль → вступительное обсуждение, у него есть таймер.
   for (const s of socks) await emitAck(s, "mafia:ready", {});
   await sleep(2500);
 
   const view = (await emitAck(hostSock, "mafia:hello", {})) as MafiaView;
-  assert(view.phase === "NIGHT", `фаза с таймером началась (${view.phase})`);
+  assert(view.phase === "DISCUSSION", `фаза с таймером началась (${view.phase})`);
   assert(view.timer !== undefined, "в состоянии комнаты есть таймер");
   assert(ticks.length >= 2, `тики таймера приходят (получено ${ticks.length})`);
   const falling = ticks[ticks.length - 1].msLeft < ticks[0].msLeft;
@@ -264,7 +264,7 @@ async function mafiaScenario() {
   };
   assert(stored.timerPaused === true, "партия встала, когда комната опустела");
   assert(stored.pausedByEmpty === true, "и помечена именно как «пауза из-за пустой комнаты»");
-  assert(stored.phase === "NIGHT", `фаза осталась прежней (${stored.phase})`);
+  assert(stored.phase === "DISCUSSION", `фаза осталась прежней (${stored.phase})`);
 
   const peek = await connect("/mafia", hostToken, code, "Хост");
   await emitAck(peek, "mafia:hello", {});

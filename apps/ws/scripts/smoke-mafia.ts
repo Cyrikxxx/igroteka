@@ -62,8 +62,6 @@ class Client {
           roles: { don: true, sheriff: true, doctor: true, maniac: false },
           // Минимально допустимые таймеры — чтобы скрипт не шёл минутами.
           timers: { night: 15, discussion: 30, vote: 15, lastWord: 10 },
-          // Иначе первый день пропускает голосование и мы его не проверим.
-          rules: { firstDayNoVote: false },
         },
       }),
     });
@@ -146,6 +144,11 @@ async function main(): Promise<void> {
   console.log("[start] роли розданы");
 
   for (const c of clients) await c.emit("mafia:ready");
+  // Партия открывается вступительным обсуждением: люди знакомятся, и только
+  // потом наступает первая ночь. Хост завершает его досрочно, чтобы смок не
+  // ждал полную минуту.
+  await waitPhase(host, "DISCUSSION");
+  await host.emit("mafia:end_discussion");
   await waitPhase(host, "NIGHT");
   const roles = clients.map((c) => `${c.name}:${c.role}`).join(" ");
   console.log(`[night 1] ${roles}`);

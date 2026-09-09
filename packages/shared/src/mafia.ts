@@ -111,7 +111,12 @@ export interface MafiaSettings {
     nightStep: number;
   };
   rules: {
-    firstDayNoVote: boolean;
+    /**
+     * Можно ли голосовать за то, чтобы никого не изгонять. Голос за скип
+     * считается наравне с голосами за игроков: набрал больше всех — день
+     * заканчивается без изгнания.
+     */
+    allowSkipVote: boolean;
     revealRoles: boolean;
     openVotes: boolean;
     donHiddenFromSheriff: boolean;
@@ -135,6 +140,13 @@ export const MAFIA_TIMER_LIMITS: Record<
   nightStep: { min: 8, max: 60 },
 };
 
+/**
+ * Значение голоса «никого не изгонять». Хранится там же, где обычные голоса,
+ * поэтому подсчёт у скипа и у игроков один и тот же. Совпасть с userId не
+ * может: те — UUID.
+ */
+export const SKIP_VOTE = "abstain";
+
 export const MIN_MAFIA_PLAYERS = 5;
 export const MAX_MAFIA_PLAYERS = 16;
 
@@ -144,12 +156,7 @@ export const DEFAULT_MAFIA_SETTINGS: MafiaSettings = {
   roles: { don: true, sheriff: true, doctor: true, maniac: false },
   timers: { night: 60, discussion: 120, vote: 45, lastWord: 30, nightStep: 20 },
   rules: {
-    // Выключено намеренно. При шести игроках мафии двое, и без голосования в
-    // первый день город не успевает сделать ни одного хода: после двух ночей
-    // остаётся двое на двое — паритет, победа мафии. Партия заканчивалась, а
-    // люди так и не голосовали ни разу. Кому нужен классический вариант,
-    // включает его в настройках.
-    firstDayNoVote: false,
+    allowSkipVote: true,
     revealRoles: true,
     openVotes: true,
     donHiddenFromSheriff: false,
@@ -204,7 +211,7 @@ export function normalizeMafiaSettings(
   if (x.rules && typeof x.rules === "object") {
     const ru = x.rules as Record<string, unknown>;
     for (const k of [
-      "firstDayNoVote",
+      "allowSkipVote",
       "revealRoles",
       "openVotes",
       "donHiddenFromSheriff",
@@ -322,10 +329,15 @@ export interface MafiaNightState {
 
 export interface MafiaVoteState {
   round: 1 | 2;
-  /** voterId -> targetId | "abstain". */
+  /**
+   * voterId -> targetId, где targetId может быть SKIP_VOTE — «никого не
+   * изгонять». Скип участвует в подсчёте наравне с игроками.
+   */
   votes: Record<string, string>;
   leaders?: string[];
   eliminated?: string;
+  /** Победил скип: день закончился, но никто не выбыл. */
+  skipped?: boolean;
   tie?: boolean;
 }
 
@@ -367,6 +379,7 @@ export type MafiaEventKind =
   | "no_deaths"
   | "exile"
   | "vote_tie"
+  | "vote_skip"
   | "left"
   | "game_over";
 
@@ -490,6 +503,8 @@ export interface MafiaYouView {
 
 export interface MafiaVoteView {
   round: 1 | 2;
+  /** Город решил никого не изгонять: скип набрал больше всех. */
+  skipped?: boolean;
   /** targetId -> кол-во голосов. Заполнено, если openVotes или ты зритель/мёртв. */
   tally?: Record<string, number>;
   totalVoters: number;

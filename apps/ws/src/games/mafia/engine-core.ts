@@ -11,6 +11,7 @@ import {
   type MafiaEvent,
   type MafiaSettings,
   type MafiaNightStepRole,
+  SKIP_VOTE,
 } from "@alias/shared/mafia";
 
 /** Дописать запись в журнал партии. Журнал никогда не уходит живым игрокам. */
@@ -129,23 +130,35 @@ export function resolveNight(s: MafiaSnapshot): void {
 }
 
 export interface TallyResult {
+  /** Лидеры голосования. Среди них может быть SKIP_VOTE. */
   leaders: string[];
   eliminated?: string;
+  /** Победил скип — день кончается, но никто не выбывает. */
+  skipped: boolean;
   tie: boolean;
 }
 
-/** Подсчёт дневных голосов. Один лидер — изгнание, несколько — ничья. */
+/**
+ * Подсчёт дневных голосов. Один лидер — изгнание, несколько — ничья.
+ *
+ * Скип считается наравне с игроками: город решает не только «кого», но и
+ * «стоит ли вообще». Когда правило выключено, голоса за скип не учитываются
+ * вовсе — как будто человек не голосовал.
+ */
 export function tallyVotes(s: MafiaSnapshot): TallyResult {
+  const skipAllowed = s.settings.rules.allowSkipVote;
   const counts: Record<string, number> = {};
   for (const target of Object.values(s.vote.votes)) {
-    if (target === "abstain") continue;
+    if (target === SKIP_VOTE && !skipAllowed) continue;
     counts[target] = (counts[target] ?? 0) + 1;
   }
   let max = 0;
   for (const c of Object.values(counts)) max = Math.max(max, c);
   const leaders = Object.keys(counts).filter((k) => counts[k] === max && max > 0);
-  if (leaders.length === 1) return { leaders, eliminated: leaders[0], tie: false };
-  return { leaders, tie: true };
+  if (leaders.length !== 1) return { leaders, skipped: false, tie: leaders.length > 1 };
+  const winner = leaders[0]!;
+  if (winner === SKIP_VOTE) return { leaders, skipped: true, tie: false };
+  return { leaders, eliminated: winner, skipped: false, tie: false };
 }
 
 /** Все ли, кто ходит ночью, уже сходили — можно ли резолвить раньше таймера. */

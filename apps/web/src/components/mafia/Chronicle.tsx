@@ -49,6 +49,8 @@ function describe(e: MafiaEvent): Line | null {
       };
     case "vote_tie":
       return { icon: Scale, text: "Голоса разделились — никто не выбыл" };
+    case "vote_skip":
+      return { icon: Scale, text: "Город решил никого не изгонять" };
     case "left":
       return { icon: LogOut, text: `${e.displayName} вышел из игры` };
     case "game_over":
@@ -132,7 +134,9 @@ export function Chronicle({ events }: { events: MafiaEvent[] }) {
             </div>
             <div style={{ paddingBottom: 14 }}>
               <div className="mf-mono" style={{ fontSize: 11.5, fontWeight: 700, color: "var(--mf-text-faint)" }}>
-                {e.kind === "exile" || e.kind === "vote_tie" ? `День ${e.day}` : `Ночь ${e.day}`}
+                {e.kind === "exile" || e.kind === "vote_tie" || e.kind === "vote_skip"
+                  ? `День ${e.day}`
+                  : `Ночь ${e.day}`}
               </div>
               <div style={{ fontWeight: 600, fontSize: 13.5, color: "var(--mf-text-dim)", marginTop: 1, lineHeight: 1.4 }}>
                 {line.text}
