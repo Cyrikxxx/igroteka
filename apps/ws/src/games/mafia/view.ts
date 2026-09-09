@@ -86,7 +86,9 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
     role: myRole,
     team: myRole ? roleTeam(myRole) : null,
     alive: selfP ? selfP.alive : false,
-    isHost: selfP?.isHost ?? false,
+    // Права хоста берём из hostId, а не из флага у игрока: хостом может быть
+    // зритель, а у него записи в players нет вовсе.
+    isHost: snap.hostId === userId,
     ready: selfP?.ready ?? false,
     isSpectator,
   };

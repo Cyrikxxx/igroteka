@@ -34,9 +34,21 @@ import { checkWinner } from "../services/win";
  */
 function setHost(s: MafiaSnapshot, userId: string): void {
   s.hostId = userId;
+  // Флаг снимаем и ставим в обоих списках: хостом может быть и зритель —
+  // например, ему передали комнату. Пока флаг жил только у players, такой
+  // хост оставался без прав, а комната считалась брошенной.
   s.players.forEach((p) => (p.isHost = p.userId === userId));
-  const host = s.players.find((p) => p.userId === userId);
+  s.spectators.forEach((p) => (p.isHost = p.userId === userId));
+  const host = findInRoom(s, userId);
   s.hostOfflineSince = host && !host.online ? Date.now() : null;
+}
+
+/** Участник комнаты, кем бы он ни был — игроком или зрителем. */
+function findInRoom(s: MafiaSnapshot, userId: string): MafiaPlayerFull | undefined {
+  return (
+    s.players.find((p) => p.userId === userId) ??
+    s.spectators.find((p) => p.userId === userId)
+  );
 }
 
 /**
@@ -52,19 +64,20 @@ function everyoneSawRole(s: MafiaSnapshot): boolean {
 
 /** Хост на связи? Отсюда берётся отсчёт «комната зависла». */
 function isHostOnline(s: MafiaSnapshot): boolean {
-  return s.players.find((p) => p.userId === s.hostId)?.online ?? false;
+  return findInRoom(s, s.hostId)?.online ?? false;
 }
 
 /**
  * Хост ушёл САМ — комната достаётся тому, кто на связи. Обрыв связи сюда не
  * ведёт: у человека мог моргнуть Wi-Fi, и отбирать за это комнату нечестно.
  *
- * Наследник ищется только среди игроков: клиент считает права по
- * players[].isHost, и зритель-хост остался бы без кнопок.
+ * Игроки идут первыми, зрители — следом. Раньше зрителей в наследники не
+ * брали вовсе, и комната, где остались одни зрители, зависала навсегда:
+ * наследника нет, а забрать её кнопкой было некому.
  */
 function transferHostIfNeeded(s: MafiaSnapshot, leavingUserId: string): void {
   if (s.hostId !== leavingUserId) return;
-  const heir = pickHeir(s.players, leavingUserId);
+  const heir = pickHeir([...s.players, ...s.spectators], leavingUserId);
   if (!heir) return;
   setHost(s, heir.userId);
 }
@@ -251,9 +264,9 @@ export function registerMafiaLobbyHandlers(
   socket.on("mafia:claim_host", async (_payload, ack) => {
     const current = await load(roomCode);
     if (!current) return ack?.({ error: "room_not_found" });
-    // Только игрок: клиент считает права по players[].isHost, и зритель-хост
-    // остался бы без кнопок.
-    const claimer = current.players.find((p) => p.userId === userId);
+    // Зрители тоже могут: иначе комната, где все выбыли или подсели после
+    // старта, оставалась бы без хозяина до самой уборки.
+    const claimer = findInRoom(current, userId);
     if (!claimer) return ack?.({ error: "not_in_room" });
     // Время сверяем по серверным часам: клиент рисует кнопку по своим.
     const allowed = canClaimHost({
