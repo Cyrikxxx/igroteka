@@ -23,18 +23,20 @@ export default function MafiaShell({
     display: "flex",
     justifyContent: "center",
   };
-  const frameStyle: CSSProperties = {
-    width: "100%",
-    maxWidth: wide ? 920 : 560,
-    minHeight: "100dvh",
-    ...(vignetteLevel != null
-      ? ({ "--vignette": vignetteLevel } as CSSProperties)
-      : {}),
-  };
+  // Ширина и масштаб — в CSS (.mf-frame): на больших мониторах телефонная
+  // колонка в 560 px выглядит марочной, и её нужно увеличивать целиком,
+  // вместе с текстом и карточками. Медиазапросы этого не умеют — размеры
+  // внутри экранов заданы в пикселях прямо в разметке.
+  const frameStyle: CSSProperties =
+    vignetteLevel != null ? ({ "--vignette": vignetteLevel } as CSSProperties) : {};
   return (
     <div style={style}>
       <div
-        className={"mf-screen" + (vignette ? " mf-vignette" : "")}
+        className={
+          "mf-screen mf-frame" +
+          (wide ? " mf-frame-wide" : "") +
+          (vignette ? " mf-vignette" : "")
+        }
         style={frameStyle}
       >
         {children}

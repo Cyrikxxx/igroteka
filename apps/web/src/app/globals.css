@@ -1268,6 +1268,35 @@ html { scrollbar-color: var(--bg-4) transparent; }
   }
   .mf-screen * { box-sizing: border-box; }
 
+  /* Колонка экрана Мафии.
+     Игровые экраны нарисованы под телефон: размеры внутри заданы в пикселях
+     прямо в разметке, поэтому медиазапросами их не увеличить. zoom масштабирует
+     колонку целиком — и вёрстку, и шрифты, и аватары, — а min-height делится на
+     тот же множитель, иначе экран стал бы выше окна и появилась бы прокрутка.
+     Браузер без поддержки zoom просто покажет прежний размер. */
+  .mf-frame {
+    --mf-zoom: 1;
+    zoom: var(--mf-zoom);
+    width: 100%;
+    max-width: 560px;
+    min-height: calc(100dvh / var(--mf-zoom));
+  }
+  /* Лобби, настройки и лендинг уже широкие и на большом экране смотрятся
+     нормально — их не трогаем. */
+  .mf-frame-wide { max-width: 920px; }
+  @media (min-width: 1200px) { .mf-frame:not(.mf-frame-wide) { --mf-zoom: 1.25; } }
+  @media (min-width: 1700px) { .mf-frame:not(.mf-frame-wide) { --mf-zoom: 1.4; } }
+
+  /* Кнопка «никого не изгонять»: голоса за неё видно так же, как за игрока. */
+  .mf-skip-vote { justify-content: space-between; gap: 12px; }
+  .mf-skip-vote[data-mine] { border-color: color-mix(in srgb, var(--mf-crimson) 55%, transparent); color: var(--mf-text); }
+  .mf-skip-count {
+    min-width: 30px; padding: 2px 8px; border-radius: 999px;
+    background: var(--mf-surface-2, rgba(255,255,255,0.07));
+    font-size: 14px; font-weight: 800; color: var(--mf-text-dim);
+  }
+  .mf-skip-count[data-lead] { background: color-mix(in srgb, var(--mf-crimson) 22%, transparent); color: var(--mf-text); }
+
   /* Ночная виньетка — красное свечение по краям */
   .mf-vignette::before {
     content: "";
