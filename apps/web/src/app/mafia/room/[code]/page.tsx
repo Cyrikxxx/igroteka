@@ -14,6 +14,7 @@ import {
   type MafiaSettings,
 } from "@alias/shared/mafia";
 import MafiaShell from "@/components/mafia/MafiaShell";
+import { LeftToast, useLeftToast } from "@/components/mafia/Overlays";
 import MafiaAvatar from "@/components/mafia/MafiaAvatar";
 import MafiaSettingsForm from "@/components/mafia/MafiaSettingsForm";
 import QrCode from "@/components/common/QrCode";
@@ -76,6 +77,7 @@ export default function MafiaLobbyPage() {
   // Вызываем до ранних return'ов: порядок хуков не должен зависеть от того,
   // загрузились ли уже креды и состояние комнаты.
   const claim = useHostClaim(view?.hostOfflineSince, view?.you.isHost ?? false);
+  const leftToast = useLeftToast(view?.players ?? []);
   // Озвучку выбирают до партии: за столом надо решить, какой телефон говорит,
   // пока все ещё смотрят в экран. В игре останется только вкл/выкл.
   const voice = useVoicePref(view?.you.isHost ?? false);
@@ -574,6 +576,7 @@ export default function MafiaLobbyPage() {
         }}
         onCancel={() => setCloseAsk(false)}
       />
+      <LeftToast name={leftToast.name} inLobby={leftToast.inLobby} onClose={leftToast.close} />
     </MafiaShell>
   );
 }

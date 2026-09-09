@@ -4,7 +4,7 @@
 // и тост о передаче комнаты. Порт из mafia-design/mafia/screen-service.
 
 import { useEffect, useState } from "react";
-import { Pause, RefreshCw, Crown, X, DoorClosed } from "lucide-react";
+import { Pause, RefreshCw, Crown, LogOut, X, DoorClosed } from "lucide-react";
 
 function Backdrop({ children }: { children: React.ReactNode }) {
   return (
@@ -201,4 +201,115 @@ export function useHostToast(isHost: boolean): { show: boolean; close: () => voi
   }
 
   return { show, close: () => setShow(false) };
+}
+
+/**
+ * Кто-то вышел из партии сам. Обрыв связи сюда не относится: там человек
+ * просто гаснет в списке и, скорее всего, вернётся. Здесь — окончательный
+ * уход по кнопке, и остальным важно понимать, почему стол поредел.
+ */
+export function LeftToast({
+  name,
+  inLobby,
+  onClose,
+}: {
+  name: string | null;
+  inLobby: boolean;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!name) return;
+    const id = setTimeout(onClose, 5000);
+    return () => clearTimeout(id);
+  }, [name, onClose]);
+
+  if (!name) return null;
+  return (
+    <div
+      role="status"
+      style={{
+        position: "fixed",
+        left: 16,
+        right: 16,
+        top: 14,
+        maxWidth: 520,
+        margin: "0 auto",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        background: "var(--mf-surface-2)",
+        border: "1px solid var(--mf-border)",
+        borderRadius: 16,
+        padding: "13px 16px",
+        boxShadow: "0 10px 36px rgba(0,0,0,0.6)",
+        color: "var(--mf-text)",
+        zIndex: 90,
+      }}
+    >
+      <LogOut size={21} color="var(--mf-text-dim)" />
+      <div style={{ flex: 1, textAlign: "left" }}>
+        <div style={{ fontWeight: 800, fontSize: 14.5 }}>{name} вышел из игры</div>
+        <div style={{ fontWeight: 600, fontSize: 12.5, color: "var(--mf-text-dim)", marginTop: 1 }}>
+          {inLobby ? "Освободилось место в комнате" : "Партия продолжается без него"}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Закрыть"
+        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--mf-text-faint)", display: "flex" }}
+      >
+        <X size={17} />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Замечает, что участник ушёл насовсем. Уход выглядит по-разному: в лобби
+ * человека вычёркивают из списка, а в идущей партии оставляют, пометив
+ * `eliminatedBy: "left"`, — иначе вместе с ним пропала бы его роль.
+ *
+ * Первый расчёт только запоминает текущее состояние: подсевший к идущей
+ * партии не должен получить пачку уведомлений о тех, кто ушёл до него.
+ */
+export function useLeftToast(
+  players: readonly { userId: string; displayName: string; eliminatedBy?: string }[],
+): { name: string | null; inLobby: boolean; close: () => void } {
+  const [seen, setSeen] = useState<Set<string> | null>(null);
+  const [notice, setNotice] = useState<{ name: string; inLobby: boolean } | null>(null);
+
+  const goneNow = new Set(
+    players.filter((p) => p.eliminatedBy === "left").map((p) => p.userId),
+  );
+  const ids = players.map((p) => p.userId).join(",");
+  const [prevIds, setPrevIds] = useState(ids);
+  const [prevNames, setPrevNames] = useState(() =>
+    new Map(players.map((p) => [p.userId, p.displayName])),
+  );
+
+  // Сравнение с прошлым состоянием прямо в рендере — как в useHostToast.
+  if (seen === null) {
+    setSeen(goneNow);
+  } else if (ids !== prevIds) {
+    const now = new Set(players.map((p) => p.userId));
+    const vanished = [...prevNames.keys()].find((id) => !now.has(id));
+    if (vanished) setNotice({ name: prevNames.get(vanished) ?? "Игрок", inLobby: true });
+    setPrevIds(ids);
+    setPrevNames(new Map(players.map((p) => [p.userId, p.displayName])));
+  } else {
+    const fresh = players.find(
+      (p) => p.eliminatedBy === "left" && !seen.has(p.userId),
+    );
+    if (fresh) {
+      setSeen(goneNow);
+      setNotice({ name: fresh.displayName, inLobby: false });
+    }
+  }
+
+  return {
+    name: notice?.name ?? null,
+    inLobby: notice?.inLobby ?? false,
+    close: () => setNotice(null),
+  };
 }
