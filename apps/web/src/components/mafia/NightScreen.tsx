@@ -234,6 +234,7 @@ export default function NightScreen({
                 name={p.displayName}
                 avatarIdx={p.avatarIdx}
                 me={isMe}
+                offline={!p.online}
                 picked={picked}
                 disabled={ally || locked}
                 onClick={() => onAction("mafia", picked ? null : p.userId)}
@@ -283,6 +284,7 @@ export default function NightScreen({
                 name={p.displayName}
                 avatarIdx={p.avatarIdx}
                 me={isMe}
+                offline={!p.online}
                 picked={picked}
                 disabled={disabled || locked}
                 onClick={() => onAction("doctor", picked ? null : p.userId)}
@@ -332,6 +334,7 @@ export default function NightScreen({
                 name={p.displayName}
                 avatarIdx={p.avatarIdx}
                 me={isMe}
+                offline={!p.online}
                 picked={picked}
                 gold
                 // Проверка необратима, поэтому после хода сетка блокируется.
@@ -399,6 +402,7 @@ export default function NightScreen({
               name={p.displayName}
               avatarIdx={p.avatarIdx}
               me={isMe}
+              offline={!p.online}
               picked={picked}
               disabled={isMe || locked}
               onClick={() => onAction("maniac", picked ? null : p.userId)}

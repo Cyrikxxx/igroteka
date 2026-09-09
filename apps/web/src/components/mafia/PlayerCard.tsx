@@ -11,6 +11,7 @@ export default function PlayerCard({
   avatarIdx,
   me = false,
   dead = false,
+  offline = false,
   picked = false,
   gold = false,
   disabled = false,
@@ -23,6 +24,8 @@ export default function PlayerCard({
   avatarIdx: number;
   me?: boolean;
   dead?: boolean;
+  /** Не в сети: карточка гаснет, под именем подпись. */
+  offline?: boolean;
   picked?: boolean;
   gold?: boolean;
   disabled?: boolean;
@@ -41,12 +44,14 @@ export default function PlayerCard({
       onClick={disabled ? undefined : onClick}
       style={disabled ? { cursor: "default" } : undefined}
     >
-      <MafiaAvatar name={name} idx={avatarIdx} size={42} dead={dead} />
+      <MafiaAvatar name={name} idx={avatarIdx} size={42} dead={dead} offline={offline} />
       <div className="mf-player-name" style={dead ? { color: "var(--mf-text-faint)" } : undefined}>
         {name}
         {me ? " (ты)" : ""}
       </div>
-      {subline}
+      {/* Своя подпись, а не общая: «не в сети» важнее любой другой, потому
+          что объясняет, почему человек не ходит. */}
+      {offline && !dead ? <div className="mf-player-offline">не в сети</div> : subline}
       {badgeTopRight ? (
         <div style={{ position: "absolute", top: -9, right: 10 }}>{badgeTopRight}</div>
       ) : null}

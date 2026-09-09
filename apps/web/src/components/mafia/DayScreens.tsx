@@ -102,10 +102,19 @@ export function DiscussionScreen({
               opacity: p.alive ? 1 : 0.5,
             }}
           >
-            <MafiaAvatar name={p.displayName} idx={p.avatarIdx} size={34} dead={!p.alive} />
+            <MafiaAvatar
+              name={p.displayName}
+              idx={p.avatarIdx}
+              size={34}
+              dead={!p.alive}
+              offline={!p.online}
+            />
             <span style={{ fontWeight: 700, fontSize: 14.5, flex: 1, textDecoration: p.alive ? "none" : "line-through", color: p.alive ? "var(--mf-text)" : "var(--mf-text-faint)" }}>
               {p.displayName}
             </span>
+            {p.alive && !p.online ? (
+              <span className="mf-player-offline">не в сети</span>
+            ) : null}
             {!p.alive && p.role ? <RoleChip role={p.role} /> : null}
           </div>
         ))}
@@ -167,6 +176,7 @@ export function VoteScreen({
               name={p.displayName}
               avatarIdx={p.avatarIdx}
               me={isMe}
+              offline={!p.online}
               picked={mine}
               disabled={blocked}
               onClick={() => onVote(mine ? null : p.userId)}

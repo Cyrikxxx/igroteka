@@ -73,7 +73,13 @@ export default function SpectatorScreen({ view, exiled }: { view: MafiaView; exi
               opacity: p.alive ? 1 : 0.55,
             }}
           >
-            <MafiaAvatar name={p.displayName} idx={p.avatarIdx} size={34} dead={!p.alive} />
+            <MafiaAvatar
+              name={p.displayName}
+              idx={p.avatarIdx}
+              size={34}
+              dead={!p.alive}
+              offline={!p.online}
+            />
             <span
               style={{
                 fontWeight: 700,
@@ -85,6 +91,9 @@ export default function SpectatorScreen({ view, exiled }: { view: MafiaView; exi
             >
               {p.displayName}
             </span>
+            {p.alive && !p.online ? (
+              <span className="mf-player-offline">не в сети</span>
+            ) : null}
             {p.role ? <RoleChip role={p.role} /> : null}
           </div>
         ))}
