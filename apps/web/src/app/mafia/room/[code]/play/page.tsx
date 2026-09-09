@@ -115,14 +115,25 @@ export default function MafiaPlayPage() {
 
   const hostToast = useHostToast(view?.you.isHost ?? false);
   // Экран «ты убит» показываем один раз, пока игрок сам не уйдёт в зрители.
-  const [deathSeenAt, setDeathSeenAt] = useState<number | null>(null);
+  const [deathSeen, setDeathSeen] = useState(false);
   const [endGameAsk, setEndGameAsk] = useState(false);
   const [closeAsk, setCloseAsk] = useState(false);
   const alive = view?.you.alive ?? true;
   // Живому экран смерти не показываем, а отметка «уже посмотрел» действует
   // только для той смерти, на которой её поставили.
-  const deathSeen = !alive && deathSeenAt === (view?.day ?? 0);
-  const markDeathSeen = () => setDeathSeenAt(view?.day ?? 0);
+  const markDeathSeen = () => setDeathSeen(true);
+  // Отметка держится до конца партии и сбрасывается, только если игрок снова
+  // ожил — то есть началась новая партия тем же составом. Раньше она была
+  // привязана к номеру дня, а он растёт с каждой ночью, поэтому объявление
+  // «ты выбыл» вылезало заново каждую ночь поверх режима зрителя.
+  //
+  // Подгонка прямо при рендере, а не эффектом: так советует React, и лишней
+  // перерисовки не будет.
+  const [wasAlive, setWasAlive] = useState(alive);
+  if (wasAlive !== alive) {
+    setWasAlive(alive);
+    if (alive) setDeathSeen(false);
+  }
 
   // Выгнали или комнату закрыли — на главный экран Мафии с объяснением.
   useEffect(() => {
