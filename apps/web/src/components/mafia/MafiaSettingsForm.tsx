@@ -74,6 +74,8 @@ function ToggleRow({
   sub,
   on,
   onChange,
+  disabled = false,
+  disabledSub,
 }: {
   icon?: React.ComponentType<{ size?: number; color?: string }>;
   iconColor?: string;
@@ -81,9 +83,13 @@ function ToggleRow({
   sub?: string;
   on: boolean;
   onChange: (v: boolean) => void;
+  /** Роль в этом составе не появится — тумблер гасим, чтобы не обещал лишнего. */
+  disabled?: boolean;
+  /** Чем заменить подпись, пока роль недоступна. */
+  disabledSub?: string;
 }) {
   return (
-    <div className="mf-setting-row">
+    <div className="mf-setting-row" data-disabled={disabled ? "" : undefined}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
         {Icon ? (
           <span
@@ -104,10 +110,14 @@ function ToggleRow({
         ) : null}
         <div style={{ minWidth: 0 }}>
           <div className="mf-setting-label">{label}</div>
-          {sub ? <div className="mf-setting-sub">{sub}</div> : null}
+          {disabled && disabledSub ? (
+            <div className="mf-setting-sub">{disabledSub}</div>
+          ) : sub ? (
+            <div className="mf-setting-sub">{sub}</div>
+          ) : null}
         </div>
       </div>
-      <MfToggle on={on} onChange={onChange} />
+      <MfToggle on={disabled ? false : on} onChange={disabled ? () => {} : onChange} />
     </div>
   );
 }
@@ -349,6 +359,8 @@ export default function MafiaSettingsForm({
   });
 
   const comp = computeComposition(Math.max(playerCount, 5), s);
+  // Дон входит в это число, а не добавляется к нему.
+  const mafiaTotal = comp.mafia + comp.don;
 
   return (
     <div>
@@ -436,7 +448,19 @@ export default function MafiaSettingsForm({
           ) : null}
         </div>
       </div>
-      <ToggleRow icon={Crown} iconColor="var(--mf-gold)" label="Дон" sub="Решающий голос мафии" on={s.roles.don} onChange={setRole("don")} />
+      {/* Дон — одна из мафий, а не добавочный игрок: при одной мафии его
+          некому назначить, и движок его всё равно не выдаст. Раньше тумблер
+          в этом случае горел включённым и обещал роль, которой не будет. */}
+      <ToggleRow
+        icon={Crown}
+        iconColor="var(--role-don)"
+        label="Дон"
+        sub="Решает, когда голоса мафии разделились"
+        on={s.roles.don}
+        onChange={setRole("don")}
+        disabled={mafiaTotal < 2}
+        disabledSub="Нужны хотя бы две мафии"
+      />
       <ToggleRow icon={Search} iconColor="var(--role-sheriff)" label="Шериф" sub="Ночные проверки" on={s.roles.sheriff} onChange={setRole("sheriff")} />
       <ToggleRow icon={HeartPulse} iconColor="var(--role-doctor)" label="Доктор" sub="Лечит одного за ночь" on={s.roles.doctor} onChange={setRole("doctor")} />
       <ToggleRow icon={Skull} iconColor="var(--role-maniac)" label="Маньяк" sub="Третья сила, сам за себя" on={s.roles.maniac} onChange={setRole("maniac")} />

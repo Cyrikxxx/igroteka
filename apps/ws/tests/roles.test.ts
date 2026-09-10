@@ -3,15 +3,27 @@
 import { describe, it, expect } from "vitest";
 import { buildRolePool, assignRoles } from "../src/games/mafia/roles";
 import { player, snapshot } from "./fixtures";
+import { DEFAULT_MAFIA_SETTINGS } from "@alias/shared/mafia";
 
-function lobbyOf(n: number) {
+function lobbyOf(n: number, withDon = false) {
   return snapshot(
     Array.from({ length: n }, (_, i) => ({
       ...player(`p${i}`, "civilian"),
       role: null,
       ready: true,
     })),
-    { phase: "LOBBY", day: 0 },
+    {
+      phase: "LOBBY",
+      day: 0,
+      ...(withDon
+        ? {
+            settings: {
+              ...DEFAULT_MAFIA_SETTINGS,
+              roles: { ...DEFAULT_MAFIA_SETTINGS.roles, don: true },
+            },
+          }
+        : {}),
+    },
   );
 }
 
@@ -39,10 +51,19 @@ describe("assignRoles", () => {
     assignRoles(s);
     const count = (r: string) => s.players.filter((p) => p.role === r).length;
     expect(count("mafia") + count("don")).toBe(3);
-    expect(count("don")).toBe(1);
+    // Дон выключен по умолчанию — все три мафии рядовые.
+    expect(count("don")).toBe(0);
     expect(count("sheriff")).toBe(1);
     expect(count("doctor")).toBe(1);
     expect(count("maniac")).toBe(0);
+  });
+
+  it("включённый дон занимает одно из мест мафии, а не добавляется к ним", () => {
+    const s = lobbyOf(9, true);
+    assignRoles(s);
+    const count = (r: string) => s.players.filter((p) => p.role === r).length;
+    expect(count("don")).toBe(1);
+    expect(count("mafia") + count("don")).toBe(3);
   });
 
   it("роли перемешиваются, а не раздаются по порядку", () => {

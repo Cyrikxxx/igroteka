@@ -16,10 +16,17 @@ function settings(overrides: Partial<MafiaSettings["timers"]> = {}): MafiaSettin
   };
 }
 
-function renderForm(value: MafiaSettings) {
+function renderForm(value: MafiaSettings, playerCount = 8) {
   const onChange = vi.fn();
-  render(<MafiaSettingsForm value={value} onChange={onChange} playerCount={8} />);
+  render(<MafiaSettingsForm value={value} onChange={onChange} playerCount={playerCount} />);
   return onChange;
+}
+
+/** Строка настройки целиком — по подписи внутри неё. */
+function row(label: string): HTMLElement {
+  const el = screen.getByText(label).closest(".mf-setting-row");
+  if (!el) throw new Error(`нет строки настройки «${label}»`);
+  return el as HTMLElement;
 }
 
 const field = (label: string) => screen.getByLabelText(`${label}: своё время в секундах`);
@@ -82,5 +89,24 @@ describe("своё время", () => {
     fireEvent.click(screen.getByText("2 мин"));
     expect(onChange.mock.calls[0][0].timers.discussion).toBe(120);
     expect(screen.queryByLabelText(/Обсуждение: своё/)).toBeNull();
+  });
+});
+
+describe("дон", () => {
+  it("при одной мафии тумблер недоступен", () => {
+    // Пятеро игроков — авто-состав даёт одну мафию, и дона назначить некому.
+    // Раньше тумблер горел включённым и обещал роль, которой не будет.
+    renderForm(settings(), 5);
+    const don = row("Дон");
+    expect(don.getAttribute("data-disabled")).toBe("");
+    expect(don.textContent).toContain("Нужны хотя бы две мафии");
+  });
+
+  it("при двух мафиях тумблер работает", () => {
+    const onChange = renderForm(settings(), 8);
+    const don = row("Дон");
+    expect(don.getAttribute("data-disabled")).toBe(null);
+    fireEvent.click(don.querySelector("button")!);
+    expect(onChange.mock.calls[0][0].roles.don).toBe(true);
   });
 });

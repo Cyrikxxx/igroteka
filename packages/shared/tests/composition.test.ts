@@ -36,8 +36,16 @@ describe("computeComposition", () => {
   });
 
   it("дон появляется только когда мафий двое и больше", () => {
-    expect(computeComposition(5, settings({ mafiaCount: 1 })).don).toBe(0);
-    expect(computeComposition(9, settings({ mafiaCount: 3 })).don).toBe(1);
+    const withDon = { don: true, sheriff: true, doctor: true, maniac: false };
+    expect(computeComposition(5, settings({ mafiaCount: 1, roles: withDon })).don).toBe(0);
+    expect(computeComposition(9, settings({ mafiaCount: 3, roles: withDon })).don).toBe(1);
+  });
+
+  it("по умолчанию дона нет", () => {
+    // Он осмыслен только при двух мафиях и включается осознанно — иначе
+    // тумблер в лобби горит включённым, а роли в партии не появляется.
+    expect(DEFAULT_MAFIA_SETTINGS.roles.don).toBe(false);
+    expect(computeComposition(9, settings()).don).toBe(0);
   });
 
   it("выключенные спец-роли не занимают мест", () => {

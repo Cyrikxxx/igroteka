@@ -44,9 +44,10 @@ export const ROLE_META: Record<MafiaRole, RoleMeta> = {
   don: {
     label: "Дон",
     Icon: Crown,
-    color: "var(--mf-gold)",
+    // Красный, как вся мафия: золотой путался с Шерифом — цвет у них один.
+    color: "var(--role-don)",
     team: "Команда мафии",
-    task: "Решающий голос мафии при выборе жертвы.",
+    task: "Твой голос решает, когда мафия не сошлась во мнении.",
   },
   sheriff: {
     label: "Шериф",

@@ -153,7 +153,9 @@ export const MAX_MAFIA_PLAYERS = 16;
 export const DEFAULT_MAFIA_SETTINGS: MafiaSettings = {
   mafiaCount: "auto",
   narrator: false,
-  roles: { don: true, sheriff: true, doctor: true, maniac: false },
+  // Дон выключен: он работает только при двух мафиях и старшим правилам
+  // партии не нужен — включают его осознанно.
+  roles: { don: false, sheriff: true, doctor: true, maniac: false },
   timers: { night: 60, discussion: 120, vote: 45, lastWord: 30, nightStep: 20 },
   rules: {
     allowSkipVote: true,
