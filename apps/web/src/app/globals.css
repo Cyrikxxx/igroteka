@@ -1301,6 +1301,14 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .mf-skip-count[data-lead] { background: color-mix(in srgb, var(--mf-crimson) 22%, transparent); color: var(--mf-text); }
 
   /* Ночная виньетка — красное свечение по краям */
+  /* Свечение по краям экрана партии.
+     Слой уходит под содержимое отрицательным z-index, а не поднятием детей.
+     Раньше тут стояло `.mf-vignette > * { position: relative }` — правило с
+     тем же весом, что у `.confirm-overlay`, но ниже по файлу, поэтому оно
+     побеждало и отнимало у диалога `position: fixed`: накладка во весь экран
+     становилась обычным блоком в потоке и уезжала под кнопки. Собственный
+     контекст наложения держит слой внутри оболочки. */
+  .mf-vignette { isolation: isolate; }
   .mf-vignette::before {
     content: "";
     position: absolute;
@@ -1309,9 +1317,8 @@ html { scrollbar-color: var(--bg-4) transparent; }
     background:
       radial-gradient(120% 60% at 50% -20%, rgba(225, 29, 72, var(--vignette, 0.16)) 0%, transparent 60%),
       radial-gradient(140% 50% at 50% 115%, rgba(225, 29, 72, calc(var(--vignette, 0.16) * 0.6)) 0%, transparent 60%);
-    z-index: 0;
+    z-index: -1;
   }
-  .mf-vignette > * { position: relative; z-index: 1; }
 
   /* Кнопки */
   .mf-btn {

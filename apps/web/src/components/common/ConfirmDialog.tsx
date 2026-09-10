@@ -11,6 +11,7 @@
 // без вопросов.
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle } from "lucide-react";
 
 export default function ConfirmDialog({
@@ -47,10 +48,19 @@ export default function ConfirmDialog({
     };
   }, [open, onCancel]);
 
-  if (!open) return null;
+  // Рисуем прямо в body, а не там, где вызвали.
+  //
+  // Накладка держится на `position: fixed`, и любой родитель, создающий свой
+  // контекст позиционирования или переопределяющий `position` детей, ломает
+  // её молча — так и вышло на экране финала, где диалог оказался внутри
+  // оболочки со свечением. Из body ломать некому.
+  // На сервере document нет, и портала быть не может. Расхождения разметки
+  // это не даёт: закрытый диалог не рисует ничего ни там, ни тут, а открытым
+  // он бывает только после действия человека.
+  if (!open || typeof document === "undefined") return null;
   const mafia = variant === "mafia";
 
-  return (
+  return createPortal(
     <div className="confirm-overlay" onClick={onCancel}>
       <div
         role="alertdialog"
@@ -74,6 +84,7 @@ export default function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
