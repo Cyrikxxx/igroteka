@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Check, Clock, Crown, DoorClosed, EyeOff, Flag, LogOut, Mic, Pause, Play, RefreshCw, SkipForward, StopCircle, Users, X } from "lucide-react";
+import { ArrowLeft, Check, Clock, Crown, DoorClosed, EyeOff, Flag, Mic, Pause, Play, RefreshCw, SkipForward, StopCircle, Users, X } from "lucide-react";
 import { nextExplainerFor } from "@alias/shared/snapshot-builders";
 import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
 import { resumeRoom } from "@/lib/room-resume";
@@ -106,7 +106,6 @@ export default function PlayPage() {
   // ВНИМАНИЕ: все хуки должны быть до любых ранних return.
   const [pauseModalOpen, setPauseModalOpen] = useState(false);
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
-  const [leaveAsk, setLeaveAsk] = useState(false);
   const [closeAsk, setCloseAsk] = useState(false);
   const [endGameAsk, setEndGameAsk] = useState(false);
   // Ошибки действий раньше проглатывались пустым коллбэком: человек жал
@@ -205,14 +204,10 @@ export default function PlayPage() {
         );
       }
     });
-  // Зритель посреди партии выйти может — на ход он не влияет. Игроку команды
-  // сервер откажет: состав на время игры заморожен.
-  const doLeave = () => {
-    emit("room:leave", {}, () => {});
-    router.push("/alias");
-  };
-  // Хост обрывает партию — единственный выход, когда ждём того, кто не
-  // вернётся. Счёт остаётся, все попадают на итоги, оттуда «Сыграть ещё».
+  // Оборвать партию может любой: посреди игры из команды не выходят — состав
+  // заморожен, иначе ломается очередь объясняющих, — и без общей кнопки стол
+  // оставался запертым, когда ждали того, кто не вернётся. Счёт остаётся, все
+  // попадают на итоги, оттуда «Сыграть ещё».
   const doEndGame = () => {
     emit("round:end_game", {}, (resp: unknown) => {
       if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
@@ -231,9 +226,6 @@ export default function PlayPage() {
     clearRoomCreds(creds.code);
     router.push("/alias");
   };
-  // Спрашиваем только там, где отменить уже нельзя: уход посреди раунда и
-  // закрытие комнаты хостом. Спрашиваем своим окном, а не системным.
-  const onLeave = () => setLeaveAsk(true);
   const onLeaveAfterGame = () => {
     if (isRoomHost) setCloseAsk(true);
     else doLeaveAfterGame();
@@ -254,8 +246,6 @@ export default function PlayPage() {
   // Ровно это же правило проверяет сервер.
   const nextUp = nextExplainerFor(snapshot);
   const nextExplainerOffline = !!nextUp && !nextUp.player.online;
-  // Только зритель уходит посреди партии; игрока команды сервер не выпустит.
-  const canLeaveMidGame = role === "spectator" && !myTeam;
 
   const teamColor = activeTeam?.color ?? "--team-1";
   const teamName = activeTeam?.name ?? "—";
@@ -305,21 +295,19 @@ export default function PlayPage() {
       onClick: claimHost,
     });
   }
-  if (inGame && isRoomHost) {
+  // Завершить игру может любой, а не только хост. Выйти посреди партии
+  // игроку команды нельзя — состав заморожен, иначе ломается очередь
+  // объясняющих, — и без общей кнопки стол оставался запертым: партия ждёт
+  // того, кто не вернётся, а хост, может быть, ушёл первым.
+  // Зрителю не даём: он в партии не участвует, а обрывать её чужим людям
+  // нечего. Ровно это же проверяет сервер.
+  if (inGame && (role !== "spectator" || isRoomHost)) {
     menuItems.push({
       icon: Flag,
       label: "Завершить игру",
       hint: "Партия закончится с текущим счётом",
-      onClick: () => setEndGameAsk(true),
-    });
-  }
-  if (inGame && canLeaveMidGame) {
-    menuItems.push({
-      icon: LogOut,
-      label: "Выйти из комнаты",
-      hint: "Вернуться можно по тому же коду",
       danger: true,
-      onClick: onLeave,
+      onClick: () => setEndGameAsk(true),
     });
   }
   const gameMenu = !inGame ? null : (
@@ -353,7 +341,7 @@ export default function PlayPage() {
   // ушла в меню, а вот объяснить, почему партия встала, кнопка в углу не
   // может — тут нужен текст на самом экране.
   const hostEndGameBar =
-    isRoomHost && nextExplainerOffline ? (
+    nextExplainerOffline ? (
       <div className="notice notice-warn room-claim">
         <span style={{ flex: 1 }}>
           {nextUp?.player.displayName ?? "Следующий игрок"} не в сети — ход передать некому.
@@ -367,20 +355,6 @@ export default function PlayPage() {
 
   const modals = (
     <>
-      {/* Меню фиксировано в углу, поэтому едет вместе с модалками — их и так
-          рисуют все фазы, и второго места для него не нужно. */}
-      {gameMenu}
-      <ConfirmDialog
-        open={leaveAsk}
-        title="Выйти из комнаты?"
-        text="Текущий раунд не засчитается. Вернуться можно будет по тому же коду."
-        confirmLabel="Выйти"
-        onConfirm={() => {
-          setLeaveAsk(false);
-          doLeave();
-        }}
-        onCancel={() => setLeaveAsk(false)}
-      />
       <ConfirmDialog
         open={closeAsk}
         title="Закрыть комнату?"
@@ -395,7 +369,7 @@ export default function PlayPage() {
       <ConfirmDialog
         open={endGameAsk}
         title="Завершить игру?"
-        text="Партия закончится с текущим счётом, все увидят итоги. Комната останется — можно будет собрать состав заново и сыграть ещё."
+        text="Партия закончится у всех, счёт останется текущим — все увидят итоги. Комната не пропадёт: можно собрать состав заново и сыграть ещё."
         confirmLabel="Завершить"
         onConfirm={doEndGame}
         onCancel={() => setEndGameAsk(false)}
@@ -468,7 +442,7 @@ export default function PlayPage() {
     const active = snapshot.phase === "ROUND_ACTIVE";
     return (
       <>
-        <AppShell bare>
+        <AppShell bare menu={gameMenu}>
           <div className={"game-screen" + (danger ? " danger" : "")}>
             <div className="game-bg" />
             <div className="shell game-shell">
@@ -616,7 +590,7 @@ export default function PlayPage() {
   if (snapshot.phase === "ROUND_REVIEW") {
     return (
       <>
-        <AppShell centered className="screen-anim">
+        <AppShell centered className="screen-anim" menu={gameMenu}>
           {claimBanner}
           {hostEndGameBar}
           {actionError && (
@@ -649,7 +623,7 @@ export default function PlayPage() {
       nextTeam?.players.find((p) => p.userId === snapshot.currentPlayerId)?.displayName ?? "?";
     return (
       <>
-        <AppShell centered className="screen-anim">
+        <AppShell centered className="screen-anim" menu={gameMenu}>
           <div style={{ textAlign: "center" }}>
             <div className="eyebrow" style={{ marginBottom: 12 }}>
               следующий ход
@@ -685,7 +659,7 @@ export default function PlayPage() {
   // было, и собрать всех на новую партию было не из чего.
   return (
     <>
-      <AppShell centered className="screen-anim">
+      <AppShell centered className="screen-anim" menu={gameMenu}>
         {finalGame ? (
           <VictoryView
             game={finalGame}

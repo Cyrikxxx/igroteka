@@ -20,12 +20,19 @@ interface AppShellProps {
   bare?: boolean;
   /** Доп. классы на внутренней обёртке `.shell`. */
   className?: string;
+  /**
+   * Служебное меню партии. Кладём его на колонку экрана, а не в угол окна:
+   * на широком мониторе колонка занимает середину, и прибитая к окну кнопка
+   * оказывалась далеко в стороне от игры — её просто не находили.
+   */
+  menu?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export function AppShell({ centered, bare, className, children }: AppShellProps) {
+export function AppShell({ centered, bare, className, menu, children }: AppShellProps) {
   return (
     <div className="app">
+      {menu ? <div className="gm-anchor">{menu}</div> : null}
       <div className="app-scroll">
         {bare ? (
           children

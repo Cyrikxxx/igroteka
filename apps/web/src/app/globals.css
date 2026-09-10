@@ -1432,7 +1432,18 @@ html { scrollbar-color: var(--bg-4) transparent; }
      Правый верхний угол: в Алиасе на одном устройстве кнопка паузы всегда
      была там. Внизу слева меню вдобавок перекрывал служебный значок Next в
      режиме разработки, и вход в него было просто не найти. */
-  .gm { position: fixed; right: 16px; top: 16px; z-index: 70; }
+  /* Прибито к колонке экрана, а не к окну. Прибитое к окну на широком
+     мониторе улетало в пустое поле метрах в восьмистах от игры — кнопка была,
+     а найти её не удавалось. */
+  .gm { position: absolute; right: 16px; top: 16px; z-index: 70; }
+  /* Накладка на ширину колонки: сама она сквозная, кликается только меню. */
+  .gm-anchor {
+    position: absolute; inset: 0; z-index: 70;
+    width: 100%; max-width: var(--shell-w); margin-inline: auto;
+    pointer-events: none;
+  }
+  .gm-anchor > * { pointer-events: auto; }
+  .gm-anchor .gm { right: clamp(18px, 3.5vw, 80px); }
   .gm-btn {
     width: 44px; height: 44px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;

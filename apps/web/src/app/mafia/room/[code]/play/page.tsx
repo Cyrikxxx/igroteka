@@ -188,19 +188,39 @@ export default function MafiaPlayPage() {
   const paused = view.paused;
   const canPause = view.you.isHost && PAUSABLE.has(view.phase) && !paused;
 
+  // Служебное меню: пауза, завершение партии, захват комнаты и выход. Отдаём
+  // его каждой оболочке, чтобы кнопка стояла в углу игровой колонки, а не в
+  // углу окна: на широком мониторе колонка занимает середину, и прибитая к
+  // окну кнопка оказывалась далеко в стороне от игры.
+  const gameMenu = (
+    <GameMenu
+      isHost={view.you.isHost}
+      canPause={canPause}
+      paused={paused}
+      canClaimHost={claim.canClaim}
+      claimSecondsLeft={claim.secondsLeft}
+      hostGone={claim.hostGone}
+      onPause={() => emit("mafia:pause", {}, () => {})}
+      onResume={() => emit("mafia:resume", {}, () => {})}
+      onEndGame={() => setEndGameAsk(true)}
+      onClaimHost={claimHost}
+      onLeave={() => setLeaveAsk(true)}
+    />
+  );
+
   function screen() {
     if (!view) return null;
 
     if (view.phase === "ROLE_REVEAL") {
       if (!view.you.role) {
         return (
-          <MafiaShell>
+          <MafiaShell menu={gameMenu}>
             <Centered title="Раздаём роли…" sub="Подожди немного" />
           </MafiaShell>
         );
       }
       return (
-        <MafiaShell vignette vignetteLevel={0.14}>
+        <MafiaShell vignette vignetteLevel={0.14} menu={gameMenu}>
           <RoleReveal
             role={view.you.role}
             partners={view.you.partners}
@@ -219,7 +239,7 @@ export default function MafiaPlayPage() {
     // Финал показываем всем, включая выбывших: там раскрываются роли.
     if (view.phase === "FINISHED") {
       return (
-        <MafiaShell wide vignette vignetteLevel={0.06}>
+        <MafiaShell wide vignette vignetteLevel={0.06} menu={gameMenu}>
           <FinaleScreen
             view={view}
             isHost={view.you.isHost}
@@ -251,7 +271,7 @@ export default function MafiaPlayPage() {
     // Только что выбыл — сначала объявление, потом уже режим зрителя.
     if (dead && !deathSeen) {
       return (
-        <MafiaShell vignette vignetteLevel={0.2}>
+        <MafiaShell vignette vignetteLevel={0.2} menu={gameMenu}>
           <YouDeadScreen exiled={exiled} onWatch={markDeathSeen} />
         </MafiaShell>
       );
@@ -261,7 +281,7 @@ export default function MafiaPlayPage() {
     // экрана и реакция выдают не меньше слов, поэтому ночью у них темно.
     if ((dead || view.you.isSpectator) && view.night) {
       return (
-        <MafiaShell vignette vignetteLevel={0.16}>
+        <MafiaShell vignette vignetteLevel={0.16} menu={gameMenu}>
           <NightHush day={view.day} />
         </MafiaShell>
       );
@@ -269,7 +289,7 @@ export default function MafiaPlayPage() {
 
     if (dead || view.you.isSpectator) {
       return (
-        <MafiaShell vignette vignetteLevel={view.phase === "NIGHT" ? 0.16 : 0.05}>
+        <MafiaShell vignette vignetteLevel={view.phase === "NIGHT" ? 0.16 : 0.05} menu={gameMenu}>
           <SpectatorScreen view={view} exiled={exiled} />
         </MafiaShell>
       );
@@ -277,7 +297,7 @@ export default function MafiaPlayPage() {
 
     if (view.phase === "NIGHT") {
       return (
-        <MafiaShell vignette vignetteLevel={view.you.role === "maniac" ? 0.1 : 0.16}>
+        <MafiaShell vignette vignetteLevel={view.you.role === "maniac" ? 0.1 : 0.16} menu={gameMenu}>
           <NightScreen
             view={view}
             onAction={(action, targetId) =>
@@ -290,7 +310,7 @@ export default function MafiaPlayPage() {
 
     if (view.phase === "MORNING") {
       return (
-        <MafiaShell vignette vignetteLevel={view.spotlight ? 0.12 : 0.04}>
+        <MafiaShell vignette vignetteLevel={view.spotlight ? 0.12 : 0.04} menu={gameMenu}>
           <MorningScreen view={view} />
         </MafiaShell>
       );
@@ -298,7 +318,7 @@ export default function MafiaPlayPage() {
 
     if (view.phase === "DISCUSSION") {
       return (
-        <MafiaShell>
+        <MafiaShell menu={gameMenu}>
           <DiscussionScreen
             view={view}
             onSkip={() => emit("mafia:skip_discussion", {}, () => {})}
@@ -309,7 +329,7 @@ export default function MafiaPlayPage() {
 
     if (view.phase === "VOTE") {
       return (
-        <MafiaShell>
+        <MafiaShell menu={gameMenu}>
           <VoteScreen
             view={view}
             onVote={(targetId) => emit("mafia:vote", { targetId }, () => {})}
@@ -320,7 +340,7 @@ export default function MafiaPlayPage() {
 
     if (view.phase === "VOTE_RESULT") {
       return (
-        <MafiaShell vignette vignetteLevel={0.1}>
+        <MafiaShell vignette vignetteLevel={0.1} menu={gameMenu}>
           <VoteResultScreen view={view} />
         </MafiaShell>
       );
@@ -328,7 +348,7 @@ export default function MafiaPlayPage() {
 
     if (view.phase === "LAST_WORD") {
       return (
-        <MafiaShell vignette vignetteLevel={0.08}>
+        <MafiaShell vignette vignetteLevel={0.08} menu={gameMenu}>
           <LastWordScreen
             view={view}
             isHost={view.you.isHost}
@@ -339,7 +359,7 @@ export default function MafiaPlayPage() {
     }
 
     return (
-      <MafiaShell>
+      <MafiaShell menu={gameMenu}>
         <Centered title="Загрузка…" />
       </MafiaShell>
     );
@@ -348,22 +368,6 @@ export default function MafiaPlayPage() {
   return (
     <>
       {screen()}
-
-      {/* Служебное меню: пауза, завершение партии, захват комнаты и выход.
-          Раньше здесь была одна кнопка паузы, и выйти из партии было нечем. */}
-      <GameMenu
-        isHost={view.you.isHost}
-        canPause={canPause}
-        paused={paused}
-        canClaimHost={claim.canClaim}
-        claimSecondsLeft={claim.secondsLeft}
-        hostGone={claim.hostGone}
-        onPause={() => emit("mafia:pause", {}, () => {})}
-        onResume={() => emit("mafia:resume", {}, () => {})}
-        onEndGame={() => setEndGameAsk(true)}
-        onClaimHost={claimHost}
-        onLeave={() => setLeaveAsk(true)}
-      />
 
       {narratorMode ? (
         <button

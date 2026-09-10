@@ -11,6 +11,7 @@ export default function MafiaShell({
   vignetteLevel,
   wide = false,
   topBar,
+  menu,
 }: {
   children: ReactNode;
   vignette?: boolean;
@@ -22,6 +23,11 @@ export default function MafiaShell({
    * середине экрана.
    */
   topBar?: ReactNode;
+  /**
+   * Служебное меню партии. Живёт внутри колонки: прибитое к углу окна, на
+   * широком мониторе оно улетало далеко вправо от игры.
+   */
+  menu?: ReactNode;
 }) {
   const style: CSSProperties = {
     minHeight: "100dvh",
@@ -50,6 +56,7 @@ export default function MafiaShell({
         }
         style={frameStyle}
       >
+        {menu}
         {children}
       </div>
     </div>
