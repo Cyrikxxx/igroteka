@@ -117,7 +117,8 @@ export default function MafiaPlayPage() {
     paused: view?.paused,
   });
 
-  const hostToast = useHostToast(view?.you.isHost ?? false);
+  // null, пока снимка нет: «не знаем» и «не хост» — разные вещи.
+  const hostToast = useHostToast(view ? view.you.isHost : null);
   const leftToast = useLeftToast(view?.players ?? []);
   // Хост может пропасть и посреди партии — тогда комнату забирают прямо
   // отсюда, а не только из лобби.

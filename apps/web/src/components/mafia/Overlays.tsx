@@ -187,17 +187,29 @@ export function HostToast({ show, onClose }: { show: boolean; onClose: () => voi
   );
 }
 
-/** Замечает момент, когда хостом стали мы, и один раз показывает тост. */
-export function useHostToast(isHost: boolean): { show: boolean; close: () => void } {
+/**
+ * Замечает момент, когда хостом стали мы, и один раз показывает тост.
+ *
+ * `null` — «ещё не знаем»: страница рисуется до первого снимка, и раньше это
+ * состояние считалось за «я не хост». Первый же снимок с правами выглядел как
+ * передача комнаты, и хост читал «прежний хост вышел» после каждой
+ * перезагрузки вкладки, возврата из лобби и обрыва связи.
+ */
+export function useHostToast(isHost: boolean | null): {
+  show: boolean;
+  close: () => void;
+} {
   const [show, setShow] = useState(false);
-  const [wasHost, setWasHost] = useState(isHost);
+  const [wasHost, setWasHost] = useState<boolean | null>(isHost);
 
   // Сравнение с предыдущим значением делается прямо в рендере — так React
   // советует выводить состояние из пропсов. Через эффект получался лишний
   // проход рендера, и тост мигал на кадр позже смены хоста.
   if (isHost !== wasHost) {
     setWasHost(isHost);
-    if (isHost) setShow(true);
+    // Тост только на настоящем переходе «не хост → хост». Первое известное
+    // значение — не переход, чем бы оно ни было.
+    if (isHost && wasHost === false) setShow(true);
   }
 
   return { show, close: () => setShow(false) };
