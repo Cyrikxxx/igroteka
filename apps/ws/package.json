@@ -25,7 +25,8 @@
     "smoke:narrator": "tsx scripts/smoke-narrator.ts",
     "smoke:history": "tsx scripts/smoke-history.ts",
     "smoke:cross-game": "tsx scripts/smoke-cross-game.ts",
-    "mafia:fill": "tsx scripts/fill-room.ts"
+    "mafia:fill": "tsx scripts/fill-mafia.ts",
+    "alias:fill": "tsx scripts/fill-alias.ts"
   },
   "dependencies": {
     "@alias/shared": "*",

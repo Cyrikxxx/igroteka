@@ -1,4 +1,4 @@
-// Наполнить комнату Мафии ботами — чтобы посмотреть глазами на большой стол.
+// Наполнить онлайн-комнату Мафии ботами — чтобы посмотреть глазами на большой стол.
 //
 // Шестнадцать телефонов ради проверки вёрстки взять негде, а сетка карточек,
 // экран ночи и голосование на пятерых и на шестнадцати выглядят по-разному.
@@ -44,20 +44,32 @@ class Bot {
     this.name = name;
   }
 
+  /**
+   * Запрос, умеющий подождать, когда сервер просит.
+   *
+   * Вход в комнату ограничен двадцатью запросами в минуту с адреса, а боты
+   * приходят все с одного. Без ожидания наполнение большого стола обрывалось
+   * на двадцать первом невнятным «не зашёл: 429».
+   */
   private async req(path: string, init?: RequestInit): Promise<Response> {
-    const res = await fetch(`${WEB}${path}`, {
-      ...init,
-      headers: {
-        "Content-Type": "application/json",
-        ...(this.cookie ? { cookie: this.cookie } : {}),
-      },
-    });
-    const sc = res.headers.get("set-cookie");
-    if (sc) {
-      const m = sc.match(/^([^=]+)=([^;]+)/);
-      if (m) this.cookie = `${m[1]}=${m[2]}`;
+    for (let attempt = 0; ; attempt++) {
+      const res = await fetch(`${WEB}${path}`, {
+        ...init,
+        headers: {
+          "Content-Type": "application/json",
+          ...(this.cookie ? { cookie: this.cookie } : {}),
+        },
+      });
+      const sc = res.headers.get("set-cookie");
+      if (sc) {
+        const m = sc.match(/^([^=]+)=([^;]+)/);
+        if (m) this.cookie = `${m[1]}=${m[2]}`;
+      }
+      if (res.status !== 429 || attempt >= 3) return res;
+      const wait = (Number(res.headers.get("Retry-After")) || 60) + 1;
+      console.log(`  … лимит запросов исчерпан, ждём ${wait} с`);
+      await sleep(wait * 1000);
     }
-    return res;
   }
 
   async join(code: string): Promise<void> {
