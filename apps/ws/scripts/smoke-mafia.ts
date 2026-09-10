@@ -116,6 +116,18 @@ class Client {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Пропустить обсуждение. Согласия нужны от всех живых: кнопка перестала быть
+ * хостовской, чтобы погибший или пропавший хост не подвешивал стол.
+ */
+async function skipDiscussion(clients: Client[]): Promise<void> {
+  for (const c of clients) {
+    if (c.view?.you.alive && !c.view.you.isSpectator) {
+      await c.emit("mafia:skip_discussion");
+    }
+  }
+}
+
 /** Ждём, пока хост увидит нужную фазу. Иначе падаем с внятным сообщением. */
 async function waitPhase(c: Client, phase: MafiaPhase, timeoutMs = 25000): Promise<void> {
   const started = Date.now();
@@ -145,10 +157,10 @@ async function main(): Promise<void> {
 
   for (const c of clients) await c.emit("mafia:ready");
   // Партия открывается вступительным обсуждением: люди знакомятся, и только
-  // потом наступает первая ночь. Хост завершает его досрочно, чтобы смок не
-  // ждал полную минуту.
+  // потом наступает первая ночь. Пропускают его все живые вместе — одному
+  // хосту это больше не под силу, — чтобы смок не ждал полную минуту.
   await waitPhase(host, "DISCUSSION");
-  await host.emit("mafia:end_discussion");
+  await skipDiscussion(clients);
   await waitPhase(host, "NIGHT");
   const roles = clients.map((c) => `${c.name}:${c.role}`).join(" ");
   console.log(`[night 1] ${roles}`);
@@ -225,8 +237,8 @@ async function main(): Promise<void> {
 
   // ─── День ───
   await waitPhase(host, "DISCUSSION");
-  console.log("[discussion] хост завершает досрочно");
-  await host.emit("mafia:end_discussion");
+  console.log("[discussion] живые пропускают обсуждение");
+  await skipDiscussion(clients);
 
   await waitPhase(host, "VOTE");
   const alive = clients.filter((c) => c.view?.you.alive);

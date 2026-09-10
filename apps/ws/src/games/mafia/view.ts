@@ -218,6 +218,21 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
     spectatorCount: snap.spectators.length,
     readyCount: snap.players.filter((p) => p.ready).length,
     aliveCount: snap.players.filter((p) => p.alive).length,
+    // Счётчик «сколько из скольких» нужен всем за столом: по нему видно,
+    // ждут ли обсуждение тебя одного.
+    ...(snap.phase === "DISCUSSION"
+      ? {
+          discussionSkip: {
+            // Считаем только живых: вышедший посреди обсуждения выбывает, но
+            // его голос остаётся в списке — без фильтра вышло бы «5 из 4».
+            count: snap.players.filter(
+              (p) => p.alive && (snap.discussionSkips ?? []).includes(p.userId),
+            ).length,
+            total: snap.players.filter((p) => p.alive).length,
+            mine: (snap.discussionSkips ?? []).includes(userId),
+          },
+        }
+      : {}),
     you,
     vote,
     winner: snap.winner,

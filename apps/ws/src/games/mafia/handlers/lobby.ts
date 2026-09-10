@@ -19,6 +19,7 @@ import {
   finishGame,
   maybeResolveNightEarly,
   maybeTallyEarly,
+  maybeEndDiscussionEarly,
   restartToLobby,
   closeRoom,
   pauseIfRoomEmpty,
@@ -388,6 +389,9 @@ export function registerMafiaLobbyHandlers(
     }
     await maybeResolveNightEarly(ns, roomCode);
     await maybeTallyEarly(ns, roomCode);
+    // Обсуждение ждёт согласия всех живых — ушедший мог быть последним, чьего
+    // нажатия не хватало.
+    await maybeEndDiscussionEarly(ns, roomCode);
   });
 
   // ─── mafia:close ─── host, в любой момент

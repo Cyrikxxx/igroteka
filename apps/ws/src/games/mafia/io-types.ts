@@ -40,7 +40,12 @@ export interface MafiaClientToServerEvents {
     ack?: Ack<OkErr>,
   ) => void;
   "mafia:vote": (payload: { targetId: string | null }, ack?: Ack<OkErr>) => void;
-  "mafia:end_discussion": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
+  /**
+   * «Пропустить обсуждение» — переключатель, доступный каждому живому.
+   * Сошлись все — фаза кончается досрочно. Раньше это была кнопка хоста,
+   * и погибший или пропавший хост подвешивал стол до таймера.
+   */
+  "mafia:skip_discussion": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
   "mafia:last_word_done": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
   "mafia:pause": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
   "mafia:resume": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;

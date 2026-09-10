@@ -187,6 +187,8 @@ async function enterDiscussion(ns: MafiaNamespace, code: string): Promise<void> 
     s.phase = "DISCUSSION";
     s.timerEndsAt = Date.now() + s.settings.timers.discussion * 1000;
     s.timerPaused = false;
+    // Голоса за пропуск — свои на каждое обсуждение.
+    s.discussionSkips = [];
   });
   if (!snap) return;
   await broadcastStateNow(ns, code);
@@ -555,6 +557,26 @@ export async function closeRoom(
     s.emit("mafia:closed", { reason: "closed_by_host" });
     s.disconnect(true);
   }
+}
+
+/**
+ * Все живые нажали «пропустить» — заканчиваем обсуждение, не дожидаясь
+ * таймера. Считаем по живым, а не по нажавшим: кто-то мог погибнуть или уйти
+ * уже после того, как проголосовал за пропуск, и без пересчёта обсуждение
+ * ждало бы голоса, которого некому подать.
+ */
+export async function maybeEndDiscussionEarly(
+  ns: MafiaNamespace,
+  code: string,
+): Promise<void> {
+  const snap = await load(code);
+  if (!snap || snap.phase !== "DISCUSSION" || snap.timerPaused) return;
+  const alive = snap.players.filter((p) => p.alive);
+  if (alive.length === 0) return;
+  const skips = new Set(snap.discussionSkips ?? []);
+  if (!alive.every((p) => skips.has(p.userId))) return;
+  clearTimer(code);
+  await afterDiscussion(ns, code);
 }
 
 // Ранние переходы — вызываются из обработчиков после действия.

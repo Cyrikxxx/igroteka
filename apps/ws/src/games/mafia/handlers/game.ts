@@ -10,7 +10,7 @@ import {
   maybeResolveNightEarly,
   maybeEndNightStepEarly,
   maybeTallyEarly,
-  afterDiscussion,
+  maybeEndDiscussionEarly,
   afterLastWord,
   pausePhase,
   resumePhase,
@@ -144,16 +144,26 @@ export function registerMafiaGameHandlers(
     await maybeTallyEarly(ns, code);
   });
 
-  // ─── Хост завершает обсуждение досрочно ───
-  socket.on("mafia:end_discussion", async (_p, ack) => {
-    const snap = await load(code);
-    if (!snap) return ack?.({ error: "room_not_found" });
-    if (snap.hostId !== userId) return ack?.({ error: "forbidden" });
-    if (snap.phase !== "DISCUSSION") return ack?.({ error: "not_discussion" });
-    if (snap.timerPaused) return ack?.({ error: "paused" });
+  // ─── «Пропустить обсуждение» ─── любой живой, решают все вместе
+  socket.on("mafia:skip_discussion", async (_p, ack) => {
+    const snap0 = await load(code);
+    if (!snap0) return ack?.({ error: "room_not_found" });
+    if (snap0.phase !== "DISCUSSION") return ack?.({ error: "not_discussion" });
+    if (snap0.timerPaused) return ack?.({ error: "paused" });
+    const me = snap0.players.find((p) => p.userId === userId);
+    if (!me || !me.alive) return ack?.({ error: "not_active" });
+
+    // Переключатель, а не одноразовое нажатие: передумать можно, пока идёт
+    // таймер, — как и с дневным голосом.
+    await mutate(code, (s) => {
+      const list = new Set(s.discussionSkips ?? []);
+      if (list.has(userId)) list.delete(userId);
+      else list.add(userId);
+      s.discussionSkips = [...list];
+    });
     ack?.({ ok: true });
-    clearTimer(code);
-    await afterDiscussion(ns, code);
+    scheduleStateBroadcast(ns, code);
+    await maybeEndDiscussionEarly(ns, code);
   });
 
   // ─── Пауза / продолжение ─── только хост

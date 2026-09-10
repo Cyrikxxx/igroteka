@@ -231,7 +231,10 @@ async function main(): Promise<void> {
 
   // Первый день без голосования — сразу вторая ночь.
   await waitPhase(host, "DISCUSSION");
-  await host.emit("mafia:end_discussion");
+  // Обсуждение пропускают все живые разом — кнопка больше не хостовская.
+  for (const c of clients) {
+    if (c.view?.you.alive && !c.view.you.isSpectator) await c.emit("mafia:skip_discussion");
+  }
   await waitPhase(host, "NIGHT");
 
   // ─── Главная проверка: мёртвого доктора зовут наравне с живыми ───

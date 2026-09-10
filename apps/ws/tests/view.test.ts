@@ -202,3 +202,30 @@ describe("ночь по шагам", () => {
     expect(buildView(s, "civ").timer).toBeDefined();
   });
 });
+
+describe("пропуск обсуждения", () => {
+  // Кнопка перестала быть хостовской: погибший хост уходит на экран
+  // наблюдателя, где её нет вовсе, и стол досиживал обсуждение до таймера.
+  const talking = (skips: string[], dead: string[] = []) =>
+    snapshot(
+      cast().map((p) => (dead.includes(p.userId) ? { ...p, alive: false } : p)),
+      { phase: "DISCUSSION", day: 1, discussionSkips: skips },
+    );
+
+  it("счётчик считает живых и знает, нажал ли ты", () => {
+    const view = buildView(talking(["maf", "civ"]), "civ");
+    expect(view.discussionSkip).toEqual({ count: 2, total: 5, mine: true });
+    expect(buildView(talking(["maf"]), "civ").discussionSkip?.mine).toBe(false);
+  });
+
+  it("голос выбывшего не считается", () => {
+    // Уйти посреди обсуждения можно, и голос остаётся в списке. Без фильтра
+    // счётчик показал бы «3 из 4» и обещал бы конец, которого не будет.
+    const view = buildView(talking(["maf", "don", "civ"], ["don"]), "civ");
+    expect(view.discussionSkip).toEqual({ count: 2, total: 4, mine: true });
+  });
+
+  it("вне обсуждения счётчика нет вовсе", () => {
+    expect(buildView(snapshot(cast()), "civ").discussionSkip).toBeUndefined();
+  });
+});
