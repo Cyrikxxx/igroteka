@@ -1363,8 +1363,15 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .mf-phase-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 0; }
   .mf-phase-title { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; letter-spacing: -0.01em; }
 
-  /* Сетка игроков */
-  .mf-player-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 20px; }
+  /* Сетка игроков.
+     До шести карточек — две колонки, дальше три: вшестером две колонки
+     смотрятся крупно и правильно, а на десятерых список уезжал за экран.
+     Третья колонка включается только когда окно её выдерживает: на телефоне
+     уже 390 px это по 110 px на карточку, и имена начинают переноситься. */
+  .mf-player-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 0 20px; }
+  @media (min-width: 480px) {
+    .mf-player-grid[data-cols="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
   .mf-player-card {
     position: relative;
     background: var(--mf-surface);
@@ -1377,18 +1384,36 @@ html { scrollbar-color: var(--bg-4) transparent; }
     gap: 8px;
     cursor: pointer;
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-    min-height: 104px;
+    /* Высота постоянная: раньше она зависела от того, есть ли подпись, и
+       карточка прыгала, стоило игроку уйти в офлайн. */
+    min-height: 120px;
     justify-content: center;
   }
   .mf-player-card:hover { border-color: rgba(255, 255, 255, 0.2); }
   .mf-player-card.picked { border-color: var(--mf-crimson); box-shadow: var(--sh-glow-crimson); background: rgba(225, 29, 72, 0.08); }
   .mf-player-card.picked-gold { border-color: var(--mf-gold); box-shadow: var(--sh-glow-gold); background: rgba(245, 158, 11, 0.08); }
   .mf-player-card.disabled { opacity: 0.45; cursor: not-allowed; }
-  .mf-player-name { font-weight: 700; font-size: 15px; }
-  /* «Не в сети» под именем в карточке игрока. Своя строка, а не общий
-     subline: она объясняет, почему человек не ходит, и важнее остальных
-     подписей. */
-  .mf-player-offline { font-size: 11.5px; font-weight: 700; color: var(--mf-text-faint); }
+  .mf-player-name { font-weight: 700; font-size: 15px; text-align: center; overflow-wrap: anywhere; }
+  /* Место под подпись занято всегда — пустое или нет. Именно оно и держит
+     высоту карточки одинаковой на всех экранах партии. */
+  .mf-player-sub {
+    min-height: 15px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11.5px; font-weight: 700; line-height: 1;
+  }
+  .mf-player-offline { color: var(--mf-text-faint); }
+
+  /* Плашки по углам: слева мой выбор, справа чужие голоса. */
+  .mf-card-badge { position: absolute; top: -9px; }
+  .mf-card-badge.left { left: 8px; }
+  .mf-card-badge.right { right: 8px; }
+  .mf-choice-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    border-radius: var(--r-chip);
+    padding: 3px 9px;
+    font-size: 11.5px; font-weight: 800; white-space: nowrap;
+    border: 1px solid transparent;
+  }
 
   /* Служебное меню игрового экрана: один вход в углу, панель раскрывается
      вверх. Слева, чтобы не спорить с кнопкой озвучки справа. */
@@ -1423,11 +1448,12 @@ html { scrollbar-color: var(--bg-4) transparent; }
     color: var(--mf-text-faint); line-height: 1.4;
   }
 
-  .mf-player-grid.cols3 { grid-template-columns: repeat(3, 1fr); }
-  .mf-player-grid.cols4 { grid-template-columns: repeat(4, 1fr); }
-
   /* Строка настройки */
   .mf-setting-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--mf-border); }
+  /* Роль, которой в этом составе не будет: строка гаснет вся целиком,
+     вместе с тумблером — иначе он выглядит рабочим. */
+  .mf-setting-row[data-disabled] { opacity: 0.45; }
+  .mf-setting-row[data-disabled] * { pointer-events: none; }
   .mf-setting-label { font-weight: 700; font-size: 15px; }
   .mf-setting-sub { font-weight: 600; font-size: 12.5px; color: var(--mf-text-faint); margin-top: 2px; }
 

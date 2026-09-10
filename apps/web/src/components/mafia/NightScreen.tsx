@@ -19,7 +19,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { MafiaView, MafiaNightAction } from "@alias/shared/mafia";
 import PhaseHead from "./PhaseHead";
-import PlayerCard from "./PlayerCard";
+import PlayerCard, { PlayerGrid, ChoiceChip } from "./PlayerCard";
 import { SheriffConfirm, SheriffVerdict } from "./SheriffCheck";
 
 function StatusBar({
@@ -216,12 +216,12 @@ export default function NightScreen({
             Выбери, кого мафия уберёт этой ночью
           </div>
           {view.settings.roles.don ? (
-            <div className="mf-chip" style={{ alignSelf: "flex-start", background: "rgba(245,158,11,0.12)", color: "var(--mf-gold)" }}>
-              <Crown size={14} /> Дон — решающий голос
+            <div className="mf-chip" style={{ alignSelf: "flex-start", background: "rgba(225,29,72,0.12)", color: "var(--role-don)" }}>
+              <Crown size={14} /> Голоса разделились — решает Дон
             </div>
           ) : null}
         </div>
-        <div className="mf-player-grid" style={{ flex: 1, alignContent: "start" }}>
+        <PlayerGrid count={alive.length}>
           {alive.map((p) => {
             const isMe = p.userId === you.userId;
             const isPartner = (you.partnerIds ?? []).includes(p.userId);
@@ -240,17 +240,17 @@ export default function NightScreen({
                 onClick={() => onAction("mafia", picked ? null : p.userId)}
                 subline={
                   isPartner ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: "var(--mf-crimson)" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "var(--mf-crimson)" }}>
                       <VenetianMask size={13} /> напарник
-                    </div>
+                    </span>
                   ) : undefined
                 }
-                badgeTopRight={picked ? chip("твой голос", "var(--mf-crimson)", "#fff") : undefined}
-                badgeTopLeft={voters ? chip(`${voters.join(", ")} ✓`, "rgba(225,29,72,0.2)", "var(--mf-crimson-hover)") : undefined}
+                choice={picked ? <ChoiceChip color="var(--role-mafia)">твой голос</ChoiceChip> : undefined}
+                badgeTopRight={voters ? chip(`${voters.join(", ")} ✓`, "rgba(225,29,72,0.2)", "var(--mf-crimson-hover)") : undefined}
               />
             );
           })}
-        </div>
+        </PlayerGrid>
         <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--mf-crimson)" : undefined}>
           {hint("Тапни по игроку, чтобы проголосовать")}
         </StatusBar>
@@ -271,7 +271,7 @@ export default function NightScreen({
             <HeartPulse size={14} /> Самолечение: осталось {you.doctorSelfHealUsed ? 0 : 1}
           </div>
         </div>
-        <div className="mf-player-grid" style={{ flex: 1, alignContent: "start" }}>
+        <PlayerGrid count={alive.length}>
           {alive.map((p) => {
             const isMe = p.userId === you.userId;
             const prev = p.userId === you.doctorPrevTarget;
@@ -290,15 +290,14 @@ export default function NightScreen({
                 onClick={() => onAction("doctor", picked ? null : p.userId)}
                 subline={
                   prev ? (
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--mf-text-faint)" }}>лечил прошлой ночью</div>
-                  ) : picked ? (
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--role-doctor)" }}>лечишь</div>
+                    <span style={{ color: "var(--mf-text-faint)" }}>лечил прошлой ночью</span>
                   ) : undefined
                 }
+                choice={picked ? <ChoiceChip color="var(--role-doctor)">лечишь</ChoiceChip> : undefined}
               />
             );
           })}
-        </div>
+        </PlayerGrid>
         <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--role-doctor)" : undefined}>
           {hint("Тапни по игроку, чтобы вылечить")}
         </StatusBar>
@@ -323,7 +322,7 @@ export default function NightScreen({
             Кого проверишь этой ночью?
           </div>
         </div>
-        <div className="mf-player-grid" style={{ flex: 1, alignContent: "start" }}>
+        <PlayerGrid count={alive.length}>
           {alive.map((p) => {
             const isMe = p.userId === you.userId;
             const picked = you.nightTarget === p.userId;
@@ -344,15 +343,16 @@ export default function NightScreen({
                 }
                 subline={
                   known !== undefined ? (
-                    <div style={{ fontSize: 11.5, fontWeight: 800, color: known ? "var(--mf-crimson)" : "var(--mf-text-dim)" }}>
+                    <span style={{ fontWeight: 800, color: known ? "var(--mf-crimson)" : "var(--mf-text-dim)" }}>
                       {known ? "МАФИЯ" : "не мафия"}
-                    </div>
+                    </span>
                   ) : undefined
                 }
+                choice={picked ? <ChoiceChip color="var(--role-sheriff)">проверяешь</ChoiceChip> : undefined}
               />
             );
           })}
-        </div>
+        </PlayerGrid>
         <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--mf-gold)" : undefined}>
           {hint("Тапни по игроку, чтобы проверить")}
         </StatusBar>
@@ -392,7 +392,7 @@ export default function NightScreen({
           <Skull size={14} /> Ты играешь сам за себя
         </div>
       </div>
-      <div className="mf-player-grid" style={{ flex: 1, alignContent: "start" }}>
+      <PlayerGrid count={alive.length}>
         {alive.map((p) => {
           const isMe = p.userId === you.userId;
           const picked = you.nightTarget === p.userId;
@@ -406,11 +406,11 @@ export default function NightScreen({
               picked={picked}
               disabled={isMe || locked}
               onClick={() => onAction("maniac", picked ? null : p.userId)}
-              subline={picked ? <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--role-maniac)" }}>жертва</div> : undefined}
+              choice={picked ? <ChoiceChip color="var(--role-maniac)">жертва</ChoiceChip> : undefined}
             />
           );
         })}
-      </div>
+      </PlayerGrid>
       <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--role-maniac)" : undefined}>
         {hint("Тапни по игроку")}
       </StatusBar>

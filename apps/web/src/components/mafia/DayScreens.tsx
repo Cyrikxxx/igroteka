@@ -16,7 +16,7 @@ import type { MafiaView } from "@alias/shared/mafia";
 import { SKIP_VOTE } from "@alias/shared/mafia";
 import Announce from "./Announce";
 import PhaseHead, { fmtClock } from "./PhaseHead";
-import PlayerCard from "./PlayerCard";
+import PlayerCard, { PlayerGrid, ChoiceChip } from "./PlayerCard";
 import MafiaAvatar from "./MafiaAvatar";
 import { RoleChip } from "./roleMeta";
 
@@ -163,7 +163,7 @@ export function VoteScreen({
           {round2 ? "Выбирайте между лидерами" : "Голос можно менять, пока идёт таймер"}
         </div>
       </div>
-      <div className="mf-player-grid" style={{ flex: 1, alignContent: "start" }}>
+      <PlayerGrid count={alive.length}>
         {alive.map((p) => {
           const isMe = p.userId === you.userId;
           const blocked = isMe || (round2 && !candidates.includes(p.userId));
@@ -203,17 +203,17 @@ export function VoteScreen({
                   </span>
                 ) : undefined
               }
-              subline={
+              choice={
                 mine ? (
-                  <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--mf-crimson)", display: "flex", alignItems: "center", gap: 4 }}>
-                    <Check size={13} /> твой голос
-                  </div>
+                  <ChoiceChip color="var(--mf-crimson)">
+                    <Check size={12} /> твой голос
+                  </ChoiceChip>
                 ) : undefined
               }
             />
           );
         })}
-      </div>
+      </PlayerGrid>
       {view.settings.rules.allowSkipVote && (
         <div style={{ padding: "14px 20px 22px" }}>
           <button
