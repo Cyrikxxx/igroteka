@@ -44,6 +44,7 @@ import Avatar from "@/components/common/Avatar";
 import RoomCode from "@/components/common/RoomCode";
 import QrCode from "@/components/common/QrCode";
 import Modal from "@/components/common/Modal";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import RoomSettingsModal from "@/components/alias/room/RoomSettingsModal";
 
 interface Creds {
@@ -61,6 +62,7 @@ export default function LobbyPage() {
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [leaveAsk, setLeaveAsk] = useState(false);
   const [editingName, setEditingName] = useState(false);
   // Ошибки действий показываем строкой в лобби, а не системным alert.
   const [actionError, setActionError] = useState<string | null>(null);
@@ -257,9 +259,27 @@ export default function LobbyPage() {
 
   return (
     <AppShell className="screen-anim">
-      <button type="button" className="back-link" onClick={handleLeave}>
+      {/* Выход из лобби спрашиваем: кнопка стоит первой на экране, попасть в
+          неё случайно легко, а вернувшийся заново вводит код и имя. */}
+      <button type="button" className="back-link" onClick={() => setLeaveAsk(true)}>
         <ArrowLeft /> Выйти из комнаты
       </button>
+
+      <ConfirmDialog
+        open={leaveAsk}
+        title="Выйти из комнаты?"
+        text={
+          isHost
+            ? "Комната останется — она перейдёт следующему, кто на связи. Вернуться можно будет по тому же коду."
+            : "Вернуться можно будет по тому же коду."
+        }
+        confirmLabel="Выйти"
+        onConfirm={() => {
+          setLeaveAsk(false);
+          handleLeave();
+        }}
+        onCancel={() => setLeaveAsk(false)}
+      />
 
       <div className="lobby-head">
         <div>

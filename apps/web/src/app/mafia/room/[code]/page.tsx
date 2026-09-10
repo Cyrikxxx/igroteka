@@ -85,6 +85,7 @@ export default function MafiaLobbyPage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [closeAsk, setCloseAsk] = useState(false);
+  const [leaveAsk, setLeaveAsk] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [draft, setDraft] = useState<MafiaSettings | null>(null);
 
@@ -205,7 +206,7 @@ export default function MafiaLobbyPage() {
           ) : null}
           <button
             type="button"
-            onClick={leave}
+            onClick={() => setLeaveAsk(true)}
             style={{ background: "none", border: "none", color: "var(--mf-text-faint)", cursor: "pointer", display: "flex", padding: 4 }}
             aria-label="Выйти"
             title={isHost ? "Выйти — комната перейдёт другому" : "Выйти"}
@@ -564,6 +565,25 @@ export default function MafiaLobbyPage() {
         </div>
       ) : null}
 
+      {/* Выход спрашиваем так же, как закрытие комнаты: кнопки стоят рядом,
+          иконки похожи, и промах по соседней уводил из лобби без единого
+          вопроса. */}
+      <ConfirmDialog
+        open={leaveAsk}
+        variant="mafia"
+        title="Выйти из комнаты?"
+        text={
+          isHost
+            ? "Комната останется — она перейдёт следующему, кто на связи. Вернуться можно будет по тому же коду."
+            : "Вернуться можно будет по тому же коду."
+        }
+        confirmLabel="Выйти"
+        onConfirm={() => {
+          setLeaveAsk(false);
+          leave();
+        }}
+        onCancel={() => setLeaveAsk(false)}
+      />
       <ConfirmDialog
         open={closeAsk}
         variant="mafia"
