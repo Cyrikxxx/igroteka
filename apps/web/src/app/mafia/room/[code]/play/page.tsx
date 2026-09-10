@@ -82,7 +82,7 @@ export default function MafiaPlayPage() {
         router.replace("/mafia");
         return;
       }
-      router.replace(`/mafia/join?code=${code}`);
+      router.replace(`/join?code=${code}&from=mafia`);
     });
     return () => {
       alive = false;

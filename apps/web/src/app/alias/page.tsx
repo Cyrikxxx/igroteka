@@ -113,7 +113,7 @@ export default function AliasLandingPage() {
             <Link href="/alias/room/new" className="mf-btn mf-btn-surface">
               Онлайн-комната
             </Link>
-            <Link href="/alias/join" className="mf-btn mf-btn-ghost">
+            <Link href="/join?from=alias" className="mf-btn mf-btn-ghost">
               Войти по коду
             </Link>
           </div>

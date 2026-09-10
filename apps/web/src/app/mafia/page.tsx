@@ -81,7 +81,7 @@ export default function MafiaLandingPage() {
             <Link href="/mafia/new" className="mf-btn mf-btn-crimson">
               Создать комнату
             </Link>
-            <Link href="/mafia/join" className="mf-btn mf-btn-ghost">
+            <Link href="/join?from=mafia" className="mf-btn mf-btn-ghost">
               Войти по коду
             </Link>
           </div>

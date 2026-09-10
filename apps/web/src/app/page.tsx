@@ -23,6 +23,7 @@ import {
   pasteCode,
   typeCode,
 } from "@/lib/room-code-input";
+import { resolveRoomGame, resolveErrorText } from "@/lib/room-platform";
 
 /** Слова-примеры на карточке Алиаса: показывают, из чего состоит игра. */
 const SAMPLE_WORDS = [
@@ -157,6 +158,7 @@ export default function HubPage() {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [wrongLayout, setWrongLayout] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const ready = code.length === ROOM_CODE_LENGTH;
 
@@ -164,6 +166,7 @@ export default function HubPage() {
     const { code: next, wrongLayout: bad } = typeCode(raw);
     setCode(next);
     setWrongLayout(bad);
+    setError(null);
   };
   // Вставку чиним молча: код мог быть скопирован уже в чужой раскладке.
   const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -172,28 +175,27 @@ export default function HubPage() {
     e.preventDefault();
     setCode(pasted);
     setWrongLayout(false);
+    setError(null);
   };
 
-  // Игрок вводит код, не указывая игру, — спрашиваем сервер, чей он.
-  // Комнату не нашли — всё равно уводим на вход Алиаса: там человек
-  // увидит понятную ошибку вместо молчания.
+  // Проверяем код, не уходя со страницы. Раньше хаб на любой ответ уводил на
+  // вход — и на опечатку тоже, где та превращалась в «комнаты больше нет,
+  // код освободился». Человек при этом терял набранное и оказывался в игре,
+  // которую не выбирал. Ошибка теперь остаётся здесь, вместе с полем.
   const go = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ready || busy) return;
     setBusy(true);
-    try {
-      const res = await fetch(`/api/rooms/resolve?code=${code}`);
-      const platform = res.ok
-        ? ((await res.json()) as { platform: string }).platform
-        : "ALIAS";
-      router.push(
-        platform === "MAFIA" ? `/mafia/join?code=${code}` : `/alias/join?code=${code}`,
-      );
-    } catch {
-      router.push(`/alias/join?code=${code}`);
-    } finally {
+    setError(null);
+    const outcome = await resolveRoomGame(code);
+    if (!outcome.game) {
+      setError(resolveErrorText(outcome.reason));
       setBusy(false);
+      return;
     }
+    // Игру уже знаем — передаём её входу цветом, чтобы страница открылась
+    // сразу в оформлении той комнаты, куда человек идёт.
+    router.push(`/join?code=${code}&from=${outcome.game}`);
   };
 
   return (
@@ -235,6 +237,7 @@ export default function HubPage() {
           </button>
         </div>
         {wrongLayout && <p className="code-layout-hint">{WRONG_LAYOUT_HINT}</p>}
+        {error && <p className="hub-code-err">{error}</p>}
       </form>
 
       <footer className="hub-footer">

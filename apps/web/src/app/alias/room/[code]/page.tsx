@@ -94,7 +94,7 @@ export default function LobbyPage() {
         router.replace("/alias");
         return;
       }
-      router.replace(`/alias/join?code=${rawCode}`);
+      router.replace(`/join?code=${rawCode}&from=alias`);
     });
     return () => {
       alive = false;
@@ -155,8 +155,8 @@ export default function LobbyPage() {
   const isHost = snapshot?.hostId === creds.userId;
   const inviteUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/alias/join?code=${creds.code}`
-      : `/alias/join?code=${creds.code}`;
+      ? `${window.location.origin}/join?code=${creds.code}&from=alias`
+      : `/join?code=${creds.code}&from=alias`;
 
   const handleCopyCode = async () => {
     try {

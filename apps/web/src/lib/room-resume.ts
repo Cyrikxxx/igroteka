@@ -12,8 +12,7 @@
 // (и выгнанному) он откажет — тогда показываем обычный экран входа.
 
 import { saveRoomCreds, type RoomCredentials } from "@/lib/room-session";
-
-type Game = "alias" | "mafia";
+import type { RoomGame } from "@/lib/room-platform";
 
 interface JoinLikeResponse {
   room: { code: string };
@@ -43,7 +42,7 @@ function noticeFor(status: number, serverText?: string): string | null {
   return null;
 }
 
-export async function resumeRoom(code: string, game: Game): Promise<ResumeOutcome> {
+export async function resumeRoom(code: string, game: RoomGame): Promise<ResumeOutcome> {
   const url =
     game === "mafia"
       ? `/api/mafia/rooms/${code}/join`

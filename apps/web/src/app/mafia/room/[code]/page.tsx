@@ -59,7 +59,7 @@ export default function MafiaLobbyPage() {
         router.replace("/mafia");
         return;
       }
-      router.replace(`/mafia/join?code=${code}`);
+      router.replace(`/join?code=${code}&from=mafia`);
     });
     return () => {
       alive = false;
@@ -138,7 +138,7 @@ export default function MafiaLobbyPage() {
   const comp = settings ? computeComposition(Math.max(count, MIN_MAFIA_PLAYERS), settings) : null;
 
   const inviteUrl =
-    typeof window === "undefined" ? "" : `${window.location.origin}/mafia/join?code=${code}`;
+    typeof window === "undefined" ? "" : `${window.location.origin}/join?code=${code}&from=mafia`;
 
   const copyCode = async () => {
     try {

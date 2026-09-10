@@ -64,7 +64,7 @@ export default function PlayPage() {
         router.replace("/alias");
         return;
       }
-      router.replace(`/alias/join?code=${rawCode}`);
+      router.replace(`/join?code=${rawCode}&from=alias`);
     });
     return () => {
       alive = false;
