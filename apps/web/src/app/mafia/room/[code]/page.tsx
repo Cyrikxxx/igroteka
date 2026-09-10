@@ -529,10 +529,15 @@ export default function MafiaLobbyPage() {
 
       {/* Шит настроек */}
       {settingsOpen && draft ? (
-        <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", flexDirection: "column", justifyContent: "flex-end", background: "rgba(5,5,9,0.6)" }} onClick={() => setSettingsOpen(false)}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", background: "rgba(5,5,9,0.6)" }} onClick={() => setSettingsOpen(false)}>
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
+              // Ширину держим телефонной колонкой: без неё панель растягивало
+              // во всю ширину окна, и на большом мониторе настройки шли от
+              // края до края.
+              width: "100%",
+              maxWidth: 560,
               background: "var(--mf-surface)",
               borderRadius: "24px 24px 0 0",
               border: "1px solid var(--mf-border)",

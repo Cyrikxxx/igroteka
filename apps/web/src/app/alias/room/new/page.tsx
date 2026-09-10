@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Clock, Minus, Sparkles, Target, Wifi } from "lucide-react";
+import { ArrowLeft, Clock, Minus, Target, Wifi } from "lucide-react";
 import AppShell from "@/components/common/AppShell";
 import Chip from "@/components/common/Chip";
 import Toggle from "@/components/common/Toggle";
@@ -28,7 +28,6 @@ export default function RoomNewPage() {
   const [typedName, setTypedName] = useState<string | null>(null);
   const hostName = typedName ?? (hydrated ? loadDisplayName() : "");
   const setHostName = setTypedName;
-  const [title, setTitle] = useState("");
   const [roundTime, setRoundTime] = useState<number>(ROUND_TIME_DEFAULT);
   const [winScore, setWinScore] = useState<number>(WIN_SCORE_DEFAULT);
   const [penaltySkip, setPenaltySkip] = useState<boolean>(PENALTY_SKIP_DEFAULT);
@@ -48,8 +47,10 @@ export default function RoomNewPage() {
   // намеренно пересекаются с темами.
   const [wordsInGame, setWordsInGame] = useState<number | null>(0);
 
-  const roomTitle =
-    title.trim() || (hostName.trim() ? `Комната ${hostName.trim()}` : "Комната хоста");
+  // Название комнаты больше не спрашиваем: заходят в неё по коду, выбирать
+  // не из чего, и жило оно ровно в одном месте — заголовке лобби. Собираем
+  // из имени хоста, чтобы заголовок остался осмысленным.
+  const roomTitle = hostName.trim() ? `Комната ${hostName.trim()}` : "Комната хоста";
   const ready = hostName.trim().length > 0 && categoryIds.length > 0;
 
   const onSubmit = async () => {
@@ -65,7 +66,7 @@ export default function RoomNewPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           hostName: name,
-          title: title.trim() || undefined,
+          title: roomTitle,
           settings: { roundTime, winScore, penaltySkip, categoryIds },
         }),
       });
@@ -130,19 +131,6 @@ export default function RoomNewPage() {
               onChange={(e) => setHostName(e.target.value.slice(0, 50))}
               maxLength={50}
             />
-            <label className="field-label" style={{ marginTop: 18 }}>
-              Имя комнаты <span className="label-opt">необязательно</span>
-            </label>
-            <input
-              className="input"
-              placeholder={hostName.trim() ? `Комната ${hostName.trim()}` : "Комната хоста"}
-              value={title}
-              onChange={(e) => setTitle(e.target.value.slice(0, 80))}
-              maxLength={80}
-            />
-            <p className="field-note">
-              <Sparkles size={13} /> Если пусто — назовём «{roomTitle}»
-            </p>
           </div>
 
           {/* Правила */}
