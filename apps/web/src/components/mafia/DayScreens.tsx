@@ -18,7 +18,12 @@ import Announce from "./Announce";
 import PhaseHead, { fmtClock } from "./PhaseHead";
 import PlayerCard, { PlayerGrid, ChoiceChip } from "./PlayerCard";
 import MafiaAvatar from "./MafiaAvatar";
-import { RoleChip } from "./roleMeta";
+import { RoleChip, ROLE_META } from "./roleMeta";
+
+/** Короткая подпись роли под именем погибшего. */
+const ROLE_LABEL: Record<string, string> = Object.fromEntries(
+  Object.entries(ROLE_META).map(([k, v]) => [k, v.label]),
+);
 
 // ─────────── Утро ───────────
 export function MorningScreen({ view }: { view: MafiaView }) {
@@ -64,15 +69,21 @@ export function MorningScreen({ view }: { view: MafiaView }) {
 }
 
 // ─────────── Обсуждение ───────────
+//
+// Сетка та же, что в голосовании, только карточки не нажимаются: экран, на
+// котором говорят вслух, и экран, на котором выбирают, должны выглядеть одним
+// столом. Погибшие остаются на своих местах приглушёнными — разговор идёт и
+// про них тоже.
 export function DiscussionScreen({
   view,
-  isHost,
-  onEnd,
+  onSkip,
 }: {
   view: MafiaView;
-  isHost: boolean;
-  onEnd: () => void;
+  /** «Пропустить обсуждение» — переключатель, общий для всех живых. */
+  onSkip: () => void;
 }) {
+  const skip = view.discussionSkip;
+  const mates = new Set(view.you.partnerIds ?? []);
   return (
     <>
       <PhaseHead
@@ -87,50 +98,49 @@ export function DiscussionScreen({
             : "Говорите голосом — телефон подождёт"}
         </div>
       </div>
-      <div style={{ padding: "14px 20px 0", flex: 1, display: "flex", flexDirection: "column", gap: 7, minHeight: 0, overflowY: "auto" }}>
+
+      <PlayerGrid count={view.players.length}>
         {view.players.map((p) => (
-          <div
+          <PlayerCard
             key={p.userId}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              background: "var(--mf-surface)",
-              border: "1px solid var(--mf-border)",
-              borderRadius: 14,
-              padding: "8px 12px",
-              opacity: p.alive ? 1 : 0.5,
-            }}
-          >
-            <MafiaAvatar
-              name={p.displayName}
-              idx={p.avatarIdx}
-              size={34}
-              dead={!p.alive}
-              offline={!p.online}
-            />
-            <span style={{ fontWeight: 700, fontSize: 14.5, flex: 1, textDecoration: p.alive ? "none" : "line-through", color: p.alive ? "var(--mf-text)" : "var(--mf-text-faint)" }}>
-              {p.displayName}
-            </span>
-            {p.alive && !p.online ? (
-              <span className="mf-player-offline">не в сети</span>
-            ) : null}
-            {!p.alive && p.role ? <RoleChip role={p.role} /> : null}
-          </div>
+            name={p.displayName}
+            avatarIdx={p.avatarIdx}
+            me={p.userId === view.you.userId}
+            dead={!p.alive}
+            offline={!p.online}
+            disabled
+            subline={
+              !p.alive && p.role ? (
+                <span style={{ color: "var(--mf-text-faint)" }}>{ROLE_LABEL[p.role]}</span>
+              ) : mates.has(p.userId) ? (
+                <span style={{ color: "var(--mf-crimson)" }}>напарник</span>
+              ) : undefined
+            }
+          />
         ))}
-      </div>
+      </PlayerGrid>
+
       <div style={{ padding: "12px 20px 22px" }}>
-        {isHost ? (
-          <button type="button" className="mf-btn mf-btn-crimson" style={{ width: "100%" }} onClick={onEnd}>
-            Завершить обсуждение
+        {/* Обсуждение кончают все вместе. Прежде это была кнопка хоста — и
+            стол вставал до таймера, стоило хосту погибнуть или пропасть. */}
+        {view.you.alive && !view.you.isSpectator && skip ? (
+          <button
+            type="button"
+            className="mf-btn mf-btn-ghost mf-skip-vote"
+            data-mine={skip.mine ? "" : undefined}
+            onClick={onSkip}
+          >
+            <span>Пропустить обсуждение</span>
+            <span className="mf-mono mf-skip-count" data-lead={skip.count >= skip.total ? "" : undefined}>
+              {skip.count}/{skip.total}
+            </span>
           </button>
         ) : (
           <div className="mf-mono" style={{ textAlign: "center", fontSize: 13, color: "var(--mf-text-faint)", fontWeight: 700 }}>
-            хост может завершить раньше
+            {skip ? `пропустить готовы ${skip.count} из ${skip.total}` : ""}
           </div>
         )}
       </div>
-
     </>
   );
 }
@@ -151,6 +161,9 @@ export function VoteScreen({
   const tally = vote?.tally;
   const max = tally ? Math.max(0, ...Object.values(tally)) : 0;
   const skipVotes = tally?.[SKIP_VOTE] ?? 0;
+  // Своих мафия видит и днём: ночью подпись есть, а днём её не было, хотя
+  // знание то же самое и утекать ему некуда — вид собирается на каждый сокет.
+  const mates = new Set(you.partnerIds ?? []);
 
   return (
     <>
@@ -160,7 +173,7 @@ export function VoteScreen({
           {round2 ? "Голоса разделились" : "Кто мафия?"}
         </div>
         <div style={{ fontSize: 14, fontWeight: 600, color: "var(--mf-text-dim)", marginTop: 4 }}>
-          {round2 ? "Выбирайте между лидерами" : "Голос можно менять, пока идёт таймер"}
+          {round2 ? "Голосовать можно только за них" : "Голос можно менять, пока идёт таймер"}
         </div>
       </div>
       <PlayerGrid count={alive.length}>
@@ -210,6 +223,11 @@ export function VoteScreen({
                   </ChoiceChip>
                 ) : undefined
               }
+              subline={
+                mates.has(p.userId) ? (
+                  <span style={{ color: "var(--mf-crimson)" }}>напарник</span>
+                ) : undefined
+              }
             />
           );
         })}
@@ -222,9 +240,9 @@ export function VoteScreen({
             data-mine={you.voted === SKIP_VOTE ? "" : undefined}
             onClick={() => onVote(you.voted === SKIP_VOTE ? null : SKIP_VOTE)}
           >
-            <span>
-              {you.voted === SKIP_VOTE ? "Голос за «никого»" : "Никого не изгонять"}
-            </span>
+            {/* Текст постоянный: подпись, скачущая под пальцем, читается как
+                другая кнопка. Что голос твой, видно по подсветке и счётчику. */}
+            <span>Никого не изгонять</span>
             {/* Голоса за скип видны так же, как за игроков: иначе город не
                 понимает, набирается ли большинство. */}
             {skipVotes > 0 && (

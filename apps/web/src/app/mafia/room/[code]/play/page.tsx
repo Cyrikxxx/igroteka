@@ -300,8 +300,7 @@ export default function MafiaPlayPage() {
         <MafiaShell>
           <DiscussionScreen
             view={view}
-            isHost={view.you.isHost}
-            onEnd={() => emit("mafia:end_discussion", {}, () => {})}
+            onSkip={() => emit("mafia:skip_discussion", {}, () => {})}
           />
         </MafiaShell>
       );
