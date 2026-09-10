@@ -19,7 +19,7 @@
 import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
 import type { MafiaView } from "@alias/shared/mafia";
-import { MAX_MAFIA_PLAYERS } from "@alias/shared/mafia";
+import { MAX_MAFIA_PLAYERS, SKIP_VOTE } from "@alias/shared/mafia";
 
 const WEB = process.env.SMOKE_WEB ?? "http://localhost:3000";
 const WS = process.env.SMOKE_WS ?? process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001";
@@ -114,7 +114,7 @@ class Bot {
   private async react(): Promise<void> {
     const v = this.view;
     if (!v) return;
-    const stamp = `${v.phase}:${v.day}`;
+    const stamp = `${v.phase}:${v.day}:${v.vote?.round ?? 0}`;
     if (this.done === stamp) return;
 
     const me = v.you;
@@ -144,10 +144,35 @@ class Bot {
       return;
     }
 
+    if (v.phase === "DISCUSSION") {
+      this.done = stamp;
+      // Вразнобой, а не разом: иначе счётчик прыгает сразу на полный и
+      // посмотреть, как он набирается, не получится.
+      await sleep(3000 + Math.random() * 9000);
+      if (this.view?.phase !== "DISCUSSION") return;
+      this.sock.emit("mafia:skip_discussion", {}, () => {});
+      return;
+    }
+
     if (v.phase === "VOTE") {
       this.done = stamp;
       await sleep(800 + Math.random() * 3000);
-      const target = pick(others);
+      // Во втором туре голосовать можно только за спорных — за остальных
+      // сервер отвечает `not_candidate`, и голос молча пропадал. Плюс сам
+      // второй тур раньше проходил мимо ботов: метка фазы не различала туры,
+      // и проголосовавший в первом считал, что уже отработал.
+      const round2 = v.vote?.round === 2;
+      const pool = round2
+        ? others.filter((p) => (v.vote?.leaders ?? []).includes(p.userId))
+        : others;
+      // Иногда «никого не изгонять» — вариант такой же законный, и без него
+      // эту кнопку в деле не увидеть.
+      const skipAllowed = v.settings.rules.allowSkipVote;
+      if (skipAllowed && (pool.length === 0 || Math.random() < 0.2)) {
+        this.sock.emit("mafia:vote", { targetId: SKIP_VOTE }, () => {});
+        return;
+      }
+      const target = pick(pool);
       if (target) this.sock.emit("mafia:vote", { targetId: target.userId }, () => {});
       return;
     }
