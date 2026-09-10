@@ -339,7 +339,11 @@ export default function LocalRoundPage() {
             <div className="game-turn">
               <Avatar name={player.name} color={colorVar} size={40} />
               <div>
-                <span className="gt-name">Твой ход</span>
+                {/* Имя, а не «твой ход»: на одном устройстве телефон ходит
+                    по кругу, и подтверждение, кто сейчас объясняет, нужно
+                    прямо во время раунда — экран передачи хода к этому
+                    моменту уже закрыт. */}
+                <span className="gt-name">Объясняет {player.name}</span>
                 <span className="gt-team mono">
                   {trio
                     ? `Угадывает ${guesser?.name ?? "?"} · круг ${game.currentRoundNumber}`
