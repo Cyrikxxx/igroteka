@@ -28,9 +28,12 @@ export async function DELETE(_request: NextRequest, { params }: Ctx) {
 
     const room = await prisma.room.findUnique({
       where: { code },
-      select: { id: true, hostId: true },
+      select: { id: true, hostId: true, platform: true },
     });
-    if (!room) {
+    // Комната чужой игры — для этого роута её не существует: снимок Мафии
+    // лежит в своём пространстве ключей, и удалить его отсюда всё равно не
+    // вышло бы — комната осталась бы живой в Redis и мёртвой в Postgres.
+    if (!room || room.platform !== "ALIAS") {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
     if (room.hostId !== userId) {

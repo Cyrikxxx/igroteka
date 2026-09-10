@@ -23,7 +23,8 @@
     "smoke:mafia": "tsx scripts/smoke-mafia.ts",
     "smoke:vote": "tsx scripts/smoke-vote.ts",
     "smoke:narrator": "tsx scripts/smoke-narrator.ts",
-    "smoke:history": "tsx scripts/smoke-history.ts"
+    "smoke:history": "tsx scripts/smoke-history.ts",
+    "smoke:cross-game": "tsx scripts/smoke-cross-game.ts"
   },
   "dependencies": {
     "@alias/shared": "*",

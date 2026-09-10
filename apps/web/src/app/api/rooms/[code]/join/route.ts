@@ -41,6 +41,7 @@ export async function POST(request: NextRequest, { params }: Ctx) {
         code: true,
         title: true,
         status: true,
+        platform: true,
         hostId: true,
         roundTime: true,
         winScore: true,
@@ -49,7 +50,12 @@ export async function POST(request: NextRequest, { params }: Ctx) {
         _count: { select: { participants: true } },
       },
     });
-    if (!room) {
+    // Комната чужой игры — для этого входа её просто не существует. Проверка
+    // обязана стоять до поиска снимка: снимки Мафии лежат в своём
+    // пространстве ключей, здесь бы их не нашли, комнату сочли бы брошенной и
+    // закрыли — то есть код живой партии Мафии, набранный в форме Алиаса,
+    // выкидывал из неё всех разом.
+    if (!room || room.platform !== "ALIAS") {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
     if (room.status === "FINISHED") {
