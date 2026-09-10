@@ -8,6 +8,7 @@ import {
   allNightActorsDone,
   allVoted,
   applyEnterNight,
+  overrunSurvivors,
 } from "../src/games/mafia/engine-core";
 import { player, snapshot } from "./fixtures";
 import { SKIP_VOTE, DEFAULT_MAFIA_SETTINGS } from "@alias/shared/mafia";
@@ -289,5 +290,46 @@ describe("готовность фазы", () => {
     expect(allVoted(s)).toBe(false);
     s.vote.votes.b = "a";
     expect(allVoted(s)).toBe(true);
+  });
+});
+
+describe("город захвачен", () => {
+  // Мафия побеждает паритетом, а не тем, что убила всех. Без этого на финале
+  // человек, оставшийся один на один с мафией, значился «выжил».
+  it("выбывают все, кроме мафии", () => {
+    const s = snapshot(
+      [
+        player("don", "don"),
+        player("maf", "mafia"),
+        player("civ", "civilian"),
+        player("doc", "doctor"),
+      ],
+      { day: 3 },
+    );
+    overrunSurvivors(s);
+    const byId = Object.fromEntries(s.players.map((p) => [p.userId, p]));
+    expect(byId.civ!.alive).toBe(false);
+    expect(byId.civ!.eliminatedBy).toBe("overrun");
+    expect(byId.civ!.deathDay).toBe(3);
+    expect(byId.doc!.alive).toBe(false);
+    expect(byId.don!.alive).toBe(true);
+    expect(byId.maf!.alive).toBe(true);
+  });
+
+  it("маньяк тоже проиграл", () => {
+    const s = snapshot([player("maf", "mafia"), player("man", "maniac")]);
+    overrunSurvivors(s);
+    expect(s.players.find((p) => p.userId === "man")!.alive).toBe(false);
+  });
+
+  it("уже погибшим причину смерти не переписывает", () => {
+    const s = snapshot([
+      player("maf", "mafia"),
+      player("civ", "civilian", { alive: false, eliminatedBy: "vote", deathDay: 1 }),
+    ]);
+    overrunSurvivors(s);
+    const civ = s.players.find((p) => p.userId === "civ")!;
+    expect(civ.eliminatedBy).toBe("vote");
+    expect(civ.deathDay).toBe(1);
   });
 });

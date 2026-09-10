@@ -27,6 +27,7 @@ import {
   allNightActorsDone,
   allVoted,
   logEvent,
+  overrunSurvivors,
   buildNightPlan,
   nightStepDone,
   nightStepActMs,
@@ -314,6 +315,11 @@ export async function finishGame(
     s.timerEndsAt = undefined;
     s.timerPaused = false;
     s.timerRemainingMs = undefined;
+    // Мафия побеждает паритетом, а не тем, что убила всех: город сдаётся,
+    // когда мафии столько же, сколько остальных. Оставшиеся мирные никуда не
+    // денутся — поэтому и они выбывают. Иначе на финальном экране человек,
+    // оставшийся один на один с мафией, значился «выжил».
+    if (winner === "mafia") overrunSurvivors(s);
     logEvent(s, { kind: "game_over", winner });
   });
   if (!snap) return;

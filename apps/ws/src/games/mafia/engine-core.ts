@@ -123,6 +123,24 @@ export function decideMafiaTarget(
   return leaders[Math.floor(rand() * leaders.length)];
 }
 
+/**
+ * Город захвачен: партия кончилась паритетом, и всем, кто не в мафии, дожить
+ * до утра уже не дадут.
+ *
+ * Мафия побеждает не тем, что убила всех, а тем, что её стало не меньше
+ * остальных. Поэтому на финальном экране человек, оставшийся один на один с
+ * мафией, значился «выжил» — что читалось издёвкой.
+ */
+export function overrunSurvivors(s: MafiaSnapshot): void {
+  for (const p of s.players) {
+    if (!p.alive) continue;
+    if (p.role === "mafia" || p.role === "don") continue;
+    p.alive = false;
+    p.eliminatedBy = "overrun";
+    p.deathDay = s.day;
+  }
+}
+
 /** Разыгрывает ночь: лечение отменяет убийство той же цели. */
 export function resolveNight(s: MafiaSnapshot): void {
   const saved = s.night.doctorTarget;

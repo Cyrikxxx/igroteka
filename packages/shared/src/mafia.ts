@@ -40,7 +40,15 @@ export type MafiaPhase =
 export type MafiaWinner = "city" | "mafia" | "maniac";
 
 /** Кто/что вывело игрока из игры. `left` — вышел сам или отвалился навсегда. */
-export type MafiaDeathCause = "mafia" | "maniac" | "vote" | "left";
+/**
+ * Отчего игрок выбыл.
+ *
+ * `overrun` — город захвачен: партия кончилась паритетом, и оставшиеся мирные
+ * дожили только до финального экрана. Формально их никто не убивал, но
+ * «выжил» про человека, оставшегося один на один с мафией, читается как
+ * издёвка.
+ */
+export type MafiaDeathCause = "mafia" | "maniac" | "vote" | "left" | "overrun";
 
 /** Ночные действия, которые шлёт клиент. */
 export type MafiaNightAction = "mafia" | "doctor" | "sheriff" | "maniac";

@@ -10,13 +10,13 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, RotateCcw, Shield, Skull, VenetianMask } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { MafiaDeathCause } from "@alias/shared/mafia";
 import type { MafiaResultGame } from "@/app/api/mafia/games/[id]/route";
 import MafiaShell from "@/components/mafia/MafiaShell";
 import MafiaAvatar from "@/components/mafia/MafiaAvatar";
 import { RoleChip } from "@/components/mafia/roleMeta";
 import { Chronicle } from "@/components/mafia/Chronicle";
 import { createMafiaRoomLike } from "@/lib/rematch";
+import { fateText } from "@/lib/mafia-fate";
 
 const WIN_META: Record<
   "CITY" | "MAFIA" | "MANIAC",
@@ -26,15 +26,6 @@ const WIN_META: Record<
   MAFIA: { title: "Победа мафии", color: "var(--mf-crimson)", Icon: VenetianMask },
   MANIAC: { title: "Победа маньяка", color: "var(--role-maniac)", Icon: Skull },
 };
-
-/** Судьба игрока одной строкой — как на финальном экране в комнате. */
-function fate(by: MafiaDeathCause | null, day: number | null): string {
-  if (!by) return "выжил";
-  if (by === "mafia") return `убит ночью ${day ?? ""}`.trim();
-  if (by === "maniac") return `убит маньяком (ночь ${day ?? ""})`.trim();
-  if (by === "left") return "вышел из партии";
-  return `изгнан городом (день ${day ?? ""})`.trim();
-}
 
 export default function MafiaResultsPage() {
   const params = useParams();
@@ -138,7 +129,7 @@ export default function MafiaResultsPage() {
                   {p.you ? <span style={{ color: "var(--mf-text-faint)", fontWeight: 600 }}> · ты</span> : null}
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "var(--mf-text-faint)" }}>
-                  {fate(p.eliminatedBy, p.deathDay)}
+                  {fateText(p.eliminatedBy, p.deathDay)}
                 </div>
               </div>
               <RoleChip role={p.role} />

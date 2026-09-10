@@ -4,7 +4,8 @@
 
 import { VenetianMask, Skull, Shield, Home, RotateCcw } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { MafiaView, MafiaWinner, MafiaDeathCause } from "@alias/shared/mafia";
+import type { MafiaView, MafiaWinner } from "@alias/shared/mafia";
+import { fateText } from "@/lib/mafia-fate";
 import MafiaAvatar from "./MafiaAvatar";
 import { RoleChip } from "./roleMeta";
 import { Chronicle } from "./Chronicle";
@@ -14,13 +15,6 @@ const WIN_META: Record<MafiaWinner, { title: string; color: string; Icon: Lucide
   mafia: { title: "Победа мафии", color: "var(--mf-crimson)", Icon: VenetianMask },
   maniac: { title: "Победа маньяка", color: "var(--role-maniac)", Icon: Skull },
 };
-
-function fate(by?: MafiaDeathCause, day?: number): string {
-  if (!by) return "выжил";
-  if (by === "mafia") return `убит ночью ${day ?? ""}`.trim();
-  if (by === "maniac") return `убит маньяком (ночь ${day ?? ""})`.trim();
-  return `изгнан городом (день ${day ?? ""})`.trim();
-}
 
 export default function FinaleScreen({
   view,
@@ -85,7 +79,7 @@ export default function FinaleScreen({
             <MafiaAvatar name={p.displayName} idx={p.avatarIdx} size={36} dead={!p.alive} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 14.5 }}>{p.displayName}</div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--mf-text-faint)" }}>{fate(p.eliminatedBy, p.deathDay)}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--mf-text-faint)" }}>{fateText(p.eliminatedBy, p.deathDay)}</div>
             </div>
             {p.role ? <RoleChip role={p.role} /> : null}
           </div>
