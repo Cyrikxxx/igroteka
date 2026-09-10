@@ -24,7 +24,7 @@ describe("decideMafiaTarget", () => {
     expect(decideMafiaTarget(s)).toBe("civ");
   });
 
-  it("голос дона решает при разногласии", () => {
+  it("большинство сильнее дона", () => {
     const s = snapshot([
       player("don", "don"),
       player("m1", "mafia"),
@@ -32,9 +32,79 @@ describe("decideMafiaTarget", () => {
       player("civ", "civilian"),
       player("civ2", "civilian"),
     ]);
-    // Двое рядовых против одного дона — и всё равно решает дон.
+    // Двое рядовых против одного дона: раньше побеждал дон, и голоса
+    // напарников не значили ничего.
     s.night.mafiaVotes = { m1: "civ2", m2: "civ2", don: "civ" };
-    expect(decideMafiaTarget(s)).toBe("civ");
+    expect(decideMafiaTarget(s)).toBe("civ2");
+  });
+
+  it("дон решает ничью", () => {
+    const s = snapshot([
+      player("don", "don"),
+      player("m1", "mafia"),
+      player("civ", "civilian"),
+      player("civ2", "civilian"),
+    ]);
+    // 1:1 — ровно тот случай, ради которого дон и нужен.
+    s.night.mafiaVotes = { don: "civ", m1: "civ2" };
+    expect(decideMafiaTarget(s, () => 0.99)).toBe("civ");
+  });
+
+  it("ничью без дона решает жребий", () => {
+    const s = snapshot([
+      player("m1", "mafia"),
+      player("m2", "mafia"),
+      player("civ", "civilian"),
+      player("civ2", "civilian"),
+    ]);
+    s.night.mafiaVotes = { m1: "civ", m2: "civ2" };
+    // Жребий проверяемый: rand выбирает индекс среди спорных.
+    const leaders = ["civ", "civ2"];
+    expect(leaders).toContain(decideMafiaTarget(s, () => 0));
+    expect(decideMafiaTarget(s, () => 0)).not.toBe(decideMafiaTarget(s, () => 0.99));
+  });
+
+  it("трое врозь — тоже жребий", () => {
+    const s = snapshot([
+      player("m1", "mafia"),
+      player("m2", "mafia"),
+      player("m3", "mafia"),
+      player("a", "civilian"),
+      player("b", "civilian"),
+      player("c", "civilian"),
+    ]);
+    s.night.mafiaVotes = { m1: "a", m2: "b", m3: "c" };
+    expect(["a", "b", "c"]).toContain(decideMafiaTarget(s, () => 0.5));
+  });
+
+  it("выбывший дон ничью не решает", () => {
+    const s = snapshot([
+      player("don", "don", { alive: false }),
+      player("m1", "mafia"),
+      player("m2", "mafia"),
+      player("civ", "civilian"),
+      player("civ2", "civilian"),
+    ]);
+    // Голос мёртвого дона в снапшоте остаться может — учитывать его нельзя.
+    s.night.mafiaVotes = { don: "civ", m1: "civ", m2: "civ2" };
+    expect(decideMafiaTarget(s, () => 0)).toBe("civ");
+    expect(decideMafiaTarget(s, () => 0.99)).toBe("civ2");
+  });
+
+  it("дон, оставшийся в меньшинстве, ничью не решает", () => {
+    const s = snapshot([
+      player("don", "don"),
+      player("m1", "mafia"),
+      player("m2", "mafia"),
+      player("m3", "mafia"),
+      player("m4", "mafia"),
+      player("a", "civilian"),
+      player("b", "civilian"),
+      player("c", "civilian"),
+    ]);
+    // Спорят b и c по два голоса, дон один за a — его цель не в споре.
+    s.night.mafiaVotes = { don: "a", m1: "b", m2: "b", m3: "c", m4: "c" };
+    expect(["b", "c"]).toContain(decideMafiaTarget(s, () => 0.75));
   });
 
   it("игнорирует голоса не-мафии", () => {

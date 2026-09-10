@@ -79,30 +79,48 @@ export function eliminateLeaver(s: MafiaSnapshot, userId: string): void {
   if (me.role === "maniac") s.night.maniacTarget = undefined;
 }
 
-/** Решение мафии о жертве: голос дона решающий, иначе большинство. */
-export function decideMafiaTarget(s: MafiaSnapshot): string | undefined {
+/**
+ * Решение мафии о жертве.
+ *
+ * Правило одно на любое число мафий: **побеждает большинство**. Дон не
+ * начальник, а разрешитель споров — он вступает, только когда голоса
+ * разделились поровну, и только если его собственный голос среди спорных.
+ * Выбыл дон, промолчал или его цель никто больше не поддержал — ничью решает
+ * жребий.
+ *
+ * Раньше голос дона забирал ночь целиком: двое проголосовали за одного, дон
+ * за другого — убивали того, кого назвал дон, и голоса напарников не значили
+ * ничего. А ничью без дона молча выигрывал тот, за кого проголосовали первым,
+ * — со стороны это выглядело случайным, но случайным не было.
+ *
+ * `rand` вынесен параметром ради тестов: жребий должен быть проверяемым.
+ */
+export function decideMafiaTarget(
+  s: MafiaSnapshot,
+  rand: () => number = Math.random,
+): string | undefined {
   const mafiaIds = new Set(
     s.players
       .filter((p) => p.alive && (p.role === "mafia" || p.role === "don"))
       .map((p) => p.userId),
   );
-  const don = s.players.find((p) => p.alive && p.role === "don");
-  if (don && s.night.mafiaVotes[don.userId]) return s.night.mafiaVotes[don.userId];
 
   const counts: Record<string, number> = {};
   for (const [voter, target] of Object.entries(s.night.mafiaVotes)) {
     if (!mafiaIds.has(voter)) continue;
     counts[target] = (counts[target] ?? 0) + 1;
   }
-  let best: string | undefined;
-  let bestN = 0;
-  for (const [target, c] of Object.entries(counts)) {
-    if (c > bestN) {
-      bestN = c;
-      best = target;
-    }
-  }
-  return best;
+
+  const best = Math.max(0, ...Object.values(counts));
+  if (best === 0) return undefined;
+  const leaders = Object.keys(counts).filter((t) => counts[t] === best);
+  if (leaders.length === 1) return leaders[0];
+
+  const don = s.players.find((p) => p.alive && p.role === "don");
+  const donVote = don ? s.night.mafiaVotes[don.userId] : undefined;
+  if (donVote && leaders.includes(donVote)) return donVote;
+
+  return leaders[Math.floor(rand() * leaders.length)];
 }
 
 /** Разыгрывает ночь: лечение отменяет убийство той же цели. */
