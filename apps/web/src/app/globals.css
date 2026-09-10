@@ -1038,6 +1038,9 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .game-top .icon-btn { width: clamp(46px, 3.4vw, 56px); }
   .game-top .icon-btn svg { width: 23px; height: 23px; }
   .game-top .pill { padding: 9px 15px; font-size: clamp(12px, 0.85vw, 13.5px); }
+  /* Держит заголовок хода по центру: справа теперь ничего нет — меню
+     фиксировано в углу экрана и в поток шапки не входит. */
+  .game-top-spacer { width: clamp(46px, 3.4vw, 56px); flex: none; }
   .game-turn { display: flex; align-items: center; gap: 14px; }
   .game-turn .gt-name { display: block; font-weight: 800; font-size: clamp(16px, 1.3vw, 22px); letter-spacing: -0.01em; }
   .game-turn .gt-team { display: block; font-size: clamp(12px, 0.95vw, 14px); color: var(--fg-2); margin-top: 2px; }
@@ -1291,9 +1294,12 @@ html { scrollbar-color: var(--bg-4) transparent; }
   @media (min-width: 1700px) { .mf-frame:not(.mf-frame-wide) { --mf-zoom: 1.4; } }
 
   /* Кнопка «никого не изгонять»: голоса за неё видно так же, как за игрока. */
-  .mf-skip-vote { justify-content: space-between; gap: 12px; }
+  /* Подпись по центру, счётчик поверх у правого края: при space-between
+     подпись прижималась влево и ездила туда-сюда вместе с шириной счётчика. */
+  .mf-skip-vote { position: relative; justify-content: center; gap: 12px; }
   .mf-skip-vote[data-mine] { border-color: color-mix(in srgb, var(--mf-crimson) 55%, transparent); color: var(--mf-text); }
   .mf-skip-count {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
     min-width: 30px; padding: 2px 8px; border-radius: 999px;
     background: var(--mf-surface-2, rgba(255,255,255,0.07));
     font-size: 14px; font-weight: 800; color: var(--mf-text-dim);
@@ -1422,35 +1428,38 @@ html { scrollbar-color: var(--bg-4) transparent; }
     border: 1px solid transparent;
   }
 
-  /* Служебное меню игрового экрана: один вход в углу, панель раскрывается
-     вверх. Слева, чтобы не спорить с кнопкой озвучки справа. */
-  .mf-menu { position: fixed; left: 16px; bottom: 16px; z-index: 70; }
-  .mf-menu-btn {
+  /* Служебное меню игрового экрана — общее для Мафии и онлайн-Алиаса.
+     Правый верхний угол: в Алиасе на одном устройстве кнопка паузы всегда
+     была там. Внизу слева меню вдобавок перекрывал служебный значок Next в
+     режиме разработки, и вход в него было просто не найти. */
+  .gm { position: fixed; right: 16px; top: 16px; z-index: 70; }
+  .gm-btn {
     width: 44px; height: 44px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     background: var(--mf-surface-2); border: 1px solid var(--mf-border);
     color: var(--mf-text-dim); cursor: pointer;
   }
-  /* Хост пропал, а человек в меню не заглядывает — подсвечиваем вход. */
-  .mf-menu-btn[data-alert] { border-color: var(--mf-gold); color: var(--mf-gold); }
-  .mf-menu-sheet {
-    position: absolute; bottom: 52px; left: 0; min-width: 244px;
+  /* Внутри есть то, чего человек ждёт (например, брошенная комната), а он
+     в меню не заглядывает — подсвечиваем вход. */
+  .gm-btn[data-alert] { border-color: var(--mf-gold); color: var(--mf-gold); }
+  .gm-sheet {
+    position: absolute; top: 52px; right: 0; min-width: 244px;
     display: flex; flex-direction: column; gap: 2px; padding: 6px;
     background: var(--mf-surface-2); border: 1px solid var(--mf-border);
     border-radius: 16px; box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
   }
-  .mf-menu-item {
+  .gm-item {
     display: flex; align-items: center; gap: 11px; width: 100%;
     padding: 10px 12px; border: none; border-radius: 11px;
     background: none; color: var(--mf-text); cursor: pointer; text-align: left;
     font-family: var(--font-main);
   }
-  .mf-menu-item:hover { background: rgba(255, 255, 255, 0.06); }
-  .mf-menu-item[data-danger] { color: var(--mf-crimson); }
-  .mf-menu-item-text { display: flex; flex-direction: column; gap: 1px; }
-  .mf-menu-item-label { font-weight: 800; font-size: 14.5px; }
-  .mf-menu-item-hint { font-weight: 600; font-size: 12px; color: var(--mf-text-faint); }
-  .mf-menu-note {
+  .gm-item:hover { background: rgba(255, 255, 255, 0.06); }
+  .gm-item[data-danger] { color: var(--mf-crimson); }
+  .gm-item-text { display: flex; flex-direction: column; gap: 1px; }
+  .gm-item-label { font-weight: 800; font-size: 14.5px; }
+  .gm-item-hint { font-weight: 600; font-size: 12px; color: var(--mf-text-faint); }
+  .gm-note {
     padding: 9px 12px; font-weight: 700; font-size: 12.5px;
     color: var(--mf-text-faint); line-height: 1.4;
   }

@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Check, Clock, DoorClosed, EyeOff, LogOut, Pause, Play, RefreshCw, SkipForward, Users, X } from "lucide-react";
+import { ArrowLeft, Check, Clock, Crown, DoorClosed, EyeOff, Flag, LogOut, Mic, Pause, Play, RefreshCw, SkipForward, StopCircle, Users, X } from "lucide-react";
 import { nextExplainerFor } from "@alias/shared/snapshot-builders";
 import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
 import { resumeRoom } from "@/lib/room-resume";
@@ -21,6 +21,7 @@ import Modal from "@/components/common/Modal";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import TimerRing from "@/components/alias/game/TimerRing";
 import VictoryView from "@/components/alias/game/VictoryView";
+import GameMenu, { type GameMenuItem } from "@/components/common/GameMenu";
 import type { GameFromAPI } from "@/types";
 
 interface Creds {
@@ -274,6 +275,65 @@ export default function PlayPage() {
       }
     });
 
+  // Служебное меню партии — одно на все экраны, как в Мафии. Раньше рычаги
+  // были рассыпаны по фазам: «завершить игру» жила в шапке хода и полосой на
+  // итогах раунда, «оборвать раунд» пряталась внутри паузы, а на экране
+  // «следующий ход» не было ничего — партия, ждущая того, кто не вернётся,
+  // останавливалась именно там, и оборвать её было нечем.
+  // На итогах партии меню пустое: обрывать больше нечего, а «сыграть ещё» и
+  // «закрыть комнату» стоят прямо на экране.
+  const inGame = snapshot.phase !== "LOBBY" && snapshot.phase !== "FINISHED";
+  const menuItems: GameMenuItem[] = [];
+  if (inGame && role === "explainer" && snapshot.phase === "ROUND_ACTIVE") {
+    if (paused) {
+      menuItems.push({ icon: Play, label: "Продолжить раунд", onClick: onResume });
+    } else {
+      menuItems.push({ icon: Pause, label: "Поставить на паузу", onClick: onPause });
+    }
+    menuItems.push({
+      icon: StopCircle,
+      label: "Закончить раунд",
+      hint: "Слова засчитаются как есть",
+      onClick: onEndRequest,
+    });
+  }
+  if (inGame && claim.canClaim) {
+    menuItems.push({
+      icon: Crown,
+      label: "Взять комнату",
+      hint: "Хоста нет в сети",
+      onClick: claimHost,
+    });
+  }
+  if (inGame && isRoomHost) {
+    menuItems.push({
+      icon: Flag,
+      label: "Завершить игру",
+      hint: "Партия закончится с текущим счётом",
+      onClick: () => setEndGameAsk(true),
+    });
+  }
+  if (inGame && canLeaveMidGame) {
+    menuItems.push({
+      icon: LogOut,
+      label: "Выйти из комнаты",
+      hint: "Вернуться можно по тому же коду",
+      danger: true,
+      onClick: onLeave,
+    });
+  }
+  const gameMenu = !inGame ? null : (
+    <GameMenu
+      items={menuItems}
+      note={
+        claim.hostGone && !claim.canClaim
+          ? `Хоста нет в сети. Взять комнату можно через ${claim.secondsLeft} с.`
+          : undefined
+      }
+      alert={claim.hostGone && !isRoomHost}
+    />
+  );
+
   const claimBanner = claim.hostGone ? (
     <div className="notice notice-warn room-claim" style={{ margin: "0 0 12px" }}>
       <span style={{ flex: 1 }}>
@@ -289,26 +349,27 @@ export default function PlayPage() {
     </div>
   ) : null;
 
-  const hostEndGameBar = !isRoomHost ? null : nextExplainerOffline ? (
-    <div className="notice notice-warn room-claim">
-      <span style={{ flex: 1 }}>
-        {nextUp?.player.displayName ?? "Следующий игрок"} не в сети — ход передать некому.
-        Можно подождать его или завершить игру.
-      </span>
-      <button type="button" className="btn btn-danger btn-sm" onClick={() => setEndGameAsk(true)}>
-        Завершить игру
-      </button>
-    </div>
-  ) : (
-    <div className="room-claim" style={{ justifyContent: "flex-end" }}>
-      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEndGameAsk(true)}>
-        <DoorClosed size={15} /> Завершить игру
-      </button>
-    </div>
-  );
+  // Полоса осталась только предупреждением: голая кнопка «Завершить игру»
+  // ушла в меню, а вот объяснить, почему партия встала, кнопка в углу не
+  // может — тут нужен текст на самом экране.
+  const hostEndGameBar =
+    isRoomHost && nextExplainerOffline ? (
+      <div className="notice notice-warn room-claim">
+        <span style={{ flex: 1 }}>
+          {nextUp?.player.displayName ?? "Следующий игрок"} не в сети — ход передать некому.
+          Можно подождать его или завершить игру.
+        </span>
+        <button type="button" className="btn btn-danger btn-sm" onClick={() => setEndGameAsk(true)}>
+          Завершить игру
+        </button>
+      </div>
+    ) : null;
 
   const modals = (
     <>
+      {/* Меню фиксировано в углу, поэтому едет вместе с модалками — их и так
+          рисуют все фазы, и второго места для него не нужно. */}
+      {gameMenu}
       <ConfirmDialog
         open={leaveAsk}
         title="Выйти из комнаты?"
@@ -419,9 +480,6 @@ export default function PlayPage() {
                 teamName={teamName}
                 teamColor={teamColor}
                 roundNumber={snapshot.currentRoundNumber}
-                onLeave={canLeaveMidGame ? onLeave : null}
-                onEndGame={isRoomHost ? () => setEndGameAsk(true) : null}
-                onPause={onPause}
               />
 
               {/* Объясняющий пропал: раунд стоит, время не горит. Ждём его —
@@ -676,9 +734,6 @@ function GameTop({
   teamName,
   teamColor,
   roundNumber,
-  onLeave,
-  onEndGame,
-  onPause,
 }: {
   role: Role;
   trio: boolean;
@@ -687,28 +742,27 @@ function GameTop({
   teamName: string;
   teamColor: string;
   roundNumber: number;
-  /** Есть только у зрителя: игрок команды посреди партии не выходит. */
-  onLeave: (() => void) | null;
-  /** Есть только у хоста: оборвать партию, если ждать больше нечего. */
-  onEndGame: (() => void) | null;
-  onPause: () => void;
 }) {
   return (
     <div className="game-top">
-      {/* Выйти посреди партии может только зритель — состав команд заморожен,
-          иначе ломается очередь объясняющих. У хоста вместо выхода рычаг
-          «Завершить игру», у остальных тут пусто. */}
-      {onLeave ? (
-        <button type="button" className="back-link" onClick={onLeave}>
-          <LogOut /> Выйти
-        </button>
-      ) : onEndGame ? (
-        <button type="button" className="back-link" onClick={onEndGame}>
-          <DoorClosed /> Завершить игру
-        </button>
-      ) : (
-        <span />
-      )}
+      {/* Слева — кто ты в этом раунде. Выход, пауза и завершение партии
+          переехали в меню в правом верхнем углу: рычаги, нужные раз за игру,
+          не должны занимать место в шапке хода. */}
+      <span className={"pill pill-mono" + (role === "spectator" ? "" : " pill-accent")}>
+        {role === "spectator" ? (
+          <>
+            <EyeOff size={13} /> зритель
+          </>
+        ) : role === "explainer" ? (
+          <>
+            <Mic size={13} /> объясняешь
+          </>
+        ) : (
+          <>
+            <Users size={13} /> угадываешь
+          </>
+        )}
+      </span>
       <div className="game-turn">
         <Avatar name={explainerName} color={teamColor} size={40} online={role !== "explainer"} />
         <div>
@@ -724,23 +778,9 @@ function GameTop({
           </span>
         </div>
       </div>
-      {role === "explainer" ? (
-        <button type="button" className="icon-btn" onClick={onPause} aria-label="Пауза">
-          <Pause />
-        </button>
-      ) : (
-        <span className={"pill pill-mono" + (role === "spectator" ? "" : " pill-accent")}>
-          {role === "spectator" ? (
-            <>
-              <EyeOff size={13} /> зритель
-            </>
-          ) : (
-            <>
-              <Users size={13} /> угадываешь
-            </>
-          )}
-        </span>
-      )}
+      {/* Место под меню: оно фиксировано в углу, а этот пустой блок держит
+          заголовок хода по центру. */}
+      <span className="game-top-spacer" />
     </div>
   );
 }
