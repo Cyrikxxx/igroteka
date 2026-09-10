@@ -1031,16 +1031,32 @@ html { scrollbar-color: var(--bg-4) transparent; }
      настройки: до «Выйти» и паузы дотягиваются пальцем в спешке, а «Твой ход»
      читают через стол. Прирост по высоте — около 8px, .game-center его
      забирает своими clamp'ами, так что экран по-прежнему влезает целиком. */
-  .game-top { display: flex; align-items: center; justify-content: space-between; gap: clamp(12px, 1.6vw, 22px); }
-  .game-top .back-link { margin: 0; font-size: clamp(15px, 1.05vw, 17px); padding: 8px 10px; margin-left: -10px; border-radius: var(--r-sm); }
-  .game-top .back-link:hover { background: var(--bg-2); }
-  .game-top .back-link svg { width: 20px; height: 20px; }
+  /* Сетка, а не space-between: центр обязан держаться, даже если сбоку
+     пусто. У зрителя меню не показывалось, элементов оставалось два — и
+     заголовок хода уезжал вправо, к самому краю. */
+  .game-top {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: clamp(12px, 1.6vw, 22px);
+  }
+  .game-top > :first-child { justify-self: start; }
+  .game-top > :last-child { justify-self: end; }
+  /* Выход из партии. Один вид на все экраны Алиаса: в шапке хода и на экране
+     передачи устройства он выглядел по-разному — там крупной кнопкой с
+     подложкой, тут мелкой серой строчкой у края окна. */
+  .game-top .back-link, .exit-btn { margin: 0; font-size: clamp(15px, 1.05vw, 17px); padding: 8px 10px; margin-left: -10px; border-radius: var(--r-sm); }
+  .game-top .back-link:hover, .exit-btn:hover { background: var(--bg-2); }
+  .game-top .back-link svg, .exit-btn svg { width: 20px; height: 20px; }
+  /* Ряд над содержимым той же ширины, что и оно: кнопка встаёт над левым
+     краем карточки, а не у края экрана. 1100px — ширина .pass-wrap. */
+  .pass-top { width: 100%; max-width: 1100px; margin-inline: auto; margin-bottom: clamp(14px, 2vh, 24px); }
   .game-top .icon-btn { width: clamp(46px, 3.4vw, 56px); }
   .game-top .icon-btn svg { width: 23px; height: 23px; }
   .game-top .pill { padding: 9px 15px; font-size: clamp(12px, 0.85vw, 13.5px); }
-  /* Держит заголовок хода по центру: справа теперь ничего нет — меню
-     фиксировано в углу экрана и в поток шапки не входит. */
-  .game-top-spacer { width: clamp(46px, 3.4vw, 56px); flex: none; }
+  /* Запасное место справа, когда меню там нет: колонка сетки не должна
+     схлопываться, иначе центр съедет. */
+  .game-top-spacer { width: clamp(46px, 3.4vw, 56px); }
   .game-turn { display: flex; align-items: center; gap: 14px; }
   .game-turn .gt-name { display: block; font-weight: 800; font-size: clamp(16px, 1.3vw, 22px); letter-spacing: -0.01em; }
   .game-turn .gt-team { display: block; font-size: clamp(12px, 0.95vw, 14px); color: var(--fg-2); margin-top: 2px; }
@@ -1294,18 +1310,6 @@ html { scrollbar-color: var(--bg-4) transparent; }
   @media (min-width: 1700px) { .mf-frame:not(.mf-frame-wide) { --mf-zoom: 1.4; } }
 
   /* Кнопка «никого не изгонять»: голоса за неё видно так же, как за игрока. */
-  /* Подпись по центру, счётчик поверх у правого края: при space-between
-     подпись прижималась влево и ездила туда-сюда вместе с шириной счётчика. */
-  .mf-skip-vote { position: relative; justify-content: center; gap: 12px; }
-  .mf-skip-vote[data-mine] { border-color: color-mix(in srgb, var(--mf-crimson) 55%, transparent); color: var(--mf-text); }
-  .mf-skip-count {
-    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-    min-width: 30px; padding: 2px 8px; border-radius: 999px;
-    background: var(--mf-surface-2, rgba(255,255,255,0.07));
-    font-size: 14px; font-weight: 800; color: var(--mf-text-dim);
-  }
-  .mf-skip-count[data-lead] { background: color-mix(in srgb, var(--mf-crimson) 22%, transparent); color: var(--mf-text); }
-
   /* Ночная виньетка — красное свечение по краям */
   /* Свечение по краям экрана партии.
      Слой уходит под содержимое отрицательным z-index, а не поднятием детей.
@@ -1353,6 +1357,31 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .mf-btn-surface { background: var(--mf-surface-2); color: var(--mf-text); }
   .mf-btn-surface:hover:not(:disabled) { background: #232331; }
   .mf-btn-gold { background: var(--mf-gold); color: #1a1102; }
+
+  /* Кнопки «пропустить»: подпись строго по центру, счётчик своей колонкой
+     справа.
+
+     Два подвоха, из-за которых это выглядело сломанным. Первый: правило
+     стояло в файле выше .mf-btn, вес одинаковый — и раскладка кнопки
+     побеждала эту. Поэтому блок объявлен после .mf-btn. Второй: счётчик,
+     положенный поверх через absolute, наезжал на длинную подпись и обрезал
+     её. Теперь это сетка, наехать друг на друга колонки не могут. */
+  .mf-skip-vote {
+    display: grid;
+    grid-template-columns: minmax(38px, 1fr) auto minmax(38px, 1fr);
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+  }
+  .mf-skip-vote > span:first-child { grid-column: 2; }
+  .mf-skip-vote[data-mine] { border-color: color-mix(in srgb, var(--mf-crimson) 55%, transparent); color: var(--mf-text); }
+  .mf-skip-count {
+    grid-column: 3; justify-self: end;
+    min-width: 30px; padding: 2px 8px; border-radius: 999px;
+    background: var(--mf-surface-2, rgba(255,255,255,0.07));
+    font-size: 14px; font-weight: 800; color: var(--mf-text-dim);
+  }
+  .mf-skip-count[data-lead] { background: color-mix(in srgb, var(--mf-crimson) 22%, transparent); color: var(--mf-text); }
 
   /* Чипы и бейджи */
   .mf-chip {
@@ -1428,14 +1457,17 @@ html { scrollbar-color: var(--bg-4) transparent; }
     border: 1px solid transparent;
   }
 
-  /* Служебное меню игрового экрана — общее для Мафии и онлайн-Алиаса.
-     Правый верхний угол: в Алиасе на одном устройстве кнопка паузы всегда
-     была там. Внизу слева меню вдобавок перекрывал служебный значок Next в
-     режиме разработки, и вход в него было просто не найти. */
-  /* Прибито к колонке экрана, а не к окну. Прибитое к окну на широком
-     мониторе улетало в пустое поле метрах в восьмистах от игры — кнопка была,
-     а найти её не удавалось. */
+  /* Служебное меню игрового экрана. Механика одна на обе игры, облик свой:
+     в Мафии круглая кнопка в чернильной палитре, в Алиасе — та же .icon-btn,
+     что и пауза на одном устройстве (класс берётся в разметке, здесь только
+     то, чего у неё нет).
+
+     Прибито к колонке экрана, а не к окну: прибитое к окну на широком
+     мониторе улетало в пустое поле далеко правее игры. */
   .gm { position: absolute; right: 16px; top: 16px; z-index: 70; }
+  /* В потоке — там, где место в шапке для меню уже есть. */
+  .gm[data-inline] { position: relative; right: auto; top: auto; }
+
   /* Накладка на ширину колонки: сама она сквозная, кликается только меню. */
   .gm-anchor {
     position: absolute; inset: 0; z-index: 70;
@@ -1444,36 +1476,47 @@ html { scrollbar-color: var(--bg-4) transparent; }
   }
   .gm-anchor > * { pointer-events: auto; }
   .gm-anchor .gm { right: clamp(18px, 3.5vw, 80px); }
-  .gm-btn {
+
+  /* Мафия: круглая кнопка в своей палитре. */
+  .gm[data-skin="mafia"] .gm-btn {
     width: 44px; height: 44px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     background: var(--mf-surface-2); border: 1px solid var(--mf-border);
     color: var(--mf-text-dim); cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
   }
-  /* Внутри есть то, чего человек ждёт (например, брошенная комната), а он
-     в меню не заглядывает — подсвечиваем вход. */
-  .gm-btn[data-alert] { border-color: var(--mf-gold); color: var(--mf-gold); }
+  .gm[data-skin="mafia"] .gm-btn:hover { color: var(--mf-text); border-color: rgba(255, 255, 255, 0.2); }
+  /* Внутри есть то, чего человек ждёт (брошенная комната), а он в меню не
+     заглядывает — подсвечиваем вход. */
+  .gm[data-skin="mafia"] .gm-btn[data-alert] { border-color: var(--mf-gold); color: var(--mf-gold); }
+  .gm[data-skin="alias"] .gm-btn[data-alert] { border-color: var(--warn); color: var(--warn); }
+
   .gm-sheet {
-    position: absolute; top: 52px; right: 0; min-width: 244px;
+    position: absolute; top: calc(100% + 8px); right: 0; min-width: 244px;
     display: flex; flex-direction: column; gap: 2px; padding: 6px;
-    background: var(--mf-surface-2); border: 1px solid var(--mf-border);
     border-radius: 16px; box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
   }
+  .gm[data-skin="mafia"] .gm-sheet { background: var(--mf-surface-2); border: 1px solid var(--mf-border); }
+  .gm[data-skin="alias"] .gm-sheet { background: var(--bg-2); border: 1px solid var(--line); }
+
   .gm-item {
     display: flex; align-items: center; gap: 11px; width: 100%;
     padding: 10px 12px; border: none; border-radius: 11px;
-    background: none; color: var(--mf-text); cursor: pointer; text-align: left;
+    background: none; cursor: pointer; text-align: left;
     font-family: var(--font-main);
   }
+  .gm[data-skin="mafia"] .gm-item { color: var(--mf-text); }
+  .gm[data-skin="alias"] .gm-item { color: var(--fg); }
   .gm-item:hover { background: rgba(255, 255, 255, 0.06); }
-  .gm-item[data-danger] { color: var(--mf-crimson); }
+  .gm-item[data-danger] { color: var(--danger); }
   .gm-item-text { display: flex; flex-direction: column; gap: 1px; }
   .gm-item-label { font-weight: 800; font-size: 14.5px; }
-  .gm-item-hint { font-weight: 600; font-size: 12px; color: var(--mf-text-faint); }
-  .gm-note {
-    padding: 9px 12px; font-weight: 700; font-size: 12.5px;
-    color: var(--mf-text-faint); line-height: 1.4;
-  }
+  .gm-item-hint { font-weight: 600; font-size: 12px; }
+  .gm[data-skin="mafia"] .gm-item-hint { color: var(--mf-text-faint); }
+  .gm[data-skin="alias"] .gm-item-hint { color: var(--fg-3); }
+  .gm-note { padding: 9px 12px; font-weight: 700; font-size: 12.5px; line-height: 1.4; }
+  .gm[data-skin="mafia"] .gm-note { color: var(--mf-text-faint); }
+  .gm[data-skin="alias"] .gm-note { color: var(--fg-3); }
 
   /* Строка настройки */
   .mf-setting-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--mf-border); }

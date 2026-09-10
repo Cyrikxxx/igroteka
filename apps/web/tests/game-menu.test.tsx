@@ -72,3 +72,25 @@ describe("меню Мафии", () => {
     expect(screen.getByText(/Взять комнату можно через 30 с/)).toBeTruthy();
   });
 });
+
+describe("облик зоны", () => {
+  it("в Алиасе кнопка — та же .icon-btn, что пауза на одном устройстве", () => {
+    // Именно класс, а не копия его стилей: копия разошлась бы с оригиналом.
+    render(<GameMenu skin="alias" items={[{ icon: Flag, label: "Завершить игру", onClick: noop }]} />);
+    const btn = screen.getByLabelText("Меню игры");
+    expect(btn.classList.contains("icon-btn")).toBe(true);
+    expect(document.querySelector('.gm[data-skin="alias"]')).toBeTruthy();
+  });
+
+  it("в Мафии — своя круглая, без класса Алиаса", () => {
+    render(<MafiaGameMenu {...mafiaProps} />);
+    const btn = screen.getByLabelText("Меню игры");
+    expect(btn.classList.contains("icon-btn")).toBe(false);
+    expect(document.querySelector('.gm[data-skin="mafia"]')).toBeTruthy();
+  });
+
+  it("в потоке меню не накладка, а обычный элемент шапки", () => {
+    render(<GameMenu inline items={[{ icon: Flag, label: "Завершить игру", onClick: noop }]} />);
+    expect(document.querySelector(".gm")?.hasAttribute("data-inline")).toBe(true);
+  });
+});

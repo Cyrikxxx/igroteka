@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Check, Clock, Crown, DoorClosed, EyeOff, Flag, Mic, Pause, Play, RefreshCw, SkipForward, StopCircle, Users, X } from "lucide-react";
+import { ArrowLeft, Check, Clock, Crown, DoorClosed, EyeOff, Flag, LogOut, Mic, Pause, Play, RefreshCw, SkipForward, StopCircle, Users, X } from "lucide-react";
 import { nextExplainerFor } from "@alias/shared/snapshot-builders";
 import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
 import { resumeRoom } from "@/lib/room-resume";
@@ -15,6 +15,7 @@ import { useRoom } from "@/hooks/useRoom";
 import { useHostClaim } from "@/hooks/useHostClaim";
 import { useHydrated } from "@/hooks/useHydrated";
 import { pluralize, WORDS } from "@/lib/plural";
+import { formatTime } from "@/lib/utils";
 import AppShell from "@/components/common/AppShell";
 import Avatar from "@/components/common/Avatar";
 import Modal from "@/components/common/Modal";
@@ -299,9 +300,7 @@ export default function PlayPage() {
   // игроку команды нельзя — состав заморожен, иначе ломается очередь
   // объясняющих, — и без общей кнопки стол оставался запертым: партия ждёт
   // того, кто не вернётся, а хост, может быть, ушёл первым.
-  // Зрителю не даём: он в партии не участвует, а обрывать её чужим людям
-  // нечего. Ровно это же проверяет сервер.
-  if (inGame && (role !== "spectator" || isRoomHost)) {
+  if (inGame) {
     menuItems.push({
       icon: Flag,
       label: "Завершить игру",
@@ -312,6 +311,23 @@ export default function PlayPage() {
   }
   const gameMenu = !inGame ? null : (
     <GameMenu
+      skin="alias"
+      items={menuItems}
+      note={
+        claim.hostGone && !claim.canClaim
+          ? `Хоста нет в сети. Взять комнату можно через ${claim.secondsLeft} с.`
+          : undefined
+      }
+      alert={claim.hostGone && !isRoomHost}
+    />
+  );
+  // На экране хода место для меню уже есть — там, где на одном устройстве
+  // стоит пауза. Остальные экраны получают его накладкой на колонку: своей
+  // шапки у них нет.
+  const gameMenuInline = !inGame ? null : (
+    <GameMenu
+      skin="alias"
+      inline
       items={menuItems}
       note={
         claim.hostGone && !claim.canClaim
@@ -375,16 +391,20 @@ export default function PlayPage() {
         onCancel={() => setEndGameAsk(false)}
       />
 
+      {/* Слово в слово как пауза на одном устройстве: та же строка с
+          замороженным временем и счётом, те же две кнопки в ряд. Разойдясь,
+          два одинаковых по смыслу окна выглядели двумя разными играми. */}
       <Modal isOpen={pauseModalOpen && canControlRound} title="Пауза" onClose={onResume}>
         <p className="muted" style={{ marginBottom: 18 }}>
-          Раунд приостановлен. Таймер не идёт, пока модалка открыта.
+          Таймер заморожен на <b className="mono">{formatTime(sec)}</b>. {got}/{got + skip} угадано.
+          Можно продолжить или завершить раунд.
         </p>
-        <div className="col" style={{ gap: 8 }}>
-          <button type="button" className="btn btn-primary btn-lg btn-block" onClick={onResume}>
-            Продолжить
+        <div className="row" style={{ gap: 8 }}>
+          <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={onEndRequest}>
+            <LogOut /> Завершить
           </button>
-          <button type="button" className="btn btn-danger btn-block" onClick={onEndRequest}>
-            Завершить раунд
+          <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={onResume}>
+            <Play /> Продолжить
           </button>
         </div>
       </Modal>
@@ -442,7 +462,7 @@ export default function PlayPage() {
     const active = snapshot.phase === "ROUND_ACTIVE";
     return (
       <>
-        <AppShell bare menu={gameMenu}>
+        <AppShell bare>
           <div className={"game-screen" + (danger ? " danger" : "")}>
             <div className="game-bg" />
             <div className="shell game-shell">
@@ -454,6 +474,7 @@ export default function PlayPage() {
                 teamName={teamName}
                 teamColor={teamColor}
                 roundNumber={snapshot.currentRoundNumber}
+                menu={gameMenuInline}
               />
 
               {/* Объясняющий пропал: раунд стоит, время не горит. Ждём его —
@@ -708,6 +729,7 @@ function GameTop({
   teamName,
   teamColor,
   roundNumber,
+  menu,
 }: {
   role: Role;
   trio: boolean;
@@ -716,6 +738,8 @@ function GameTop({
   teamName: string;
   teamColor: string;
   roundNumber: number;
+  /** Меню партии. Стоит там же, где пауза на одном устройстве. */
+  menu: React.ReactNode;
 }) {
   return (
     <div className="game-top">
@@ -752,9 +776,9 @@ function GameTop({
           </span>
         </div>
       </div>
-      {/* Место под меню: оно фиксировано в углу, а этот пустой блок держит
-          заголовок хода по центру. */}
-      <span className="game-top-spacer" />
+      {/* Меню, а если его нет — пустое место той же ширины: колонка сетки
+          должна остаться, иначе заголовок хода съедет вбок. */}
+      {menu ?? <span className="game-top-spacer" />}
     </div>
   );
 }

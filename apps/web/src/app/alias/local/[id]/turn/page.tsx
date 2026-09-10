@@ -4,11 +4,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Crown, EyeOff, Play } from "lucide-react";
+import { Crown, EyeOff, LogOut, Play } from "lucide-react";
 import type { GameFromAPI } from "@/types";
 import { teamColorVar } from "@/constants/game";
 import { TRIO_TURNS, trioRoles } from "@alias/shared/trio";
 import AppShell from "@/components/common/AppShell";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import Avatar from "@/components/common/Avatar";
 
 export default function LocalTurnPage() {
@@ -17,6 +18,7 @@ export default function LocalTurnPage() {
   const gameId = params.id as string;
   const [game, setGame] = useState<GameFromAPI | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exitAsk, setExitAsk] = useState(false);
 
   useEffect(() => {
     fetch(`/api/games/${gameId}`)
@@ -65,12 +67,13 @@ export default function LocalTurnPage() {
 
   return (
     <AppShell centered className="screen-anim">
-      {/* Единственный выход с этого экрана. Партия уже сохранена и доступна
-          в Истории по «Продолжить», поэтому спрашивать подтверждение — в
-          отличие от экрана раунда — не за чем: терять нечего. */}
-      <button type="button" className="back-link" onClick={() => router.push("/alias")}>
-        <ArrowLeft /> Выйти из партии
-      </button>
+      {/* Выход выглядит и стоит так же, как в шапке хода: раньше это была
+          мелкая серая строчка у самого края окна, в стороне от карточки. */}
+      <div className="pass-top">
+        <button type="button" className="back-link exit-btn" onClick={() => setExitAsk(true)}>
+          <LogOut /> Выйти
+        </button>
+      </div>
 
       <div className="pass-wrap" style={{ "--tc": `var(${colorVar})` } as React.CSSProperties}>
         <div className="pass-hero">
@@ -139,6 +142,21 @@ export default function LocalTurnPage() {
           </p>
         </div>
       </div>
+
+      {/* Спрашиваем, хотя терять нечего: партия сохранена и продолжается из
+          Истории. Раньше нажатие молча выкидывало на лендинг, а кнопка стоит
+          первой на экране — промахнуться легко. */}
+      <ConfirmDialog
+        open={exitAsk}
+        title="Выйти из партии?"
+        text="Счёт сохранён — продолжить эту партию можно из Истории."
+        confirmLabel="Выйти"
+        onConfirm={() => {
+          setExitAsk(false);
+          router.push("/alias");
+        }}
+        onCancel={() => setExitAsk(false)}
+      />
     </AppShell>
   );
 }

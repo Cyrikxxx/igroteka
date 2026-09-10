@@ -30,9 +30,26 @@ export interface GameMenuProps {
   note?: string;
   /** Подсветить вход: внутри есть то, чего человек ждёт. */
   alert?: boolean;
+  /**
+   * Облик зоны. Механика общая, а выглядеть меню должно своим: в Мафии
+   * круглой кнопкой в чернильной палитре, в Алиасе — той же самой кнопкой,
+   * что пауза на одном устройстве.
+   */
+  skin?: "alias" | "mafia";
+  /**
+   * Меню стоит в потоке, а не накладкой поверх экрана. Нужно там, где место
+   * для него уже есть — в шапке хода Алиаса.
+   */
+  inline?: boolean;
 }
 
-export default function GameMenu({ items, note, alert = false }: GameMenuProps) {
+export default function GameMenu({
+  items,
+  note,
+  alert = false,
+  skin = "mafia",
+  inline = false,
+}: GameMenuProps) {
   const [open, setOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement | null>(null);
 
@@ -57,10 +74,12 @@ export default function GameMenu({ items, note, alert = false }: GameMenuProps) 
   if (items.length === 0 && !note) return null;
 
   return (
-    <div className="gm" ref={boxRef}>
+    <div className="gm" data-skin={skin} data-inline={inline ? "" : undefined} ref={boxRef}>
       <button
         type="button"
-        className="gm-btn"
+        // В Алиасе это буквально та же кнопка, что пауза на одном устройстве:
+        // берём её класс, а не переписываем стили заново — иначе они разойдутся.
+        className={skin === "alias" ? "icon-btn gm-btn" : "gm-btn"}
         aria-label={open ? "Закрыть меню" : "Меню игры"}
         aria-expanded={open}
         data-alert={alert ? "" : undefined}

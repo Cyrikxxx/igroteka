@@ -746,21 +746,16 @@ export function registerRoundHandlers(
   // объясняющих. Раньше рычаг был только у хоста, и стол оставался запертым,
   // если хост ушёл первым или сам оказался тем, кого ждут.
   //
-  // Зрителю не даём: он в партии не участвует, а оборвать её чужим людям —
-  // нет. Счёт остаётся текущим, все попадают на экран итогов, откуда хост
-  // уже существующей «Сыграть ещё» возвращает комнату в лобби.
+  // Доступна каждому, кто в комнате. Счёт остаётся текущим, все попадают на
+  // экран итогов, откуда хост уже существующей «Сыграть ещё» возвращает
+  // комнату в лобби.
   socket.on("round:end_game", async (_payload, ack) => {
     const code = socket.data.roomCode;
-    const userId = socket.data.userId;
     const snap = await load(code);
     if (!snap) return ack?.({ error: "room_not_found" });
     if (snap.phase === "LOBBY" || snap.phase === "FINISHED") {
       return ack?.({ error: "not_in_game" });
     }
-    const inTeams = snap.teams.some((t) =>
-      t.players.some((p) => p.userId === userId),
-    );
-    if (!inTeams && snap.hostId !== userId) return ack?.({ error: "forbidden" });
     ack?.({ ok: true });
     await endGame(ns, code, "ended_by_host");
   });
