@@ -1205,7 +1205,7 @@ html { scrollbar-color: var(--bg-4) transparent; }
      ============================================================ */
   @media (max-width: 640px) {
     /* шапка переносит статус на 2-ю строку вместо обрезки за краем */
-    .pl-topbar { flex-wrap: wrap; row-gap: 10px; }
+    .pl-topbar-inner { flex-wrap: wrap; row-gap: 10px; }
     .pl-topbar-right { flex: 1; justify-content: flex-end; gap: 10px; }
 
     .setup-head, .lobby-head { gap: 14px; }
@@ -1284,6 +1284,9 @@ html { scrollbar-color: var(--bg-4) transparent; }
   /* Лобби, настройки и лендинг уже широкие и на большом экране смотрятся
      нормально — их не трогаем. */
   .mf-frame-wide { max-width: 920px; }
+  /* Под шапкой высоту держит внешняя обёртка: иначе колонка добирала бы свои
+     100dvh уже после полосы, и страница всегда была бы выше окна. */
+  .mf-frame-under-bar { min-height: 0; flex: 1; }
   @media (min-width: 1200px) { .mf-frame:not(.mf-frame-wide) { --mf-zoom: 1.25; } }
   @media (min-width: 1700px) { .mf-frame:not(.mf-frame-wide) { --mf-zoom: 1.4; } }
 
@@ -1593,7 +1596,9 @@ html { scrollbar-color: var(--bg-4) transparent; }
 
   /* Подложка нейтральная, как у Мафии: зелёный остаётся только акцентом
      на заголовке и мелких деталях, фон-градиента нет. */
-  .al-landing { min-height: 100dvh; background: var(--ink-bg); color: var(--mf-text); font-family: var(--font-main); display: flex; justify-content: center; }
+  /* Колонка по центру, а шапка над ней — во всю ширину окна, поэтому это
+     колоночный флекс, а не ряд с центрированием. */
+  .al-landing { min-height: 100dvh; background: var(--ink-bg); color: var(--mf-text); font-family: var(--font-main); display: flex; flex-direction: column; align-items: center; }
   .al-landing-inner { width: 100%; max-width: 920px; display: flex; flex-direction: column; gap: 8px; padding-bottom: 28px; }
 
   .al-chip { display: inline-flex; align-items: center; gap: 6px; border-radius: var(--r-chip); padding: 5px 12px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.02em; background: rgba(255, 255, 255, 0.07); color: var(--mf-text-dim); }
@@ -1724,8 +1729,15 @@ html { scrollbar-color: var(--bg-4) transparent; }
 @layer components {
   .pl-screen { min-height: 100dvh; background: var(--ink-bg); color: var(--mf-text); font-family: var(--font-main); }
 
-  .pl-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--ink-border); }
-  @media (min-width: 900px) { .pl-topbar { padding: 20px 56px; } }
+  /* Полоса — всегда во всю ширину окна, содержимое внутри неё. Раньше шапка
+     была одним элементом, и на лендингах её клали внутрь колонки: логотип
+     съезжал вместе с ней, а нижняя граница обрывалась посреди экрана. */
+  .pl-topbar { width: 100%; border-bottom: 1px solid var(--ink-border); }
+  .pl-topbar-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; }
+  @media (min-width: 900px) { .pl-topbar-inner { padding: 20px 56px; } }
+  /* Лендинги: содержимое прижато к их колонке, отступы те же, что у секций
+     под ней, — логотип встаёт ровно над началом текста. */
+  .pl-topbar-column { max-width: 920px; margin: 0 auto; padding-left: clamp(20px, 5vw, 64px); padding-right: clamp(20px, 5vw, 64px); }
   .pl-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 15px; letter-spacing: 0.04em; color: inherit; text-decoration: none; white-space: nowrap; }
   .pl-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
   /* Справа: сначала статус страницы (код комнаты, индикатор связи), затем

@@ -94,8 +94,8 @@ function WordCard() {
 export default function AliasLandingPage() {
   return (
     <div className="al-landing">
+      <SiteTopBar inset="column" />
       <div className="al-landing-inner">
-      <SiteTopBar />
       {/* Объяснение для того, кого только что выгнали из комнаты. */}
       <RoomNoticeBanner />
       <section className="al-hero">

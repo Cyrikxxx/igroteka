@@ -66,9 +66,8 @@ const ROLES: [MafiaRole, string][] = [
 
 export default function MafiaLandingPage() {
   return (
-    <MafiaShell wide vignette vignetteLevel={0.1}>
+    <MafiaShell wide vignette vignetteLevel={0.1} topBar={<SiteTopBar inset="column" />}>
       <div className="mf-landing">
-        <SiteTopBar />
         {/* Объяснение для того, кого только что выгнали из комнаты. */}
         <RoomNoticeBanner variant="mafia" />
         <section className="mf-hero">
