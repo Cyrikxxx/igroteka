@@ -11,7 +11,7 @@
 // значок Next в режиме разработки — вход было просто не найти.
 
 import { useEffect, useRef, useState } from "react";
-import { MoreHorizontal, X } from "lucide-react";
+import { Menu, MoreHorizontal, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface GameMenuItem {
@@ -85,7 +85,9 @@ export default function GameMenu({
         data-alert={alert ? "" : undefined}
         onClick={() => setOpen((v) => !v)}
       >
-        {open ? <X size={19} /> : <MoreHorizontal size={19} />}
+        {/* Иконку выбирает зона: в Мафии гамбургер — там всюду прямые формы,
+            а три точки не повторяют ничего. */}
+        {open ? <X size={19} /> : skin === "mafia" ? <Menu size={19} /> : <MoreHorizontal size={19} />}
       </button>
 
       {open ? (

@@ -6,6 +6,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { Flag } from "lucide-react";
 import GameMenu from "@/components/common/GameMenu";
 import MafiaGameMenu from "@/components/mafia/GameMenu";
+import PhaseHead from "@/components/mafia/PhaseHead";
 
 const noop = () => {};
 
@@ -92,5 +93,31 @@ describe("облик зоны", () => {
   it("в потоке меню не накладка, а обычный элемент шапки", () => {
     render(<GameMenu inline items={[{ icon: Flag, label: "Завершить игру", onClick: noop }]} />);
     expect(document.querySelector(".gm")?.hasAttribute("data-inline")).toBe(true);
+  });
+});
+
+describe("меню в шапке фазы Мафии", () => {
+  it("стоит внутри шапки, а не накладкой поверх экрана", () => {
+    // Накладка держалась на `position: absolute; right: 16`, а шапка держит
+    // таймер на `right: 20` — они занимали одно место.
+    render(
+      <PhaseHead
+        icon={Flag}
+        title="Ночь 2"
+        timerMs={102_000}
+        menu={<MafiaGameMenu {...mafiaProps} />}
+      />,
+    );
+    const head = document.querySelector(".mf-phase-head");
+    expect(head).toBeTruthy();
+    expect(head?.querySelector(".gm")).toBeTruthy();
+    // И таймер никуда не делся — он сосед, а не подложка.
+    expect(screen.getByText("1:42")).toBeTruthy();
+  });
+
+  it("в Мафии иконка не три точки", () => {
+    render(<MafiaGameMenu {...mafiaProps} />);
+    expect(screen.getByLabelText("Меню игры").querySelector("svg")?.classList.toString())
+      .toContain("lucide-menu");
   });
 });

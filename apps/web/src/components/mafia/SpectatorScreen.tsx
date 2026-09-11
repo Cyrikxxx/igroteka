@@ -4,10 +4,11 @@
 // Список игроков (живые/выбывшие), роли — если открыты правилами.
 
 import { Eye } from "lucide-react";
+import type { ReactNode } from "react";
 import type { MafiaView } from "@alias/shared/mafia";
 import MafiaAvatar from "./MafiaAvatar";
 import { RoleChip } from "./roleMeta";
-import { fmtClock } from "./PhaseHead";
+import PhaseHead from "./PhaseHead";
 import { EventFeed } from "./Chronicle";
 
 const PHASE_LABEL: Record<string, string> = {
@@ -19,17 +20,28 @@ const PHASE_LABEL: Record<string, string> = {
   LAST_WORD: "Последнее слово",
 };
 
-export default function SpectatorScreen({ view, exiled }: { view: MafiaView; exiled?: boolean }) {
+export default function SpectatorScreen({
+  view,
+  exiled,
+  menu,
+}: {
+  view: MafiaView;
+  exiled?: boolean;
+  /** Служебное меню партии: стоит в шапке фазы, рядом с таймером. */
+  menu?: ReactNode;
+}) {
   const label = PHASE_LABEL[view.phase] ?? view.phase;
   return (
     <>
-      <div className="mf-phase-head">
-        <div className="mf-phase-title">
-          <Eye size={21} color="var(--mf-text-dim)" />
-          <span>Наблюдаешь · {label} {view.day || ""}</span>
-        </div>
-        {view.timer ? <div className="mf-timer" style={{ fontSize: 20 }}>{fmtClock(view.timer.msLeft)}</div> : null}
-      </div>
+      {/* Шапка общая с игровыми экранами: своя, собранная руками, разошлась бы
+          с ними при первой же правке — и меню в неё было некуда поставить. */}
+      <PhaseHead
+        icon={Eye}
+        iconColor="var(--mf-text-dim)"
+        title={`Наблюдаешь · ${label} ${view.day || ""}`.trim()}
+        timerMs={view.timer?.msLeft ?? null}
+        menu={menu}
+      />
 
       <div style={{ padding: "8px 20px 4px" }}>
         <div

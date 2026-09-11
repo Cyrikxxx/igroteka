@@ -12,6 +12,7 @@ import {
   Mic,
   Check,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import type { MafiaView } from "@alias/shared/mafia";
 import { SKIP_VOTE } from "@alias/shared/mafia";
 import Announce from "./Announce";
@@ -77,10 +78,13 @@ export function MorningScreen({ view }: { view: MafiaView }) {
 export function DiscussionScreen({
   view,
   onSkip,
+  menu,
 }: {
   view: MafiaView;
   /** «Пропустить обсуждение» — переключатель, общий для всех живых. */
   onSkip: () => void;
+  /** Служебное меню партии: стоит в шапке фазы, рядом с таймером. */
+  menu?: ReactNode;
 }) {
   const skip = view.discussionSkip;
   const mates = new Set(view.you.partnerIds ?? []);
@@ -89,6 +93,7 @@ export function DiscussionScreen({
       <PhaseHead
         icon={MessagesSquare}
         title={view.day === 0 ? "Знакомство" : `День ${view.day} — обсуждение`}
+        menu={menu}
       />
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 0 8px" }}>
         <div className="mf-timer" style={{ fontSize: 64, lineHeight: 1 }}>{fmtClock(view.timer?.msLeft ?? 0)}</div>
@@ -149,9 +154,12 @@ export function DiscussionScreen({
 export function VoteScreen({
   view,
   onVote,
+  menu,
 }: {
   view: MafiaView;
   onVote: (targetId: string | null) => void;
+  /** Служебное меню партии: стоит в шапке фазы, рядом с таймером. */
+  menu?: ReactNode;
 }) {
   const you = view.you;
   const vote = view.vote;
@@ -167,7 +175,12 @@ export function VoteScreen({
 
   return (
     <>
-      <PhaseHead icon={Vote} title={`День ${view.day} — голосование`} timerMs={view.timer?.msLeft ?? null} />
+      <PhaseHead
+        icon={Vote}
+        title={`День ${view.day} — голосование`}
+        timerMs={view.timer?.msLeft ?? null}
+        menu={menu}
+      />
       <div style={{ padding: "8px 20px 16px" }}>
         <div style={{ fontWeight: 800, fontSize: 28, letterSpacing: "-0.02em" }}>
           {round2 ? "Голоса разделились" : "Кто мафия?"}
@@ -280,18 +293,34 @@ export function VoteResultScreen({ view }: { view: MafiaView }) {
     );
   }
   if (tie) {
+    // Ничья в первом туре и во втором — разные события. В первом она ведёт во
+    // второй тур, и кого-то ещё могут изгнать; экран же объявлял итог дня, а
+    // через несколько секунд игра возвращала к голосованию — это выглядело
+    // сбоем. Во втором туре ничья и правда заканчивает день.
+    const second = view.vote?.round === 1;
+    const names = (view.vote?.leaders ?? []).map((id) =>
+      id === SKIP_VOTE
+        ? "никого не изгонять"
+        : (view.players.find((p) => p.userId === id)?.displayName ?? "игрок"),
+    );
     return (
       <Announce
         icon={Scale}
         iconColor="var(--mf-text-dim)"
         kicker="Голосование окончено"
-        title="Голоса разделились — никто не выбывает"
+        title={second ? "Голоса разделились" : "Голоса разделились — никто не выбывает"}
         footer={
           <div className="mf-mono" style={{ textAlign: "center", fontSize: 13, color: "var(--mf-text-faint)", fontWeight: 700 }}>
-            {view.vote?.round === 1 ? "переголосование…" : "ночь начнётся скоро"}
+            {second ? "второй тур…" : "ночь начнётся скоро"}
           </div>
         }
-      />
+      >
+        {second && names.length > 0 ? (
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--mf-text-dim)", textWrap: "pretty" }}>
+            Голосуем ещё раз — только за {names.join(" и ")}
+          </div>
+        ) : null}
+      </Announce>
     );
   }
   return (

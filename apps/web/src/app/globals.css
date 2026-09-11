@@ -1437,6 +1437,8 @@ html { scrollbar-color: var(--bg-4) transparent; }
   /* Шапка фазы */
   .mf-phase-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 0; }
   .mf-phase-title { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; letter-spacing: -0.01em; }
+  /* Правая часть шапки: таймер и меню рядом, а не друг на друге. */
+  .mf-phase-right { display: flex; align-items: center; gap: 12px; }
 
   /* Сетка игроков.
      До шести карточек — две колонки, дальше три: вшестером две колонки
@@ -1510,11 +1512,12 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .gm-anchor > * { pointer-events: auto; }
   .gm-anchor .gm { right: clamp(18px, 3.5vw, 80px); }
 
-  /* Мафия: круглая кнопка в своей палитре. */
+  /* Мафия: та же прямая форма, что у всех её кнопок (.mf-btn). Круг тут был
+     чужим — из круглого в Мафии только кнопка озвучки внизу экрана. */
   .gm[data-skin="mafia"] .gm-btn {
-    width: 44px; height: 44px; border-radius: 50%;
+    width: 44px; height: 44px; border-radius: var(--r-btn);
     display: flex; align-items: center; justify-content: center;
-    background: var(--mf-surface-2); border: 1px solid var(--mf-border);
+    background: var(--mf-surface); border: 1px solid var(--mf-border);
     color: var(--mf-text-dim); cursor: pointer;
     transition: color .15s, border-color .15s, background .15s;
   }

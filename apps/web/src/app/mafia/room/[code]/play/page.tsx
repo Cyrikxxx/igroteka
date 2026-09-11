@@ -289,17 +289,18 @@ export default function MafiaPlayPage() {
 
     if (dead || view.you.isSpectator) {
       return (
-        <MafiaShell vignette vignetteLevel={view.phase === "NIGHT" ? 0.16 : 0.05} menu={gameMenu}>
-          <SpectatorScreen view={view} exiled={exiled} />
+        <MafiaShell vignette vignetteLevel={view.phase === "NIGHT" ? 0.16 : 0.05}>
+          <SpectatorScreen view={view} exiled={exiled} menu={gameMenu} />
         </MafiaShell>
       );
     }
 
     if (view.phase === "NIGHT") {
       return (
-        <MafiaShell vignette vignetteLevel={view.you.role === "maniac" ? 0.1 : 0.16} menu={gameMenu}>
+        <MafiaShell vignette vignetteLevel={view.you.role === "maniac" ? 0.1 : 0.16}>
           <NightScreen
             view={view}
+            menu={gameMenu}
             onAction={(action, targetId) =>
               emit("mafia:night_action", { action, targetId }, () => {})
             }
@@ -318,9 +319,10 @@ export default function MafiaPlayPage() {
 
     if (view.phase === "DISCUSSION") {
       return (
-        <MafiaShell menu={gameMenu}>
+        <MafiaShell>
           <DiscussionScreen
             view={view}
+            menu={gameMenu}
             onSkip={() => emit("mafia:skip_discussion", {}, () => {})}
           />
         </MafiaShell>
@@ -329,9 +331,10 @@ export default function MafiaPlayPage() {
 
     if (view.phase === "VOTE") {
       return (
-        <MafiaShell menu={gameMenu}>
+        <MafiaShell>
           <VoteScreen
             view={view}
+            menu={gameMenu}
             onVote={(targetId) => emit("mafia:vote", { targetId }, () => {})}
           />
         </MafiaShell>

@@ -111,9 +111,12 @@ export function NightHush({ day }: { day: number }) {
 export default function NightScreen({
   view,
   onAction,
+  menu,
 }: {
   view: MafiaView;
   onAction: (action: MafiaNightAction, targetId: string | null) => void;
+  /** Служебное меню партии: стоит в шапке фазы, рядом с таймером. */
+  menu?: ReactNode;
 }) {
   const you = view.you;
   const role = you.role;
@@ -143,7 +146,7 @@ export default function NightScreen({
   if (night && !night.yourTurn) {
     return (
       <>
-        <PhaseHead icon={Moon} title={`Ночь ${view.day}`} />
+        <PhaseHead menu={menu} icon={Moon} title={`Ночь ${view.day}`} />
         <NightHush day={view.day} />
       </>
     );
@@ -153,7 +156,7 @@ export default function NightScreen({
   if (!role || role === "civilian") {
     return (
       <>
-        <PhaseHead icon={Moon} title={`Ночь ${view.day}`} timerMs={t} />
+        <PhaseHead menu={menu} icon={Moon} title={`Ночь ${view.day}`} timerMs={t} />
         <div
           style={{
             flex: 1,
@@ -210,7 +213,7 @@ export default function NightScreen({
     }
     return (
       <>
-        <PhaseHead icon={Moon} title={`Ночь ${view.day}`} timerMs={t} />
+        <PhaseHead menu={menu} icon={Moon} title={`Ночь ${view.day}`} timerMs={t} />
         <div style={{ padding: "6px 20px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--mf-text-dim)" }}>
             Выбери, кого мафия уберёт этой ночью
@@ -262,7 +265,7 @@ export default function NightScreen({
   if (role === "doctor") {
     return (
       <>
-        <PhaseHead icon={HeartPulse} title={`Ночь ${view.day}`} timerMs={t} />
+        <PhaseHead menu={menu} icon={HeartPulse} title={`Ночь ${view.day}`} timerMs={t} />
         <div style={{ padding: "6px 20px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--mf-text-dim)" }}>
             Кого будешь лечить этой ночью?
@@ -316,7 +319,7 @@ export default function NightScreen({
 
     return (
       <>
-        <PhaseHead icon={Search} title={`Ночь ${view.day}`} timerMs={t} gold />
+        <PhaseHead menu={menu} icon={Search} title={`Ночь ${view.day}`} timerMs={t} gold />
         <div style={{ padding: "6px 20px 14px" }}>
           <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--mf-text-dim)" }}>
             Кого проверишь этой ночью?
@@ -383,7 +386,7 @@ export default function NightScreen({
   // ─── Маньяк ───
   return (
     <>
-      <PhaseHead icon={Skull} title={`Ночь ${view.day}`} timerMs={t} />
+      <PhaseHead menu={menu} icon={Skull} title={`Ночь ${view.day}`} timerMs={t} />
       <div style={{ padding: "6px 20px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--mf-text-dim)" }}>
           Выбери жертву этой ночи
