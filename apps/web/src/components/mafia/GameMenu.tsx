@@ -27,6 +27,11 @@ export interface MafiaGameMenuProps {
   onEndGame: () => void;
   onClaimHost: () => void;
   onLeave: () => void;
+  /**
+   * Меню стоит в потоке шапки фазы, а не накладкой в углу колонки. Без этого
+   * оно ложится ровно на таймер: обе стороны держатся правого края.
+   */
+  inline?: boolean;
 }
 
 export default function MafiaGameMenu(props: MafiaGameMenuProps) {
@@ -66,6 +71,7 @@ export default function MafiaGameMenu(props: MafiaGameMenuProps) {
 
   return (
     <Menu
+      inline={props.inline}
       items={items}
       note={
         props.hostGone && !props.canClaimHost

@@ -192,21 +192,25 @@ export default function MafiaPlayPage() {
   // его каждой оболочке, чтобы кнопка стояла в углу игровой колонки, а не в
   // углу окна: на широком мониторе колонка занимает середину, и прибитая к
   // окну кнопка оказывалась далеко в стороне от игры.
-  const gameMenu = (
-    <GameMenu
-      isHost={view.you.isHost}
-      canPause={canPause}
-      paused={paused}
-      canClaimHost={claim.canClaim}
-      claimSecondsLeft={claim.secondsLeft}
-      hostGone={claim.hostGone}
-      onPause={() => emit("mafia:pause", {}, () => {})}
-      onResume={() => emit("mafia:resume", {}, () => {})}
-      onEndGame={() => setEndGameAsk(true)}
-      onClaimHost={claimHost}
-      onLeave={() => setLeaveAsk(true)}
-    />
-  );
+  const menuProps = {
+    isHost: view.you.isHost,
+    canPause,
+    paused,
+    canClaimHost: claim.canClaim,
+    claimSecondsLeft: claim.secondsLeft,
+    hostGone: claim.hostGone,
+    onPause: () => emit("mafia:pause", {}, () => {}),
+    onResume: () => emit("mafia:resume", {}, () => {}),
+    onEndGame: () => setEndGameAsk(true),
+    onClaimHost: claimHost,
+    onLeave: () => setLeaveAsk(true),
+  };
+  // Два варианта одного меню. В шапке фазы оно стоит в потоке, рядом с
+  // таймером: накладка ложилась ровно на него — обе стороны держатся правого
+  // края колонки. Экраны без шапки (объявления, раздача ролей, финал) берут
+  // накладку: там перекрывать нечего.
+  const gameMenu = <GameMenu {...menuProps} />;
+  const gameMenuInline = <GameMenu {...menuProps} inline />;
 
   function screen() {
     if (!view) return null;
@@ -290,7 +294,7 @@ export default function MafiaPlayPage() {
     if (dead || view.you.isSpectator) {
       return (
         <MafiaShell vignette vignetteLevel={view.phase === "NIGHT" ? 0.16 : 0.05}>
-          <SpectatorScreen view={view} exiled={exiled} menu={gameMenu} />
+          <SpectatorScreen view={view} exiled={exiled} menu={gameMenuInline} />
         </MafiaShell>
       );
     }
@@ -300,7 +304,7 @@ export default function MafiaPlayPage() {
         <MafiaShell vignette vignetteLevel={view.you.role === "maniac" ? 0.1 : 0.16}>
           <NightScreen
             view={view}
-            menu={gameMenu}
+            menu={gameMenuInline}
             onAction={(action, targetId) =>
               emit("mafia:night_action", { action, targetId }, () => {})
             }
@@ -322,7 +326,7 @@ export default function MafiaPlayPage() {
         <MafiaShell>
           <DiscussionScreen
             view={view}
-            menu={gameMenu}
+            menu={gameMenuInline}
             onSkip={() => emit("mafia:skip_discussion", {}, () => {})}
           />
         </MafiaShell>
@@ -334,7 +338,7 @@ export default function MafiaPlayPage() {
         <MafiaShell>
           <VoteScreen
             view={view}
-            menu={gameMenu}
+            menu={gameMenuInline}
             onVote={(targetId) => emit("mafia:vote", { targetId }, () => {})}
           />
         </MafiaShell>

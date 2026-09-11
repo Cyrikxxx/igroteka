@@ -115,6 +115,21 @@ describe("меню в шапке фазы Мафии", () => {
     expect(screen.getByText("1:42")).toBeTruthy();
   });
 
+  it("в шапке меню стоит в потоке, а не накладкой на таймер", () => {
+    // Лежать внутри шапки мало: без data-inline меню остаётся
+    // position: absolute с привязкой к правому краю колонки — то есть ровно
+    // туда же, где таймер, и закрывает его собой.
+    render(
+      <PhaseHead
+        icon={Flag}
+        title="Ночь 2"
+        timerMs={102_000}
+        menu={<MafiaGameMenu {...mafiaProps} inline />}
+      />,
+    );
+    expect(document.querySelector(".gm")?.hasAttribute("data-inline")).toBe(true);
+  });
+
   it("в Мафии иконка не три точки", () => {
     render(<MafiaGameMenu {...mafiaProps} />);
     expect(screen.getByLabelText("Меню игры").querySelector("svg")?.classList.toString())
