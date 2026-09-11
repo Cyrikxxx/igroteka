@@ -17,18 +17,20 @@
 
 </div>
 
-<!--
-  Скриншоты. Положить файлы в project-context/screenshots/ под этими именами —
-  и блок оживёт. Что снимать, написано в project-context/screenshots/README.md.
--->
 <div align="center">
 
+<!--
+  Размер задан у картинок, а не у колонок: в markdown-таблице ширину колонок
+  браузер раздаёт сам, по длине подписей, и одинаковые файлы отрисовывались
+  разными. Все снимки 1920×928, поэтому 420×203 — это ровно их пропорция,
+  ничего не сплющивается.
+-->
 | | |
 |---|---|
-| ![Хаб](project-context/screenshots/hub.png) | ![Экран объясняющего](project-context/screenshots/alias-round.png) |
-| Хаб: выбор игры и вход по коду | Алиас: слово видит только объясняющий |
-| ![Ночь в Мафии](project-context/screenshots/mafia-night.png) | ![Итоги партии](project-context/screenshots/mafia-results.png) |
-| Мафия: ночь, ход мафии | Итоги: кто кем был и хроника ночей |
+| <img src="project-context/screenshots/hub.png" alt="Хаб Игротеки: карточки Алиаса и Мафии, поле для кода комнаты" width="420" height="203"> | <img src="project-context/screenshots/alias-landing.png" alt="Страница Алиаса: три способа начать партию и правила в четырёх шагах" width="420" height="203"> |
+| **Хаб** — выбор игры и вход по коду | **Алиас** — с чего начать и как играть |
+| <img src="project-context/screenshots/alias-round.png" alt="Экран объясняющего: слово «мастерская», таймер, счёт раунда" width="420" height="203"> | <img src="project-context/screenshots/mafia-results.png" alt="Итоги партии Мафии: роли всех игроков и хроника ночей" width="420" height="203"> |
+| **Раунд Алиаса** — слово видит только объясняющий | **Итоги Мафии** — кто кем был и хроника партии |
 
 </div>
 
