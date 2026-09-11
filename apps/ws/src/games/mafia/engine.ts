@@ -553,6 +553,11 @@ export async function restartToLobby(
 export async function closeRoom(
   ns: MafiaNamespace,
   code: string,
+  /**
+   * Кто закрыл. Ему объяснять нечего: он уходит своим кодом и увидел бы
+   * «хост закрыл комнату» про самого себя.
+   */
+  byUserId?: string,
 ): Promise<void> {
   clearTimer(code);
   await remove(code);
@@ -560,7 +565,9 @@ export async function closeRoom(
 
   const sockets = await ns.in(mafiaRoom(code)).fetchSockets();
   for (const s of sockets) {
-    s.emit("mafia:closed", { reason: "closed_by_host" });
+    if (s.data.userId !== byUserId) {
+      s.emit("mafia:closed", { reason: "closed_by_host" });
+    }
     s.disconnect(true);
   }
 }

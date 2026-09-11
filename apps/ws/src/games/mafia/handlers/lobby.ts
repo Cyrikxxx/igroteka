@@ -401,7 +401,7 @@ export function registerMafiaLobbyHandlers(
     if (current.hostId !== userId) return ack?.({ error: "forbidden" });
 
     ack?.({ ok: true });
-    await closeRoom(ns, roomCode);
+    await closeRoom(ns, roomCode, userId);
   });
 
   // ─── mafia:start ─── host, LOBBY, ≥5 игроков
