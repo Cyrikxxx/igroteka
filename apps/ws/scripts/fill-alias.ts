@@ -109,6 +109,7 @@ class Bot {
       });
       this.sock.on("room:state", (s: RoomSnapshot) => {
         this.snap = s;
+        void this.keepSeat();
         void this.onPhase(s.phase);
       });
       this.sock.on("round:phase", (p: RoundPhasePayload) => void this.onPhase(p.phase));
@@ -125,11 +126,42 @@ class Bot {
     });
   }
 
-  /** Сесть в команду. Вызывается один раз при рассадке. */
-  sit(teamId: number): Promise<void> {
-    return new Promise((resolve) => {
-      this.sock.emit("team:join", { teamId }, () => resolve());
-    });
+  /** Идёт ли уже попытка сесть — чтобы не слать десяток team:join разом. */
+  private seating = false;
+
+  /**
+   * Держит бота в команде.
+   *
+   * Раньше рассадка считалась один раз до входа: удалили команду — бот
+   * оставался в зрителях навсегда, добавили новую — не занимал её, а
+   * распределение разъезжалось, стоило хосту тронуть состав.
+   *
+   * Теперь каждый бот сам следит за собой и на каждый снимок проверяет: если
+   * я без команды и есть свободное место — сажусь в самую пустую. Перед
+   * отправкой ждём немного и пересчитываем: иначе все десять ботов увидят
+   * один и тот же снимок и ломанутся в одну команду.
+   */
+  private async keepSeat(): Promise<void> {
+    if (this.seating) return;
+    const s = this.snap;
+    if (!s || s.phase !== "LOBBY") return;
+    if (s.teams.some((t) => t.players.some((p) => p.userId === this.userId))) return;
+    if (!emptiestTeam(s)) return;
+
+    this.seating = true;
+    try {
+      await sleep(120 + Math.random() * 400);
+      const now = this.snap;
+      if (!now || now.phase !== "LOBBY") return;
+      if (now.teams.some((t) => t.players.some((p) => p.userId === this.userId))) return;
+      const team = emptiestTeam(now);
+      if (!team) return;
+      await new Promise<void>((resolve) =>
+        this.sock.emit("team:join", { teamId: team }, () => resolve()),
+      );
+    } finally {
+      this.seating = false;
+    }
   }
 
   /** Что бот уже сделал в этой фазе — чтобы не слать одно и то же дважды. */
@@ -168,10 +200,16 @@ class Bot {
   }
 }
 
-/** Свободные места по командам: [teamId, сколько влезет ещё]. */
-function freeSeats(s: RoomSnapshot): [number, number][] {
+/**
+ * Команда с самым малым составом, где ещё есть место. Так состав выходит
+ * ровным сам собой: каждый следующий садится туда, где сейчас меньше всех.
+ */
+function emptiestTeam(s: RoomSnapshot): number | null {
   const cap = teamCapacity(s.format);
-  return s.teams.map((t) => [t.id, Math.max(0, cap - t.players.length)]);
+  const free = s.teams
+    .filter((t) => t.players.length < cap)
+    .sort((a, b) => a.players.length - b.players.length);
+  return free[0]?.id ?? null;
 }
 
 async function main(): Promise<void> {
@@ -187,67 +225,25 @@ async function main(): Promise<void> {
     console.error("В комнате должно быть больше одного игрока.");
     process.exit(1);
   }
-
-  // Первый бот заходит, чтобы посмотреть на комнату: сколько там команд и
-  // сколько в них мест. Команды создаёт только хост, и подстроиться под них —
-  // единственное, что мы можем.
-  const scout = new Bot(NAMES[0]!);
-  await scout.join(code);
-  await scout.connect();
-  const snap = scout.snap!;
-  if (snap.phase !== "LOBBY") {
-    console.error(`Комната не в лобби, а в фазе ${snap.phase}. Боты садятся только до старта.`);
-    scout.leave();
-    process.exit(1);
-  }
-
-  const seats = freeSeats(snap);
-  const free = seats.reduce((n, [, k]) => n + k, 0);
-  if (free === 0) {
-    console.error(
-      snap.teams.length === 0
-        ? "В комнате нет команд. Создайте их в лобби — команды заводит только хост."
-        : "Свободных мест нет. Добавьте команду в лобби.",
-    );
-    scout.leave();
-    process.exit(1);
-  }
-  if (free < want) {
-    console.log(
-      `[fill] свободных мест ${free}, а просили ${want} ботов — посадим сколько влезет.`,
-    );
-    console.log("[fill] чтобы вошли все, добавьте команд в лобби и запустите заново.\n");
-  }
-
-  // Рассаживаем по кругу: команды заполняются равномерно, а не первая доверху.
-  const plan: number[] = [];
-  const left = new Map(seats);
-  while (plan.length < Math.min(want, free)) {
-    let placed = false;
-    for (const [teamId] of seats) {
-      if (plan.length >= Math.min(want, free)) break;
-      const k = left.get(teamId) ?? 0;
-      if (k <= 0) continue;
-      plan.push(teamId);
-      left.set(teamId, k - 1);
-      placed = true;
-    }
-    if (!placed) break;
-  }
-
-  const bots: Bot[] = [scout];
-  await scout.sit(plan[0]!);
-  console.log(`  + ${scout.name} → команда ${plan[0]}`);
-
-  for (let i = 1; i < plan.length; i++) {
+  // Боты заходят и дальше сами держатся в командах: занимают свободные
+  // места, пересаживаются, если их команду удалили, и ждут в зрителях, пока
+  // команд нет вовсе. Раньше рассадка считалась один раз до входа, и любое
+  // движение состава со стороны хоста её ломало.
+  const bots: Bot[] = [];
+  for (let i = 0; i < want; i++) {
     const b = new Bot(NAMES[i % NAMES.length]!);
     await b.join(code);
     await b.connect();
-    await b.sit(plan[i]!);
     bots.push(b);
-    console.log(`  + ${b.name} → команда ${plan[i]}`);
+    console.log(`  + ${b.name}`);
     // Вход по одному: у входа в комнату лимит запросов.
     await sleep(400);
+  }
+
+  if (bots[0]?.snap?.teams.length === 0) {
+    console.log("");
+    console.log("[fill] команд в лобби нет — боты ждут в зрителях.");
+    console.log("[fill] создайте команды, и они рассядутся сами.");
   }
 
   console.log(`\n[fill] в комнате ${code} ботов: ${bots.length} (+ вы = ${bots.length + 1})`);
