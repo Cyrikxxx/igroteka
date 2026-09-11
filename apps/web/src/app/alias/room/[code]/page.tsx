@@ -493,35 +493,49 @@ export default function LobbyPage() {
                 никого
               </p>
             ) : (
-              <div className="chip-row">
+              // Та же карточка, что у игрока в команде: у зрителя была
+              // «пилюля» с другим скруглением, и выгнать его было нечем —
+              // хотя в комнату он попадает по тому же коду.
+              <div className="spectator-list">
                 {snapshot?.spectators.map((sp) => (
-                  <span key={sp.userId} className="pill" style={{ opacity: sp.online ? 1 : 0.55 }}>
-                    {sp.online && <span className="dot" style={{ color: "var(--accent)" }} />}
-                    {sp.displayName}
-                    {sp.userId === snapshot.hostId && " 👑"}
-                    {/* Своё имя правится и отсюда: в команду человек мог ещё
-                        не сесть, а ник поправить уже хочется. */}
-                    {sp.userId === creds.userId && inLobby && !editingName && (
-                      <button
-                        type="button"
-                        className="lp-edit"
-                        onClick={() => setEditingName(true)}
-                        aria-label="Изменить своё имя"
-                        title="Изменить имя"
-                      >
-                        <Pencil size={13} />
-                      </button>
+                  <div
+                    key={sp.userId}
+                    className="lobby-player"
+                    style={{ opacity: sp.online ? 1 : 0.55 }}
+                  >
+                    <Avatar name={sp.displayName} size={30} online={sp.online} />
+                    {sp.userId === creds.userId && inLobby ? (
+                      <MyNameCell editor={nameEditor} />
+                    ) : (
+                      <span className="lp-name">{sp.displayName}</span>
                     )}
-                  </span>
+                    {sp.userId === snapshot.hostId && (
+                      <span className="pill pill-mono pill-accent">хост</span>
+                    )}
+                    {isHost && sp.userId !== creds.userId && (
+                      <div className="lobby-player-actions">
+                        <button
+                          type="button"
+                          className="slot-x"
+                          onClick={() => makeHost(sp.userId)}
+                          aria-label={`Передать комнату — ${sp.displayName}`}
+                          title="Сделать хостом"
+                        >
+                          <Crown size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          className="slot-x"
+                          onClick={() => kickPlayer(sp.userId)}
+                          aria-label={`Выгнать ${sp.displayName}`}
+                          title="Выгнать"
+                        >
+                          <UserX size={15} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 ))}
-              </div>
-            )}
-            {/* Правка ника зрителя: в «пилюлю» поле не влезает, поэтому оно
-                разворачивается под списком. */}
-            {editingName && !myTeam && (
-              <div className="row" style={{ gap: 10, marginTop: 12 }}>
-                <Avatar name={myName} size={30} />
-                <MyNameCell editor={nameEditor} />
               </div>
             )}
           </div>

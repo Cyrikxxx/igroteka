@@ -761,6 +761,32 @@ html { scrollbar-color: var(--bg-4) transparent; }
   /* Плашка «что случилось с комнатой» на главном экране игры. Закрывается
      крестиком; у Мафии своя палитра, поэтому отдельный класс. */
   .room-notice { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+
+  /* Уведомление о судьбе комнаты. Всплывает поверх страницы: раньше это была
+     плашка в потоке разметки, и её появление сдвигало весь лендинг вниз. */
+  .room-toast {
+    position: fixed; left: 16px; right: 16px; top: 16px;
+    z-index: 95; max-width: 520px; margin-inline: auto;
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 14px; border-radius: 14px;
+    font-size: 14px; font-weight: 600;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+    animation: room-toast-in .18s ease-out;
+  }
+  .room-toast[data-variant="alias"] {
+    background: color-mix(in srgb, var(--danger) 16%, var(--bg-2));
+    border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+    color: var(--fg);
+  }
+  .room-toast[data-variant="mafia"] {
+    background: var(--mf-surface-2);
+    border: 1px solid color-mix(in srgb, var(--mf-crimson) 45%, transparent);
+    color: var(--mf-text);
+  }
+  @keyframes room-toast-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: none; }
+  }
   /* Предупреждение «хост не в сети» с кнопкой: на узком экране кнопка
      переезжает под текст, а не сплющивает его. */
   .room-claim { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; font-size: 14px; }
@@ -836,7 +862,11 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .lobby-teams-head { margin-bottom: 16px; }
   .lobby-teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: var(--gap); align-items: stretch; }
   .lobby-team { display: flex; flex-direction: column; }
-  .lobby-team > .stack { flex: 1; }
+  /* Кнопка «занять место» идёт сразу за последним игроком, а не прижимается
+     ко дну карточки. Карточки в ряду растягиваются по самой высокой, и
+     `margin-top: auto` уводил кнопку в самый низ: в команде из одного
+     человека она висела в пустоте на уровне чужого четвёртого игрока. */
+  .lobby-team > .stack { flex: 1; justify-content: flex-start; }
   .lobby-team .lt-title { display: flex; flex-direction: column; gap: 3px; }
   .lobby-team .lt-name { font-weight: 800; font-size: clamp(17px, 1.3vw, 22px); letter-spacing: -0.02em; color: var(--tc); }
   .lobby-team .lt-count { font-size: 12px; color: var(--fg-2); }
@@ -871,7 +901,10 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .lp-edit { all: unset; cursor: pointer; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; margin-left: 6px; vertical-align: -5px; color: var(--fg-3); }
   .lp-edit:hover { color: var(--accent); background: var(--accent-soft); }
   .lp-name-input { flex: 1; min-width: 0; height: 34px; padding: 0 10px; font-size: 14.5px; font-weight: 700; }
-  .lobby-add { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: auto; padding: 11px; border: 1px dashed var(--line-strong); border-radius: var(--r-sm); background: none; color: var(--fg-3); font-size: 13px; font-weight: 600; cursor: pointer; transition: color .15s, border-color .15s; }
+  /* Зрители — тем же списком, что игроки в команде. */
+  .spectator-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 8px; }
+
+  .lobby-add { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 11px; border: 1px dashed var(--line-strong); border-radius: var(--r-sm); background: none; color: var(--fg-3); font-size: 13px; font-weight: 600; cursor: pointer; transition: color .15s, border-color .15s; }
   .lobby-add:hover { color: var(--fg-1); border-color: var(--accent-line); }
   .lobby-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: clamp(24px, 3vh, 40px); padding: clamp(14px, 1.4vw, 20px) clamp(18px, 1.8vw, 26px); background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r-lg); position: sticky; bottom: 16px; box-shadow: var(--shadow-card); flex-wrap: wrap; }
   @media (max-width: 1000px) { .lobby-grid { grid-template-columns: 1fr; } .lobby-invite { position: static; } }
