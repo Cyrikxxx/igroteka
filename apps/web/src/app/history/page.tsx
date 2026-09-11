@@ -28,6 +28,7 @@ import { prepareLocalRematch, createRoomLike } from "@/lib/rematch";
 import { loadDisplayName, saveRoomCreds } from "@/lib/room-session";
 import PageShell, { PageHead, PageFooter } from "@/components/platform/PageShell";
 import { ROLE_META } from "@/components/mafia/roleMeta";
+import { formatDayRu } from "@/lib/utils";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import type { MafiaHistoryGame } from "@/app/api/mafia/history/route";
 
@@ -429,7 +430,9 @@ export default function HistoryPage() {
                 {r.body}
 
                 <div className="hist-card-foot">
-                  <span className="mf-mono hist-card-meta">{r.meta}</span>
+                  <span className="mf-mono hist-card-meta">
+                    {r.meta} · {formatDayRu(r.time)}
+                  </span>
                   <div className="hist-card-actions">
                     <Link
                       href={r.href}
