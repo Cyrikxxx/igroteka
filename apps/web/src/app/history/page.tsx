@@ -27,6 +27,7 @@ import type { MafiaSettings, MafiaCreateRoomResponse } from "@alias/shared/mafia
 import { prepareLocalRematch, createRoomLike } from "@/lib/rematch";
 import { loadDisplayName, saveRoomCreds } from "@/lib/room-session";
 import PageShell, { PageHead, PageFooter } from "@/components/platform/PageShell";
+import { ROLE_META } from "@/components/mafia/roleMeta";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import type { MafiaHistoryGame } from "@/app/api/mafia/history/route";
 
@@ -53,6 +54,8 @@ interface Row {
   live: boolean;
   /** Куда ведёт основная кнопка. */
   href: string;
+  /** Когда партия была — по ней обе игры выстраиваются в один список. */
+  time: number;
   meta: string;
   body: React.ReactNode;
   /** Удалять можно только локальные партии Алиаса — они наши. */
@@ -66,6 +69,10 @@ interface Row {
  * сами по себе ни о чём не говорят — через неделю не вспомнить, кто в «Лисах»
  * играл. Втроём команда и есть игрок, и вторая колонка тогда пустая.
  */
+/**
+ * Строка участника в карточке истории. Одна на обе игры: в Алиасе справа
+ * команда и счёт, в Мафии — роль, счёта там нет.
+ */
 function PlayerRow({
   name,
   team,
@@ -73,19 +80,27 @@ function PlayerRow({
   color,
 }: {
   name: string;
+  /** Правая подпись: команда в Алиасе, роль в Мафии. */
   team: string | null;
-  score: number;
+  /** Только у Алиаса: в Мафии очков не бывает. */
+  score?: number;
+  /** Имя переменной («--team-1») или готовый цвет («var(--role-mafia)»). */
   color: string;
 }) {
   return (
     <div className="hist-line">
       <span className="hist-line-name">
-        <span className="hist-dot" style={{ background: `var(${color})` }} />
+        <span
+          className="hist-dot"
+          style={{ background: color.startsWith("--") ? `var(${color})` : color }}
+        />
         <span className="hist-line-nm">{name}</span>
       </span>
       <span className="hist-line-right">
         {team ? <span className="hist-line-team">{team}</span> : null}
-        <span className="mf-mono hist-line-value">{score}</span>
+        {score === undefined ? null : (
+          <span className="mf-mono hist-line-value">{score}</span>
+        )}
       </span>
     </div>
   );
@@ -204,6 +219,7 @@ export default function HistoryPage() {
       online,
       live,
       href,
+      time: new Date(g.finishedAt ?? g.updatedAt ?? g.createdAt).getTime(),
       meta: `${g.currentRoundNumber} ${g.currentRoundNumber === 1 ? "раунд" : "раунда"}`,
       body: (
         <div className="hist-lines hist-lines-scroll">
@@ -245,6 +261,7 @@ export default function HistoryPage() {
       game: "mafia",
       online: true,
       live,
+      time: new Date(m.endedAt ?? m.createdAt).getTime(),
       href: live && m.code ? `/mafia/room/${m.code}` : `/mafia/results/${m.id}`,
       onAgain: !live && m.settings ? () => againMafia(m.settings!) : undefined,
       // Идущую партию не прячем — из неё выходят. Завершённую убирает у себя
@@ -254,7 +271,7 @@ export default function HistoryPage() {
         : () => askDelete({ key: `mafia-${m.id}`, id: m.id, game: "mafia" }, true),
       meta: `${m.dayCount} ${m.dayCount === 1 ? "ночь" : "ночи"}`,
       body: (
-        <div className="hist-lines">
+        <div className="hist-lines hist-lines-scroll">
           <div className="hist-line">
             <span className="hist-line-name">
               <span
@@ -267,12 +284,25 @@ export default function HistoryPage() {
               {live ? `${m.alive}/${m.players} в игре` : `${m.players} игроков`}
             </span>
           </div>
+          {/* Состав, как в карточке Алиаса: названия стадии мало, через
+              неделю по нему не вспомнить, что это была за партия. У идущей
+              ролей нет — их не отдаёт и сервер. */}
+          {(m.roster ?? []).map((p, i) => (
+            <PlayerRow
+              key={`${m.id}-${i}`}
+              name={p.name}
+              team={p.role ? ROLE_META[p.role].label : p.alive ? "в игре" : "выбыл"}
+              color={p.role ? ROLE_META[p.role].color : "var(--fg-3)"}
+            />
+          ))}
         </div>
       ),
     };
   });
 
-  const all = [...aliasRows, ...mafiaRows];
+  // Один список по времени, а не «сначала весь Алиас, потом вся Мафия»:
+  // иначе вчерашняя партия Алиаса стоит выше сегодняшней Мафии.
+  const all = [...aliasRows, ...mafiaRows].sort((a, b) => b.time - a.time);
   const rows = all.filter((r) => filter === "all" || r.game === filter);
   const loading = games === null;
 

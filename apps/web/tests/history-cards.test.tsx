@@ -57,6 +57,10 @@ function mafiaGame(over: Record<string, unknown> = {}) {
     endedAt: "2026-09-01T00:00:00.000Z",
     createdAt: "2026-09-01T00:00:00.000Z",
     settings: {},
+    roster: [
+      { name: "Аня", role: "mafia", alive: true },
+      { name: "Боря", role: "civilian", alive: false },
+    ],
     ...over,
   };
 }
@@ -117,5 +121,28 @@ describe("карточки истории", () => {
     stubApi([], [mafiaGame({ status: "live", code: "XYZ999", winner: null, phase: "Ночь 2" })]);
     await renderHistory();
     expect(screen.queryByLabelText("Убрать из истории")).toBeNull();
+  });
+});
+
+describe("список истории", () => {
+  it("обе игры идут одним списком по дате, а не Алиас впереди Мафии", async () => {
+    // Раньше сначала шёл весь Алиас, потом вся Мафия — и вчерашняя партия
+    // Алиаса стояла выше сегодняшней Мафии.
+    stubApi(
+      [aliasGame({ id: "a-old", finishedAt: "2026-09-01T00:00:00.000Z" })],
+      [mafiaGame({ id: "m-new", endedAt: "2026-09-05T00:00:00.000Z" })],
+    );
+    await renderHistory();
+    const cards = [...document.querySelectorAll(".hist-card")];
+    expect(cards).toHaveLength(2);
+    const kinds = cards.map((c) => (c.textContent?.includes("Мафия") ? "mafia" : "alias"));
+    expect(kinds).toEqual(["mafia", "alias"]);
+  });
+
+  it("в карточке Мафии виден состав", async () => {
+    stubApi([], [mafiaGame()]);
+    await renderHistory();
+    expect(screen.getByText("Аня")).toBeTruthy();
+    expect(screen.getByText("Боря")).toBeTruthy();
   });
 });

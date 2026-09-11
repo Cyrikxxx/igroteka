@@ -7,7 +7,19 @@ import prisma from "@/lib/prisma";
 import { requireUserId } from "@/lib/identity";
 import { loadMafiaSnapshot } from "@/lib/mafia-snapshot";
 import { visibleMafiaGamesWhere } from "@/lib/history-access";
-import type { MafiaPhase, MafiaSettings } from "@alias/shared/mafia";
+import type { MafiaPhase, MafiaRole, MafiaSettings } from "@alias/shared/mafia";
+
+/**
+ * Игрок в карточке истории.
+ *
+ * Роль есть только у завершённых партий: в идущей она — секрет, и отдавать её
+ * сюда значило бы раскрыть мафию всем, кто откроет Историю.
+ */
+export interface MafiaHistoryPlayer {
+  name: string;
+  role?: MafiaRole;
+  alive: boolean;
+}
 
 export interface MafiaHistoryGame {
   id: string;
@@ -26,6 +38,8 @@ export interface MafiaHistoryGame {
   createdAt: string;
   /** Снимок настроек — из него собирается «сыграть так же». */
   settings?: MafiaSettings;
+  /** Кто играл. Карточка Алиаса всегда показывала состав, Мафии — нет. */
+  roster: MafiaHistoryPlayer[];
 }
 
 /** Подпись фазы для карточки идущей партии. */
@@ -71,6 +85,7 @@ export async function GET() {
           endedAt: true,
           createdAt: true,
           settings: true,
+          players: { select: { name: true, role: true, alive: true }, orderBy: { order: "asc" } },
           _count: { select: { players: true } },
         },
       }),
@@ -103,6 +118,8 @@ export async function GET() {
         dayCount: snap.day,
         endedAt: null,
         createdAt: room.createdAt.toISOString(),
+        // Без ролей: партия идёт, и раскрывать их нельзя.
+        roster: snap.players.map((p) => ({ name: p.displayName, alive: p.alive })),
       });
     }
 
@@ -115,6 +132,11 @@ export async function GET() {
       endedAt: g.endedAt ? g.endedAt.toISOString() : null,
       createdAt: g.createdAt.toISOString(),
       settings: (g.settings ?? undefined) as MafiaSettings | undefined,
+      roster: g.players.map((p) => ({
+        name: p.name,
+        role: p.role as MafiaRole,
+        alive: p.alive,
+      })),
     }));
 
     // Идущие — наверх: к ним можно вернуться прямо сейчас.
