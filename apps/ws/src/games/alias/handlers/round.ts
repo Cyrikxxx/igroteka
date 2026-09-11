@@ -773,6 +773,37 @@ export function registerRoundHandlers(
   // `maybeRehydrateExplainer` после ack'а room:hello.
 }
 
+/**
+ * Итог раунда для тех, кто подключился уже в фазе ROUND_REVIEW.
+ *
+ * Раньше `round:review` уходил ровно один раз — в момент входа в фазу. Кто
+ * подключился позже (перезагрузил вкладку, вернулся по «продолжить» из
+ * Истории, просто зашёл в комнату), события не получал никогда и навсегда
+ * оставался на экране «Подсчитываем итоги…». Выйти оттуда было нечем: фаза
+ * ждёт подтверждения объясняющего, а он видит ту же заглушку.
+ */
+export async function maybeRehydrateReview(socket: AppSocket): Promise<void> {
+  const code = socket.data.roomCode;
+  const snap = await load(code);
+  if (!snap || snap.phase !== "ROUND_REVIEW") return;
+  const rs = await loadRoundState(code);
+  if (!rs) return;
+  const guessed = rs.wordsSeen.filter((x) => x.guessed === true).length;
+  const skipped = rs.wordsSeen.filter((x) => x.guessed === false).length;
+  socket.emit("round:review", {
+    teamId: rs.teamId,
+    words: rs.wordsSeen
+      .filter((x) => x.guessed !== null)
+      .map((x) => ({
+        wordId: x.wordId,
+        text: x.text,
+        guessed: x.guessed === true,
+        order: x.order,
+      })),
+    scorePreview: guessed - (snap.settings.penaltySkip ? skipped : 0),
+  });
+}
+
 /** Вспомогательная функция: после `room:hello` если есть активный раунд и
  * этот сокет — explainer, послать ему текущее слово. */
 export async function maybeRehydrateExplainer(

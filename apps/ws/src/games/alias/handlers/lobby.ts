@@ -30,7 +30,11 @@ import type {
   AppSocket,
   AppNamespace,
 } from "../io-types";
-import { maybeRehydrateExplainer, pauseIfExplainerDropped } from "./round";
+import {
+  maybeRehydrateExplainer,
+  maybeRehydrateReview,
+  pauseIfExplainerDropped,
+} from "./round";
 import { scheduleStateBroadcast, broadcastStateNow } from "../broadcast";
 
 /**
@@ -107,6 +111,9 @@ export function registerLobbyHandlers(
     await broadcastState(ns, roomCode, snap);
     // Реконнект explainer'а — пере-эмитим текущее слово приватно.
     await maybeRehydrateExplainer(socket);
+    // А если комната стоит на итогах раунда — отдаём и их: иначе пришедший
+    // позже навсегда застревает на «Подсчитываем итоги…».
+    await maybeRehydrateReview(socket);
   });
 
   /**
@@ -408,7 +415,11 @@ export function registerLobbyHandlers(
     await closeRoom(roomCode);
     const sockets = await ns.in(`room:${roomCode}`).fetchSockets();
     for (const sock of sockets) {
-      sock.emit("room:closed", { reason: "closed_by_host" });
+      // Тому, кто сам нажал «закрыть», объяснять нечего: он уходит своим
+      // кодом и увидел бы «хост закрыл комнату» про самого себя.
+      if (sock.data.userId !== userId) {
+        sock.emit("room:closed", { reason: "closed_by_host" });
+      }
       sock.disconnect(true);
     }
   });

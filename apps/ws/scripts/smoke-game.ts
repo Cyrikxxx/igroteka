@@ -269,6 +269,32 @@ async function main() {
     ]);
     console.log(`[review] words=${review?.words.length ?? "?"} preview=${review?.scorePreview ?? "?"}`);
 
+    // Пришедший в комнату уже на итогах раунда обязан их получить. Раньше
+    // `round:review` уходил ровно один раз, в момент входа в фазу, и всякий,
+    // кто подключился позже (перезагрузил вкладку, вернулся из Истории),
+    // навсегда застревал на экране «Подсчитываем итоги…».
+    const lateReview = await new Promise<RoundReviewPayload | null>((resolve) => {
+      const late = ioClient(`${WS}/room`, {
+        auth: { token: created.wsToken, code: created.room.code, name: "late" },
+        transports: ["websocket"],
+        reconnection: false,
+      });
+      const done = setTimeout(() => {
+        late.disconnect();
+        resolve(null);
+      }, 3000);
+      late.on("round:review", (r: RoundReviewPayload) => {
+        clearTimeout(done);
+        late.disconnect();
+        resolve(r);
+      });
+      late.on("connect", () => late.emit("room:hello", {}, () => {}));
+    });
+    if (!lateReview) {
+      throw new Error("подключившийся на итогах раунда не получил round:review");
+    }
+    console.log(`[late review] слов: ${lateReview.words.length} — итоги догнали пришедшего`);
+
     console.log("[confirm]");
     const confirmResp = await emitAck<{ ok: true } | { error: string }>(
       explainerSock,
