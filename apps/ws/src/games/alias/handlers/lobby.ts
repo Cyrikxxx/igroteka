@@ -7,7 +7,7 @@ import type { Namespace } from "socket.io";
 import type {
   RoomSnapshot,
   RoomSnapshotTeam,
-} from "@alias/shared/domain";
+} from "@igroteka/shared/alias";
 import {
   findPlayer,
   nextTeamId,
@@ -18,12 +18,12 @@ import {
   everyoneIn,
   applyRoomFormat,
   teamCapacity,
-} from "@alias/shared/snapshot-builders";
+} from "@igroteka/shared/snapshot-builders";
 import {
   MAX_TEAMS,
   MIN_TEAMS,
-} from "@alias/shared/constants";
-import { nextHostOfflineSince, canClaimHost } from "@alias/shared/host";
+} from "@igroteka/shared/constants";
+import { nextHostOfflineSince, canClaimHost } from "@igroteka/shared/host";
 import { mutate, load, remove } from "../snapshot";
 import { reopenRoom, closeRoom } from "../../../services/room-lifecycle";
 import type {

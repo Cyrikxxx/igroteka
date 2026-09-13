@@ -8,7 +8,7 @@
 // Партии создаются прямо в базе: доигрывать Мафию до победы скриптом долго и
 // недетерминированно, а проверяем мы здесь историю, а не движок.
 //
-// Запуск: `npm run smoke:history -w @alias/ws` при поднятом `npm run dev`.
+// Запуск: `npm run smoke:history -w @igroteka/ws` при поднятом `npm run dev`.
 
 import "../src/env";
 import { prisma } from "../src/prisma";

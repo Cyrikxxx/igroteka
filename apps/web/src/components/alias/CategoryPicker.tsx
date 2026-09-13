@@ -17,7 +17,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Sparkles } from "lucide-react";
 import type { CatalogFromAPI, CategoryFromAPI, CollectionFromAPI } from "@/types";
-import { isInSeason, seasonRank } from "@alias/shared/season";
+import { isInSeason, seasonRank } from "@igroteka/shared/season";
 import { pluralize, WORDS } from "@/lib/plural";
 
 interface CategoryPickerProps {

@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from "vitest";
 import { removePlayer, reassignHostIfNeeded } from "../src/snapshot-builders";
-import type { RoomSnapshot, RoomSnapshotPlayer } from "../src/domain";
+import type { RoomSnapshot, RoomSnapshotPlayer } from "../src/alias";
 
 function player(userId: string): RoomSnapshotPlayer {
   return { userId, displayName: userId, online: true };

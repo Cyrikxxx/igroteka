@@ -13,7 +13,7 @@
 // Боты отвечают наугад: партия должна двигаться, а не выигрываться.
 //
 // Запуск (комната уже создана в браузере, вы в лобби):
-//   npm run alias:fill -w @alias/ws -- K7F2QD 12
+//   npm run alias:fill -w @igroteka/ws -- K7F2QD 12
 // Второй аргумент — сколько игроков должно оказаться в комнате всего, считая
 // вас. По умолчанию 12.
 //
@@ -25,9 +25,9 @@ import type {
   RoomSnapshot,
   RoundPhasePayload,
   RoundWordPayload,
-} from "@alias/shared/domain";
-import { MAX_TEAMS, MAX_PLAYERS_PER_TEAM } from "@alias/shared/constants";
-import { teamCapacity } from "@alias/shared/snapshot-builders";
+} from "@igroteka/shared/alias";
+import { MAX_TEAMS, MAX_PLAYERS_PER_TEAM } from "@igroteka/shared/constants";
+import { teamCapacity } from "@igroteka/shared/snapshot-builders";
 
 const WEB = process.env.SMOKE_WEB ?? "http://localhost:3000";
 const WS = process.env.SMOKE_WS ?? process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001";
@@ -216,7 +216,7 @@ async function main(): Promise<void> {
   const code = (process.argv[2] ?? "").toUpperCase();
   const total = Math.min(Number(process.argv[3] ?? 12), MAX_PLAYERS);
   if (!/^[A-Z0-9]{6}$/.test(code)) {
-    console.error("Укажите код комнаты: npm run alias:fill -w @alias/ws -- K7F2QD 12");
+    console.error("Укажите код комнаты: npm run alias:fill -w @igroteka/ws -- K7F2QD 12");
     process.exit(1);
   }
   // Одно место ваше — вы уже в комнате.

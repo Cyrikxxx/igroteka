@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import { HOST_CLAIM_AFTER_MS } from "@alias/shared/constants";
+import { HOST_CLAIM_AFTER_MS } from "@igroteka/shared/constants";
 import { useHostClaim } from "@/hooks/useHostClaim";
 
 describe("useHostClaim", () => {

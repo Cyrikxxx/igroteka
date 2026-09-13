@@ -8,8 +8,8 @@ import {
   type MafiaPlayerFull,
   type MafiaSnapshot,
   type MafiaWinner,
-} from "@alias/shared/mafia";
-import { pickHeir, nextHostOfflineSince, canClaimHost } from "@alias/shared/host";
+} from "@igroteka/shared/mafia";
+import { pickHeir, nextHostOfflineSince, canClaimHost } from "@igroteka/shared/host";
 import { mutate, load } from "../snapshot";
 import { assignRoles } from "../roles";
 import {

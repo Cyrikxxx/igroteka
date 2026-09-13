@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Check, Clock, Crown, DoorClosed, EyeOff, Flag, LogOut, Mic, Pause, Play, RefreshCw, SkipForward, StopCircle, Users, X } from "lucide-react";
-import { nextExplainerFor } from "@alias/shared/snapshot-builders";
+import { nextExplainerFor } from "@igroteka/shared/snapshot-builders";
 import { loadRoomCreds, clearRoomCreds } from "@/lib/room-session";
 import { resumeRoom } from "@/lib/room-resume";
 import { setRoomNotice } from "@/lib/room-notice";
@@ -800,7 +800,7 @@ function ReviewView({
   trio: boolean;
   /** Чей ход словами: втроём — пара, иначе — команда. */
   pairName: string;
-  review: import("@alias/shared/domain").RoundReviewPayload | null;
+  review: import("@igroteka/shared/alias").RoundReviewPayload | null;
   penaltySkip: boolean;
   onToggle: (wordId: number) => void;
   onConfirm: () => void;

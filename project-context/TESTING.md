@@ -74,7 +74,7 @@ Smoke-скрипты делают то же самое программно: п�
 
 ```bash
 npm run dev                          # в одном терминале
-npm run smoke:mafia -w @alias/ws     # в другом
+npm run smoke:mafia -w @igroteka/ws     # в другом
 ```
 
 | Сценарий | Что проверяет |
@@ -132,7 +132,7 @@ npm run smoke:mafia -w @alias/ws     # в другом
 **Мафия.** Создайте комнату в браузере, останьтесь в лобби и запустите:
 
 ```bash
-npm run mafia:fill -w @alias/ws -- K7F2QD 16
+npm run mafia:fill -w @igroteka/ws -- K7F2QD 16
 ```
 
 Второй аргумент — сколько игроков должно быть за столом **всего, считая вас**.
@@ -143,7 +143,7 @@ npm run mafia:fill -w @alias/ws -- K7F2QD 16
 боты займут свободные места и рассядутся по командам поровну:
 
 ```bash
-npm run alias:fill -w @alias/ws -- K7F2QD 12
+npm run alias:fill -w @igroteka/ws -- K7F2QD 12
 ```
 
 Мест не хватило — скрипт скажет, сколько ещё нужно, и посадит сколько влезет.

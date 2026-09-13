@@ -20,8 +20,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@alias/shared": ["../../packages/shared/src/index.ts"],
-      "@alias/shared/*": ["../../packages/shared/src/*"]
+      "@igroteka/shared": ["../../packages/shared/src/index.ts"],
+      "@igroteka/shared/*": ["../../packages/shared/src/*"]
     }
   },
   "include": [

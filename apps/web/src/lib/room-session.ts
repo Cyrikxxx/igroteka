@@ -39,7 +39,7 @@ export function clearRoomCreds(code: string): void {
 }
 
 // Ник запоминаем глобально между разными комнатами.
-const DISPLAY_NAME_KEY = "alias.displayName";
+const DISPLAY_NAME_KEY = "igroteka.displayName";
 
 export function saveDisplayName(name: string): void {
   if (typeof window === "undefined") return;

@@ -17,7 +17,7 @@ import {
   VenetianMask,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { MafiaView, MafiaNightAction } from "@alias/shared/mafia";
+import type { MafiaView, MafiaNightAction } from "@igroteka/shared/mafia";
 import PhaseHead from "./PhaseHead";
 import PlayerCard, { PlayerGrid, ChoiceChip } from "./PlayerCard";
 import { SheriffConfirm, SheriffVerdict } from "./SheriffCheck";

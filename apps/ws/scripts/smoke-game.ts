@@ -2,17 +2,17 @@
 // с 2 игроками каждая, начать игру, пройти первый раунд (PRE_ROUND →
 // ROUND_ACTIVE → один guess → ROUND_REVIEW → review_confirm → BETWEEN_ROUNDS).
 //
-// Запуск: `npm run smoke:game -w @alias/ws` при поднятом `npm run dev`.
+// Запуск: `npm run smoke:game -w @igroteka/ws` при поднятом `npm run dev`.
 
 import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
-import { roomKey } from "@alias/shared/redis-keys";
+import { roomKey } from "@igroteka/shared/redis-keys";
 import { redis } from "../src/redis";
 import type {
   RoomSnapshot,
   RoundReviewPayload,
   RoundWordPayload,
-} from "@alias/shared/domain";
+} from "@igroteka/shared/alias";
 
 const WEB = "http://localhost:3000";
 const WS = process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001";

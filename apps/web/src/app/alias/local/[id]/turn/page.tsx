@@ -7,7 +7,7 @@ import { useRouter, useParams } from "next/navigation";
 import { Crown, EyeOff, LogOut, Play } from "lucide-react";
 import type { GameFromAPI } from "@/types";
 import { teamColorVar } from "@/constants/game";
-import { TRIO_TURNS, trioRoles } from "@alias/shared/trio";
+import { TRIO_TURNS, trioRoles } from "@igroteka/shared/trio";
 import AppShell from "@/components/common/AppShell";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import Avatar from "@/components/common/Avatar";

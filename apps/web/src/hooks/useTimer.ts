@@ -3,7 +3,7 @@
 // Таймер раунда локальной игры. В онлайне время считает сервер и присылает
 // в tick.msLeft — этот хук нужен только режиму «на одном устройстве».
 //
-// Вся арифметика — в @alias/shared/countdown (она покрыта тестами с
+// Вся арифметика — в @igroteka/shared/countdown (она покрыта тестами с
 // поддельными часами). Здесь только React-обвязка: состояние, интервал
 // перерисовки и вызов onTimeUp.
 
@@ -15,7 +15,7 @@ import {
   remainingSeconds,
   isExpired,
   type Countdown,
-} from "@alias/shared/countdown";
+} from "@igroteka/shared/countdown";
 
 /** Как часто перерисовываем остаток. На длительность раунда не влияет. */
 const TICK_MS = 250;

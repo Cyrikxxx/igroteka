@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { SKIP_VOTE, type MafiaView } from "@alias/shared/mafia";
+import { SKIP_VOTE, type MafiaView } from "@igroteka/shared/mafia";
 import { VoteResultScreen } from "@/components/mafia/DayScreens";
 
 function view(over: Partial<MafiaView> = {}): MafiaView {

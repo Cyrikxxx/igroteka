@@ -10,7 +10,7 @@
 // а не выигрываться.
 //
 // Запуск (комната уже создана в браузере, вы в лобби):
-//   npm run mafia:fill -w @alias/ws -- K7F2QD 16
+//   npm run mafia:fill -w @igroteka/ws -- K7F2QD 16
 // Второй аргумент — сколько игроков должно оказаться за столом всего,
 // считая вас. По умолчанию 16, максимум тоже 16.
 //
@@ -18,8 +18,8 @@
 
 import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
-import type { MafiaView } from "@alias/shared/mafia";
-import { MAX_MAFIA_PLAYERS, SKIP_VOTE } from "@alias/shared/mafia";
+import type { MafiaView } from "@igroteka/shared/mafia";
+import { MAX_MAFIA_PLAYERS, SKIP_VOTE } from "@igroteka/shared/mafia";
 
 const WEB = process.env.SMOKE_WEB ?? "http://localhost:3000";
 const WS = process.env.SMOKE_WS ?? process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001";
@@ -196,7 +196,7 @@ async function main(): Promise<void> {
   const code = (process.argv[2] ?? "").toUpperCase();
   const total = Math.min(Number(process.argv[3] ?? MAX_MAFIA_PLAYERS), MAX_MAFIA_PLAYERS);
   if (!/^[A-Z0-9]{6}$/.test(code)) {
-    console.error("Укажите код комнаты: npm run mafia:fill -w @alias/ws -- K7F2QD 16");
+    console.error("Укажите код комнаты: npm run mafia:fill -w @igroteka/ws -- K7F2QD 16");
     process.exit(1);
   }
   // Одно место ваше — вы уже в комнате.

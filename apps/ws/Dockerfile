@@ -16,13 +16,13 @@ RUN npm ci
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
 # npm workspaces хостят всё в корневой node_modules, включая симлинки
-# на @alias/shared — отдельных папок в apps/* нет.
+# на @igroteka/shared — отдельных папок в apps/* нет.
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
-# esbuild собирает src/ и @alias/shared в один файл; тяжёлые нативные
+# esbuild собирает src/ и @igroteka/shared в один файл; тяжёлые нативные
 # зависимости остаются внешними и ставятся отдельно на следующем шаге.
-RUN npm run build --workspace @alias/ws
+RUN npm run build --workspace @igroteka/ws
 
 # ─── Прод-зависимости отдельным слоем ───
 FROM node:22-bookworm-slim AS prod-deps

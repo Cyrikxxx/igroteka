@@ -181,7 +181,7 @@ Redis держит идущую комнату — фазу, таймер, ро�
 ## Структура проекта
 
 ```
-alias-online/
+igroteka/
 │
 ├── apps/
 │   ├── web/                          Next.js: страницы и REST API
@@ -279,11 +279,11 @@ npm run dev           # web :3000 + ws :3001
 | `npm run db:migrate` | создать миграцию |
 | `npm run db:seed` | залить словарь |
 | `npm run db:studio` | Prisma Studio |
-| `npm run smoke:game -w @alias/ws` | полный раунд Алиаса на живых сокетах |
-| `npm run smoke:mafia -w @alias/ws` | партия Мафии на 6 клиентов |
-| `npm run smoke:narrator -w @alias/ws` | режим ведущего: ночь по шагам |
-| `npm run mafia:fill -w @alias/ws -- <код> 16` | подсадить ботов в свою комнату Мафии |
-| `npm run alias:fill -w @alias/ws -- <код> 12` | то же для онлайн-комнаты Алиаса |
+| `npm run smoke:game -w @igroteka/ws` | полный раунд Алиаса на живых сокетах |
+| `npm run smoke:mafia -w @igroteka/ws` | партия Мафии на 6 клиентов |
+| `npm run smoke:narrator -w @igroteka/ws` | режим ведущего: ночь по шагам |
+| `npm run mafia:fill -w @igroteka/ws -- <код> 16` | подсадить ботов в свою комнату Мафии |
+| `npm run alias:fill -w @igroteka/ws -- <код> 12` | то же для онлайн-комнаты Алиаса |
 
 Всего smoke-сценариев 16, полный список и наполнители комнат — в
 [TESTING.md](project-context/TESTING.md).

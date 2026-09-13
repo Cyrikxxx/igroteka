@@ -3,7 +3,7 @@
 
 import { mutate, load } from "../snapshot";
 import { logEvent } from "../engine-core";
-import { SKIP_VOTE } from "@alias/shared/mafia";
+import { SKIP_VOTE } from "@igroteka/shared/mafia";
 import { scheduleStateBroadcast } from "../broadcast";
 import { clearTimer } from "../services/scheduler";
 import {

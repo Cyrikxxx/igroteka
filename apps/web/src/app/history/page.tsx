@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import type { GameFromAPI } from "@/types";
 import { historyLines } from "@/lib/history-rows";
-import type { MafiaSettings, MafiaCreateRoomResponse } from "@alias/shared/mafia";
+import type { MafiaSettings, MafiaCreateRoomResponse } from "@igroteka/shared/mafia";
 import { prepareLocalRematch, createRoomLike } from "@/lib/rematch";
 import { loadDisplayName, saveRoomCreds } from "@/lib/room-session";
 import PageShell, { PageHead, PageFooter } from "@/components/platform/PageShell";

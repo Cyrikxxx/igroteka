@@ -20,7 +20,7 @@
 // состоит из одного человека, поэтому «индекс команды» и «индекс игрока» —
 // одно и то же.
 
-import type { GameFormat } from "./domain";
+import type { GameFormat } from "./alias";
 
 /** Ходов в полном круге. */
 export const TRIO_TURNS = 6;

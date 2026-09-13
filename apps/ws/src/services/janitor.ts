@@ -10,7 +10,7 @@
 
 import { prisma } from "../prisma";
 import { redis } from "../redis";
-import { roomKey, mafiaRoomKey } from "@alias/shared/redis-keys";
+import { roomKey, mafiaRoomKey } from "@igroteka/shared/redis-keys";
 
 const SWEEP_INTERVAL_MS = 60 * 60 * 1000;
 /** Столько же, сколько живёт снимок комнаты в Redis. */

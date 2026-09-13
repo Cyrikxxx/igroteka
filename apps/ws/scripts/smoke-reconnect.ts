@@ -7,13 +7,13 @@
 //   • после этого слова снова засчитываются;
 //   • в Мафии по ходу фазы приходят тики таймера.
 //
-// Запуск: `npm run smoke:reconnect -w @alias/ws` при поднятом `npm run dev`.
+// Запуск: `npm run smoke:reconnect -w @igroteka/ws` при поднятом `npm run dev`.
 
 import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
-import type { RoomSnapshot, RoundWordPayload } from "@alias/shared/domain";
-import type { MafiaView } from "@alias/shared/mafia";
-import { mafiaRoomKey } from "@alias/shared/redis-keys";
+import type { RoomSnapshot, RoundWordPayload } from "@igroteka/shared/alias";
+import type { MafiaView } from "@igroteka/shared/mafia";
+import { mafiaRoomKey } from "@igroteka/shared/redis-keys";
 import redis from "../src/redis";
 
 const WEB = "http://localhost:3000";

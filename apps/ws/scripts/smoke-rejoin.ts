@@ -7,12 +7,12 @@
 //   • выгнанного отключают, и он не может войти обратно;
 //   • разблокировка лишь открывает вход: сама она никого не возвращает.
 //
-// Запуск: `npm run smoke:rejoin -w @alias/ws` при поднятом `npm run dev`.
+// Запуск: `npm run smoke:rejoin -w @igroteka/ws` при поднятом `npm run dev`.
 
 import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
-import type { RoomSnapshot } from "@alias/shared/domain";
-import type { MafiaView } from "@alias/shared/mafia";
+import type { RoomSnapshot } from "@igroteka/shared/alias";
+import type { MafiaView } from "@igroteka/shared/mafia";
 
 const WEB = "http://localhost:3000";
 const WS = process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001";

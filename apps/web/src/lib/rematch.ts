@@ -10,7 +10,7 @@ import {
   type LocalSetupState,
 } from "@/lib/local-setup";
 import { loadDisplayName, saveRoomCreds } from "@/lib/room-session";
-import type { MafiaSettings, MafiaCreateRoomResponse } from "@alias/shared/mafia";
+import type { MafiaSettings, MafiaCreateRoomResponse } from "@igroteka/shared/mafia";
 
 /** Настройки партии в том виде, в каком их принимают /api/games и /api/rooms. */
 function settingsOf(game: GameFromAPI) {

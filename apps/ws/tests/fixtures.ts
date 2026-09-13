@@ -9,7 +9,7 @@ import {
   type MafiaRole,
   type MafiaSettings,
   type MafiaSnapshot,
-} from "@alias/shared/mafia";
+} from "@igroteka/shared/mafia";
 
 /** Игрок: id совпадает с именем — так тесты читаются глазами. */
 export function player(

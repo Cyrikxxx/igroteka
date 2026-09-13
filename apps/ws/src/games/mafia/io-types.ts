@@ -2,7 +2,7 @@
 // Клиент получает ПЕРСОНАЛЬНЫЙ MafiaView (свою роль видишь, чужие — нет).
 
 import type { Namespace, Socket } from "socket.io";
-import type { MafiaView, MafiaTickPayload, MafiaNightAction } from "@alias/shared/mafia";
+import type { MafiaView, MafiaTickPayload, MafiaNightAction } from "@igroteka/shared/mafia";
 import type { SocketData } from "../../socket-data";
 
 type Ack<T> = (resp: T) => void;

@@ -9,7 +9,7 @@ import type {
   RoundWordCountPayload,
   RoundReviewPayload,
   RoundCommittedPayload,
-} from "@alias/shared/domain";
+} from "@igroteka/shared/alias";
 
 type Ack<T> = (resp: T) => void;
 type OkErr = { ok: true } | { error: string };

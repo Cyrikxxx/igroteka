@@ -5,7 +5,7 @@ import {
   computeComposition,
   type MafiaRole,
   type MafiaSnapshot,
-} from "@alias/shared/mafia";
+} from "@igroteka/shared/mafia";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];

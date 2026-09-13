@@ -20,12 +20,12 @@ FROM node:22-bookworm-slim AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 # npm workspaces хостят всё в корневой node_modules, включая симлинки
-# на @alias/shared — отдельных папок в apps/* нет.
+# на @igroteka/shared — отдельных папок в apps/* нет.
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Клиент Prisma нужен уже на сборке: страницы и роуты его импортируют.
 RUN npx prisma generate
-RUN npm run build --workspace @alias/web
+RUN npm run build --workspace @igroteka/web
 
 # ─── Запуск ───
 FROM node:22-bookworm-slim AS runner

@@ -1,7 +1,7 @@
 // Рассылка room:state всем участникам комнаты Алиаса: один общий снимок
 // на всех (в отличие от Мафии, где вид персональный).
 
-import type { RoomSnapshot } from "@alias/shared/domain";
+import type { RoomSnapshot } from "@igroteka/shared/alias";
 import { load } from "./snapshot";
 import type { AppNamespace } from "./io-types";
 import {

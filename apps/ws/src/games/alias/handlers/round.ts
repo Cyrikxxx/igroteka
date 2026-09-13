@@ -11,18 +11,18 @@ import type {
   RoomSnapshot,
   RoomSnapshotTeam,
   RoundReviewWord,
-} from "@alias/shared/domain";
+} from "@igroteka/shared/alias";
 import {
   MIN_TEAMS,
   MIN_PLAYERS_PER_TEAM,
   TRIO_TEAMS,
-} from "@alias/shared/constants";
-import { trioRoles } from "@alias/shared/trio";
+} from "@igroteka/shared/constants";
+import { trioRoles } from "@igroteka/shared/trio";
 import {
   findPlayer,
   removePlayer,
   nextExplainerFor,
-} from "@alias/shared/snapshot-builders";
+} from "@igroteka/shared/snapshot-builders";
 import { mutate, load, save } from "../snapshot";
 import { prisma } from "../../../prisma";
 import {

@@ -5,7 +5,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import MafiaSettingsForm from "@/components/mafia/MafiaSettingsForm";
-import { DEFAULT_MAFIA_SETTINGS, MAFIA_TIMER_LIMITS, type MafiaSettings } from "@alias/shared/mafia";
+import { DEFAULT_MAFIA_SETTINGS, MAFIA_TIMER_LIMITS, type MafiaSettings } from "@igroteka/shared/mafia";
 
 function settings(overrides: Partial<MafiaSettings["timers"]> = {}): MafiaSettings {
   return {

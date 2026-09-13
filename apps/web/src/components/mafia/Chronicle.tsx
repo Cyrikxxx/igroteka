@@ -5,7 +5,7 @@
 
 import { Moon, Sun, Vote, Trophy, HeartPulse, Search, Skull, Scale, LogOut } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { MafiaEvent } from "@alias/shared/mafia";
+import type { MafiaEvent } from "@igroteka/shared/mafia";
 
 interface Line {
   icon: LucideIcon;

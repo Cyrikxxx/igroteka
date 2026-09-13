@@ -9,7 +9,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { renderHook, act } from "@testing-library/react";
 import MafiaSettingsForm from "@/components/mafia/MafiaSettingsForm";
 import { useVoicePref } from "@/hooks/useVoicePref";
-import { DEFAULT_MAFIA_SETTINGS, type MafiaSettings } from "@alias/shared/mafia";
+import { DEFAULT_MAFIA_SETTINGS, type MafiaSettings } from "@igroteka/shared/mafia";
 
 interface FakeUtterance {
   text: string;

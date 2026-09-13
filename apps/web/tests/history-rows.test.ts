@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from "vitest";
 import { historyLines } from "../src/lib/history-rows";
-import type { GameFromAPI, TeamFromAPI } from "@alias/shared/domain";
+import type { GameFromAPI, TeamFromAPI } from "@igroteka/shared/alias";
 
 function team(
   id: number,

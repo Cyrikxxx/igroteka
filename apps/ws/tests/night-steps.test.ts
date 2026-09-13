@@ -8,7 +8,7 @@ import {
   nightStepHasActor,
   nightStepActMs,
 } from "../src/games/mafia/engine-core";
-import { NIGHT_IDLE_MIN_MS, type MafiaSettings } from "@alias/shared/mafia";
+import { NIGHT_IDLE_MIN_MS, type MafiaSettings } from "@igroteka/shared/mafia";
 import { player, snapshot } from "./fixtures";
 
 const settingsWith = (

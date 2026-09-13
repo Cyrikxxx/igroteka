@@ -11,7 +11,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import {
   normalizeMafiaSettings,
   type MafiaCreateRoomResponse,
-} from "@alias/shared/mafia";
+} from "@igroteka/shared/mafia";
 
 export async function POST(request: NextRequest) {
   try {

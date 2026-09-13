@@ -7,7 +7,7 @@ import type {
   RoomSnapshot,
   RoomSnapshotPlayer,
   RoomSnapshotTeam,
-} from "./domain";
+} from "./alias";
 import { trioRoles, nextTrioTurn } from "./trio";
 import {
   teamColorVar,

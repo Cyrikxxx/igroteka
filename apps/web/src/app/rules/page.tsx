@@ -28,12 +28,12 @@ import {
   TRIO_TEAMS,
   ROUND_TIME_OPTIONS,
   WIN_SCORE_OPTIONS,
-} from "@alias/shared/constants";
+} from "@igroteka/shared/constants";
 import {
   MIN_MAFIA_PLAYERS,
   MAX_MAFIA_PLAYERS,
   MAFIA_TIMER_LIMITS,
-} from "@alias/shared/mafia";
+} from "@igroteka/shared/mafia";
 import PageShell, {
   PageHead,
   SectionTitle,

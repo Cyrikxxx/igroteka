@@ -5,7 +5,7 @@
 // счёт справа. Счёт командный, поэтому у соседей по команде он одинаковый —
 // строки читаются как таблица.
 
-import type { GameFromAPI } from "@alias/shared/domain";
+import type { GameFromAPI } from "@igroteka/shared/alias";
 
 export interface HistoryLine {
   key: string;

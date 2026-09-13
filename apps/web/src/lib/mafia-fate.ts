@@ -5,7 +5,7 @@
 // ночью 3», в другом «изгнан городом (день 2)», — и день то оказывался в
 // скобках, то нет.
 
-import type { MafiaDeathCause } from "@alias/shared/mafia";
+import type { MafiaDeathCause } from "@igroteka/shared/mafia";
 
 export function fateText(by?: MafiaDeathCause | null, day?: number | null): string {
   if (!by) return "выжил";

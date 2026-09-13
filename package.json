@@ -1,5 +1,5 @@
 {
-  "name": "alias-online",
+  "name": "igroteka",
   "version": "0.1.0",
   "private": true,
   "workspaces": [
@@ -10,11 +10,11 @@
     "dev": "concurrently --raw -n web,ws -c green,cyan \"npm:dev:web\" \"npm:dev:ws\"",
     "dev:web": "cd apps/web && next dev",
     "dev:ws": "cd apps/ws && tsx watch src/index.ts",
-    "dev:web-only": "npm run dev --workspace @alias/web",
+    "dev:web-only": "npm run dev --workspace @igroteka/web",
     "build": "npm run build:web",
-    "build:web": "prisma generate && npm run build --workspace @alias/web",
-    "start": "npm run start --workspace @alias/web",
-    "lint": "npm run lint --workspace @alias/web",
+    "build:web": "prisma generate && npm run build --workspace @igroteka/web",
+    "start": "npm run start --workspace @igroteka/web",
+    "lint": "npm run lint --workspace @igroteka/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireUserId } from "@/lib/identity";
-import { nextTrioTurn, trioRoles, scoredTeamIndexes } from "@alias/shared/trio";
+import { nextTrioTurn, trioRoles, scoredTeamIndexes } from "@igroteka/shared/trio";
 
 type Ctx = { params: Promise<{ id: string }> };
 

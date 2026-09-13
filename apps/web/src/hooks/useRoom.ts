@@ -11,7 +11,7 @@ import type {
   RoundPhasePayload,
   RoundReviewPayload,
   RoundWordPayload,
-} from "@alias/shared/domain";
+} from "@igroteka/shared/alias";
 import { connectToRoom, disconnectRoom } from "@/lib/socket-client";
 
 export type ConnStatus =

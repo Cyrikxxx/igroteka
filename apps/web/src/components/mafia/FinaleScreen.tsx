@@ -4,7 +4,7 @@
 
 import { VenetianMask, Skull, Shield, Home, RotateCcw } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { MafiaView, MafiaWinner } from "@alias/shared/mafia";
+import type { MafiaView, MafiaWinner } from "@igroteka/shared/mafia";
 import { fateText } from "@/lib/mafia-fate";
 import MafiaAvatar from "./MafiaAvatar";
 import { RoleChip } from "./roleMeta";

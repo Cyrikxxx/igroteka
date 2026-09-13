@@ -2,7 +2,7 @@
 // неймспейсы /room и /mafia различаются событиями, но опознаётся участник
 // одинаково — по подписанному токену.
 
-import type { WsRole, WsGame } from "@alias/shared/token";
+import type { WsRole, WsGame } from "@igroteka/shared/token";
 
 export interface SocketData {
   userId: string;

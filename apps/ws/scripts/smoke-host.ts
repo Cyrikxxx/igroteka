@@ -11,14 +11,14 @@
 // Redis — сервер сверяет её по своим часам, и для него это неотличимо от
 // честно прошедшей минуты.
 //
-// Запуск: `npm run smoke:host -w @alias/ws` при поднятом `npm run dev`.
+// Запуск: `npm run smoke:host -w @igroteka/ws` при поднятом `npm run dev`.
 
 import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
-import type { RoomSnapshot } from "@alias/shared/domain";
-import type { MafiaView } from "@alias/shared/mafia";
-import { HOST_CLAIM_AFTER_MS } from "@alias/shared/constants";
-import { roomKey, mafiaRoomKey } from "@alias/shared/redis-keys";
+import type { RoomSnapshot } from "@igroteka/shared/alias";
+import type { MafiaView } from "@igroteka/shared/mafia";
+import { HOST_CLAIM_AFTER_MS } from "@igroteka/shared/constants";
+import { roomKey, mafiaRoomKey } from "@igroteka/shared/redis-keys";
 import redis from "../src/redis";
 
 const WEB = "http://localhost:3000";

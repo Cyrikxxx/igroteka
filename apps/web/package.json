@@ -1,5 +1,5 @@
 {
-  "name": "@alias/web",
+  "name": "@igroteka/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@alias/shared": "*",
+    "@igroteka/shared": "*",
     "@prisma/client": "^6.19.3",
     "ioredis": "^5.7.0",
     "lucide-react": "^0.469.0",

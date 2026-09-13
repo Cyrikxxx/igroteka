@@ -22,8 +22,8 @@
 ## Первый запуск
 
 ```bash
-git clone https://github.com/Cyrikxxx/alias-online.git
-cd alias-online
+git clone https://github.com/Cyrikxxx/igroteka.git
+cd igroteka
 npm install
 
 cp .env.example .env      # значения по умолчанию уже рабочие

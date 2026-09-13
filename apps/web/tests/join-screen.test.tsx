@@ -56,7 +56,7 @@ async function renderJoin() {
 
 describe("общий вход по коду", () => {
   it("подставляет запомненное имя", async () => {
-    localStorage.setItem("alias.displayName", "Аня");
+    localStorage.setItem("igroteka.displayName", "Аня");
     await renderJoin();
     expect(nameInput().value).toBe("Аня");
   });

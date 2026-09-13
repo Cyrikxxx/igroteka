@@ -1,7 +1,7 @@
 // Аутентификация Socket.io: middleware проверяет HMAC-токен,
 // выданный REST-эндпоинтом (apps/web).
 
-import { verifyWsToken } from "@alias/shared/token";
+import { verifyWsToken } from "@igroteka/shared/token";
 import type { SocketData } from "./socket-data";
 
 // Middleware смотрит только на handshake и socket.data, поэтому описываем

@@ -1,10 +1,10 @@
 // Одноразовый smoke-тест: проверяет, что WS-сервер отвергает
 // неавторизованные подключения и принимает корректно подписанные.
-// Запуск: `npm run smoke:auth -w @alias/ws` при поднятом `npm run dev`.
+// Запуск: `npm run smoke:auth -w @igroteka/ws` при поднятом `npm run dev`.
 
 import "../src/env";
 import { io as ioClient } from "socket.io-client";
-import { signWsToken } from "@alias/shared/token";
+import { signWsToken } from "@igroteka/shared/token";
 
 const WS_URL = "http://localhost:3001";
 const SECRET = process.env.WS_TOKEN_SECRET;

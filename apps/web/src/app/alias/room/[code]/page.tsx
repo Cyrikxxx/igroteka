@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import type { RoomSnapshotTeam } from "@alias/shared/domain";
+import type { RoomSnapshotTeam } from "@igroteka/shared/alias";
 import {
   ArrowLeft,
   Check,
@@ -29,7 +29,7 @@ import {
   MIN_PLAYERS_PER_TEAM,
   TRIO_TEAMS,
 } from "@/constants/game";
-import { TRIO_TURNS } from "@alias/shared/trio";
+import { TRIO_TURNS } from "@igroteka/shared/trio";
 import type { GameFormat } from "@/types";
 import Chip from "@/components/common/Chip";
 import { loadRoomCreds, clearRoomCreds, saveDisplayName } from "@/lib/room-session";

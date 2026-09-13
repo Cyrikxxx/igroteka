@@ -18,8 +18,8 @@ import {
   MAX_PLAYERS_PER_TEAM,
   teamColorVar,
 } from "@/constants/game";
-import { TRIO_TURNS } from "@alias/shared/trio";
-import { nextUnusedTeamName } from "@alias/shared/snapshot-builders";
+import { TRIO_TURNS } from "@igroteka/shared/trio";
+import { nextUnusedTeamName } from "@igroteka/shared/snapshot-builders";
 import { plural, pluralize, PLAYERS, TEAMS, TEAMS_IN } from "@/lib/plural";
 import AppShell from "@/components/common/AppShell";
 import { useHydrated } from "@/hooks/useHydrated";

@@ -3,7 +3,7 @@
 import { describe, it, expect } from "vitest";
 import { buildRolePool, assignRoles } from "../src/games/mafia/roles";
 import { player, snapshot } from "./fixtures";
-import { DEFAULT_MAFIA_SETTINGS } from "@alias/shared/mafia";
+import { DEFAULT_MAFIA_SETTINGS } from "@igroteka/shared/mafia";
 
 function lobbyOf(n: number, withDon = false) {
   return snapshot(

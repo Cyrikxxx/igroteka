@@ -1,7 +1,7 @@
 // Выбор пакета слов для раунда и работа с очередью в Redis.
 
-import { WORDS_BATCH_SIZE } from "@alias/shared/constants";
-import { roomWordsKey } from "@alias/shared/redis-keys";
+import { WORDS_BATCH_SIZE } from "@igroteka/shared/constants";
+import { roomWordsKey } from "@igroteka/shared/redis-keys";
 import { redis } from "../../../redis";
 import { prisma } from "../../../prisma";
 

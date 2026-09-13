@@ -1,6 +1,6 @@
 // Проверка условий победы после каждой смерти.
 
-import { roleTeam, type MafiaSnapshot, type MafiaWinner } from "@alias/shared/mafia";
+import { roleTeam, type MafiaSnapshot, type MafiaWinner } from "@igroteka/shared/mafia";
 
 export function checkWinner(snap: MafiaSnapshot): MafiaWinner | null {
   const alive = snap.players.filter((p) => p.alive && p.role);

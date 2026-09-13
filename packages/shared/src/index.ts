@@ -1,5 +1,5 @@
 export * from "./constants";
-export * from "./domain";
+export * from "./alias";
 export * from "./mafia";
 export * from "./mafia-narration";
 export * from "./token";

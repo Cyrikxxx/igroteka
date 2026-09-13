@@ -3,7 +3,7 @@
 
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadEnvFile } from "@alias/shared/load-env";
+import { loadEnvFile } from "@igroteka/shared/load-env";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const { loaded, path } = loadEnvFile(resolve(__dirname, "../../..", ".env"));

@@ -6,7 +6,7 @@
 
 import type { NextConfig } from "next";
 import { resolve } from "node:path";
-import { loadEnvFile } from "@alias/shared/load-env";
+import { loadEnvFile } from "@igroteka/shared/load-env";
 
 // Файла может не быть — в контейнере значения приходят из окружения напрямую.
 loadEnvFile(resolve(__dirname, "../../.env"));
@@ -19,10 +19,10 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // packages/shared — TypeScript-исходники, Next/Turbopack должен
   // транспилировать их при импорте.
-  transpilePackages: ["@alias/shared"],
+  transpilePackages: ["@igroteka/shared"],
   // Монорепо: говорим трассировщику зависимостей, что корень проекта —
   // на 2 уровня выше apps/web. Без этого в сборку не попадут
-  // workspace-зависимости (@alias/shared).
+  // workspace-зависимости (@igroteka/shared).
   outputFileTracingRoot: resolve(__dirname, "../.."),
   // Разрешаем LAN-устройствам (телефон с того же Wi-Fi) подключаться к
   // dev-серверу. Next.js 16 по умолчанию блокирует cross-origin доступ

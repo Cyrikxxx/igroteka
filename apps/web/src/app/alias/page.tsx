@@ -30,7 +30,7 @@ import {
   MAX_PLAYERS_PER_TEAM,
   TRIO_TEAMS,
   ROUND_TIME_OPTIONS,
-} from "@alias/shared/constants";
+} from "@igroteka/shared/constants";
 import {
   WORD_PACKS,
   WORD_LEVELS,

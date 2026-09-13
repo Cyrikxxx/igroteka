@@ -9,11 +9,11 @@
 //   • вернулся — ход проходит;
 //   • у хоста есть рычаг: завершить партию досрочно, счёт сохраняется.
 //
-// Запуск: `npm run smoke:ingame -w @alias/ws` при поднятом `npm run dev`.
+// Запуск: `npm run smoke:ingame -w @igroteka/ws` при поднятом `npm run dev`.
 
 import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
-import type { RoomSnapshot, RoundWordPayload } from "@alias/shared/domain";
+import type { RoomSnapshot, RoundWordPayload } from "@igroteka/shared/alias";
 
 const WEB = "http://localhost:3000";
 const WS = process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001";

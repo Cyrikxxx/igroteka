@@ -6,12 +6,12 @@
 // в паре, очки приходят обоим, и за круг каждый успевает рассказать каждому и
 // поугадывать у каждого.
 //
-// Запуск: `npm run smoke:trio-online -w @alias/ws` при поднятом `npm run dev`.
+// Запуск: `npm run smoke:trio-online -w @igroteka/ws` при поднятом `npm run dev`.
 
 import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
-import type { RoomSnapshot, RoundWordPayload } from "@alias/shared/domain";
-import { TRIO_TURNS } from "@alias/shared/trio";
+import type { RoomSnapshot, RoundWordPayload } from "@igroteka/shared/alias";
+import { TRIO_TURNS } from "@igroteka/shared/trio";
 
 const WEB = "http://localhost:3000";
 const WS = process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001";

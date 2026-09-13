@@ -4,7 +4,7 @@
 
 import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
-import type { RoomSnapshot } from "@alias/shared/domain";
+import type { RoomSnapshot } from "@igroteka/shared/alias";
 
 const WEB = "http://localhost:3000";
 const WS = process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001";

@@ -8,13 +8,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Users, Loader2 } from "lucide-react";
-import type { MafiaRole } from "@alias/shared/mafia";
-import { MIN_MAFIA_PLAYERS, MAX_MAFIA_PLAYERS } from "@alias/shared/mafia";
+import type { MafiaRole } from "@igroteka/shared/mafia";
+import { MIN_MAFIA_PLAYERS, MAX_MAFIA_PLAYERS } from "@igroteka/shared/mafia";
 import {
   MAX_TEAMS,
   MAX_PLAYERS_PER_TEAM,
   TRIO_TEAMS,
-} from "@alias/shared/constants";
+} from "@igroteka/shared/constants";
 import { ROLE_META } from "@/components/mafia/roleMeta";
 import SiteTopBar from "@/components/common/SiteTopBar";
 import {

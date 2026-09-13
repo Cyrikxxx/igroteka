@@ -13,8 +13,8 @@ import {
   Check,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import type { MafiaView } from "@alias/shared/mafia";
-import { SKIP_VOTE } from "@alias/shared/mafia";
+import type { MafiaView } from "@igroteka/shared/mafia";
+import { SKIP_VOTE } from "@igroteka/shared/mafia";
 import Announce from "./Announce";
 import PhaseHead, { fmtClock } from "./PhaseHead";
 import PlayerCard, { PlayerGrid, ChoiceChip } from "./PlayerCard";

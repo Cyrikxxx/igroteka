@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { Fingerprint, VenetianMask } from "lucide-react";
-import type { MafiaRole } from "@alias/shared/mafia";
+import type { MafiaRole } from "@igroteka/shared/mafia";
 import { ROLE_META } from "./roleMeta";
 
 function CardFace({ role, partners }: { role: MafiaRole; partners?: string[] }) {

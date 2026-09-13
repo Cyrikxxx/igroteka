@@ -12,7 +12,7 @@ import {
   type MafiaSettings,
   type MafiaNightStepRole,
   SKIP_VOTE,
-} from "@alias/shared/mafia";
+} from "@igroteka/shared/mafia";
 
 /** Дописать запись в журнал партии. Журнал никогда не уходит живым игрокам. */
 export function logEvent(s: MafiaSnapshot, event: Omit<MafiaEvent, "day">): void {

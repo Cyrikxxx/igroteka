@@ -10,7 +10,7 @@ import { issueWsToken, wsConnectUrlFor } from "@/lib/ws-token";
 import { loadMafiaSnapshot, saveMafiaSnapshot } from "@/lib/mafia-snapshot";
 import { closeAbandonedRoom } from "@/lib/room-cleanup";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { MAX_MAFIA_PLAYERS, type MafiaJoinRoomResponse } from "@alias/shared/mafia";
+import { MAX_MAFIA_PLAYERS, type MafiaJoinRoomResponse } from "@igroteka/shared/mafia";
 
 type Ctx = { params: Promise<{ code: string }> };
 

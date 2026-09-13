@@ -8,7 +8,7 @@ import {
   type WsRole,
   type WsGame,
   WS_TOKEN_TTL_MS,
-} from "@alias/shared/token";
+} from "@igroteka/shared/token";
 import type { NextRequest } from "next/server";
 
 function getSecret(): string {

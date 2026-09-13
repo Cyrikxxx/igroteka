@@ -34,8 +34,8 @@ ws живут на одном адресе, и CORS между ними прос
 ## Первый запуск
 
 ```bash
-git clone https://github.com/Cyrikxxx/alias-online.git
-cd alias-online
+git clone https://github.com/Cyrikxxx/igroteka.git
+cd igroteka
 
 cp .env.example .env
 nano .env            # заполнить прод-значения, см. ниже

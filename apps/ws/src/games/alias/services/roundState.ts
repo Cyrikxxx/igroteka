@@ -3,7 +3,7 @@
 // Ключ: `room:<code>:round` → JSON {RoundState}.
 
 import { redis } from "../../../redis";
-import { ROOM_TTL_SECONDS } from "@alias/shared/constants";
+import { ROOM_TTL_SECONDS } from "@igroteka/shared/constants";
 
 export interface WordSeen {
   wordId: number;

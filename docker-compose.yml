@@ -13,7 +13,7 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: alias-postgres
+    container_name: igroteka-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: alias
@@ -22,7 +22,7 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - alias-pgdata:/var/lib/postgresql/data
+      - igroteka-pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U alias -d alias"]
       interval: 5s
@@ -31,12 +31,12 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: alias-redis
+    container_name: igroteka-redis
     restart: unless-stopped
     ports:
       - "127.0.0.1:6379:6379"
     volumes:
-      - alias-redisdata:/data
+      - igroteka-redisdata:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -44,5 +44,5 @@ services:
       retries: 10
 
 volumes:
-  alias-pgdata:
-  alias-redisdata:
+  igroteka-pgdata:
+  igroteka-redisdata:

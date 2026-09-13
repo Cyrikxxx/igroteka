@@ -10,7 +10,7 @@ import {
   User,
   type LucideIcon,
 } from "lucide-react";
-import type { MafiaRole } from "@alias/shared/mafia";
+import type { MafiaRole } from "@igroteka/shared/mafia";
 
 export interface RoleMeta {
   label: string;

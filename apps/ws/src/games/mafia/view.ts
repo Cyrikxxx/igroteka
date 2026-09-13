@@ -12,9 +12,9 @@ import type {
   MafiaDeathView,
   MafiaRole,
   MafiaNightStep,
-} from "@alias/shared/mafia";
-import { roleTeam, SKIP_VOTE } from "@alias/shared/mafia";
-import { narrationFor } from "@alias/shared/mafia-narration";
+} from "@igroteka/shared/mafia";
+import { roleTeam, SKIP_VOTE } from "@igroteka/shared/mafia";
+import { narrationFor } from "@igroteka/shared/mafia-narration";
 
 function findSelf(
   snap: MafiaSnapshot,

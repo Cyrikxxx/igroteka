@@ -13,7 +13,7 @@ import type {
   MafiaRole,
   MafiaDeathCause,
   MafiaSettings,
-} from "@alias/shared/mafia";
+} from "@igroteka/shared/mafia";
 
 type Ctx = { params: Promise<{ id: string }> };
 

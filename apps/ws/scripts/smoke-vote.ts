@@ -10,11 +10,11 @@
 //   2) в первый день голосование есть и заканчивается изгнанием;
 //   3) скип: если большинство за «никого не изгонять», никто не выбывает.
 //
-// Запуск: `npm run smoke:vote -w @alias/ws` при поднятом `npm run dev`.
+// Запуск: `npm run smoke:vote -w @igroteka/ws` при поднятом `npm run dev`.
 
 import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
-import type { MafiaView, MafiaPhase } from "@alias/shared/mafia";
+import type { MafiaView, MafiaPhase } from "@igroteka/shared/mafia";
 
 const WEB = process.env.SMOKE_WEB ?? "http://localhost:3000";
 const WS = process.env.SMOKE_WS ?? "http://localhost:3001";

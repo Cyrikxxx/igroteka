@@ -2,8 +2,8 @@
 // фиксация раунда при review_confirm.
 
 import { prisma } from "../../../prisma";
-import type { GameFormat, RoomSnapshot } from "@alias/shared/domain";
-import { nextTrioTurn, trioRoles, scoredTeamIndexes } from "@alias/shared/trio";
+import type { GameFormat, RoomSnapshot } from "@igroteka/shared/alias";
+import { nextTrioTurn, trioRoles, scoredTeamIndexes } from "@igroteka/shared/trio";
 import type { RoundState } from "./roundState";
 import { scoreRound, checkWinner } from "./score";
 import { nextTurn, nextPlayerIndex } from "./turn";

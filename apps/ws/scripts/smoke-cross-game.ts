@@ -9,7 +9,7 @@
 // Сюда же и обратный случай: код Алиаса во входе Мафии. Там проверка была
 // всегда, но пусть держится тестом, а не обещанием.
 //
-// Запуск: `npm run smoke:cross-game -w @alias/ws` при поднятом `npm run dev`.
+// Запуск: `npm run smoke:cross-game -w @igroteka/ws` при поднятом `npm run dev`.
 
 import "../src/env";
 

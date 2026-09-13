@@ -10,7 +10,7 @@ import {
   describeComposition,
   MAFIA_TIMER_LIMITS,
   type MafiaSettings,
-} from "@alias/shared/mafia";
+} from "@igroteka/shared/mafia";
 import { primeSpeech, speak, VOICE_SAMPLE } from "@/lib/narrator";
 import { loadVoiceURI, saveVoiceURI } from "@/lib/voice-prefs";
 import { useVoices } from "@/hooks/useVoices";

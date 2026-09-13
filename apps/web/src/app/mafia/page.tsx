@@ -16,8 +16,8 @@ import {
   Armchair,
   type LucideIcon,
 } from "lucide-react";
-import type { MafiaRole } from "@alias/shared/mafia";
-import { MIN_MAFIA_PLAYERS, MAX_MAFIA_PLAYERS } from "@alias/shared/mafia";
+import type { MafiaRole } from "@igroteka/shared/mafia";
+import { MIN_MAFIA_PLAYERS, MAX_MAFIA_PLAYERS } from "@igroteka/shared/mafia";
 import MafiaShell from "@/components/mafia/MafiaShell";
 import SiteTopBar from "@/components/common/SiteTopBar";
 import RoomNoticeBanner from "@/components/common/RoomNoticeBanner";

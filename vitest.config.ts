@@ -26,14 +26,14 @@ export default defineConfig({
         },
       },
       {
-        // Пути `@/…` и `@alias/shared/…` описаны в apps/web/tsconfig.json —
+        // Пути `@/…` и `@igroteka/shared/…` описаны в apps/web/tsconfig.json —
         // повторяем их здесь, чтобы не тянуть отдельный плагин.
         resolve: {
           alias: {
             // Навигация Next в тестах ненастоящая: страницы читают useParams и
             // дёргают router, а поднимать роутер ради этого незачем.
             "next/navigation": `${stubs}/next-navigation.ts`,
-            "@alias/shared": sharedSrc,
+            "@igroteka/shared": sharedSrc,
             "@/": `${webSrc}/`,
           },
         },

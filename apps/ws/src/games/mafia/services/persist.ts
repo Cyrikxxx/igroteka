@@ -2,7 +2,7 @@
 // Live-состояние живёт в Redis; сюда пишем только финал.
 
 import prisma from "../../../prisma";
-import type { MafiaSnapshot, MafiaWinner } from "@alias/shared/mafia";
+import type { MafiaSnapshot, MafiaWinner } from "@igroteka/shared/mafia";
 
 const WINNER_DB: Record<MafiaWinner, "CITY" | "MAFIA" | "MANIAC"> = {
   city: "CITY",

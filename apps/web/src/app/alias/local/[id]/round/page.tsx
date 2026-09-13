@@ -9,8 +9,8 @@ import { ArrowRight, Check, EyeOff, LogOut, Pause, Play, SkipForward, X } from "
 import type { GameFromAPI, WordInRound } from "@/types";
 import { useTimer } from "@/hooks/useTimer";
 import { teamColorVar } from "@/constants/game";
-import { trioRoles } from "@alias/shared/trio";
-import { remainingMs } from "@alias/shared/countdown";
+import { trioRoles } from "@igroteka/shared/trio";
+import { remainingMs } from "@igroteka/shared/countdown";
 import { formatTime } from "@/lib/utils";
 import { pluralize, WORDS } from "@/lib/plural";
 import { clearRound, loadRound, saveRound, type SavedRound } from "@/lib/local-round";

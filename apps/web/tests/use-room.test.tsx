@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import type { RoomSnapshot } from "@alias/shared/domain";
+import type { RoomSnapshot } from "@igroteka/shared/alias";
 import { FakeSocket } from "./helpers/fake-socket";
 
 // Держатель: vi.mock поднимается наверх файла, поэтому сокет подставляем

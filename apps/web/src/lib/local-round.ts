@@ -8,7 +8,7 @@
 // Здесь раунд переживает перезагрузку. Ключ — на партию: у каждой свой
 // незаконченный раунд, и чужой подхватить нельзя.
 
-import type { Countdown } from "@alias/shared/countdown";
+import type { Countdown } from "@igroteka/shared/countdown";
 import type { WordInRound } from "@/types";
 
 const PREFIX = "alias.localRound.";

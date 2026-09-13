@@ -3,7 +3,7 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import type { MafiaView } from "@alias/shared/mafia";
+import type { MafiaView } from "@igroteka/shared/mafia";
 import { FakeSocket } from "./helpers/fake-socket";
 
 const holder = vi.hoisted(() => ({ socket: null as unknown }));

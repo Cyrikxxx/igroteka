@@ -12,7 +12,7 @@ import {
   computeComposition,
   describeComposition,
   type MafiaSettings,
-} from "@alias/shared/mafia";
+} from "@igroteka/shared/mafia";
 import MafiaShell from "@/components/mafia/MafiaShell";
 import { LeftToast, useLeftToast } from "@/components/mafia/Overlays";
 import MafiaAvatar from "@/components/mafia/MafiaAvatar";

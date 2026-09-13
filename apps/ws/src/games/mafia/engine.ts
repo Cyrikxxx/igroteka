@@ -18,7 +18,7 @@ import {
   type MafiaNightStep,
   type MafiaNightStepRole,
   type MafiaNightAction,
-} from "@alias/shared/mafia";
+} from "@igroteka/shared/mafia";
 import {
   applyEnterNight,
   killPlayer,

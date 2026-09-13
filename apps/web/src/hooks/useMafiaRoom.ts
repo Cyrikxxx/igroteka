@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
-import type { MafiaView, MafiaTickPayload } from "@alias/shared/mafia";
+import type { MafiaView, MafiaTickPayload } from "@igroteka/shared/mafia";
 import { connectToRoom, disconnectRoom } from "@/lib/socket-client";
 
 export type MafiaConnStatus =

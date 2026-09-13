@@ -7,7 +7,7 @@ import prisma from "@/lib/prisma";
 import { requireUserId } from "@/lib/identity";
 import { loadMafiaSnapshot } from "@/lib/mafia-snapshot";
 import { visibleMafiaGamesWhere } from "@/lib/history-access";
-import type { MafiaPhase, MafiaRole, MafiaSettings } from "@alias/shared/mafia";
+import type { MafiaPhase, MafiaRole, MafiaSettings } from "@igroteka/shared/mafia";
 
 /**
  * Игрок в карточке истории.

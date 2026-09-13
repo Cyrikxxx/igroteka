@@ -5,7 +5,7 @@
 
 import { Eye } from "lucide-react";
 import type { ReactNode } from "react";
-import type { MafiaView } from "@alias/shared/mafia";
+import type { MafiaView } from "@igroteka/shared/mafia";
 import MafiaAvatar from "./MafiaAvatar";
 import { RoleChip } from "./roleMeta";
 import PhaseHead from "./PhaseHead";

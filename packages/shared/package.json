@@ -1,5 +1,5 @@
 {
-  "name": "@alias/shared",
+  "name": "@igroteka/shared",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,9 +7,9 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./alias": "./src/alias.ts",
     "./constants": "./src/constants.ts",
     "./countdown": "./src/countdown.ts",
-    "./domain": "./src/domain.ts",
     "./load-env": "./src/load-env.ts",
     "./mafia": "./src/mafia.ts",
     "./mafia-narration": "./src/mafia-narration.ts",

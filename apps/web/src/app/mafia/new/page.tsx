@@ -9,7 +9,7 @@ import {
   DEFAULT_MAFIA_SETTINGS,
   type MafiaSettings,
   type MafiaCreateRoomResponse,
-} from "@alias/shared/mafia";
+} from "@igroteka/shared/mafia";
 import { useHydrated } from "@/hooks/useHydrated";
 import MafiaShell from "@/components/mafia/MafiaShell";
 import MafiaAvatar from "@/components/mafia/MafiaAvatar";

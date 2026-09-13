@@ -11,7 +11,7 @@ import {
   overrunSurvivors,
 } from "../src/games/mafia/engine-core";
 import { player, snapshot } from "./fixtures";
-import { SKIP_VOTE, DEFAULT_MAFIA_SETTINGS } from "@alias/shared/mafia";
+import { SKIP_VOTE, DEFAULT_MAFIA_SETTINGS } from "@igroteka/shared/mafia";
 
 describe("decideMafiaTarget", () => {
   it("берёт большинство голосов мафии", () => {

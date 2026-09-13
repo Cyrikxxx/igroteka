@@ -7,7 +7,7 @@
 // пришлось бы перезагружать страницу, чтобы узнать, что ждать уже нечего.
 
 import { useEffect, useState } from "react";
-import { HOST_CLAIM_AFTER_MS } from "@alias/shared/constants";
+import { HOST_CLAIM_AFTER_MS } from "@igroteka/shared/constants";
 
 export interface HostClaimState {
   /** Хоста нет в сети и минута прошла — можно забирать. */

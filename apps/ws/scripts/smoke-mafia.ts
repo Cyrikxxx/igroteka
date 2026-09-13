@@ -4,15 +4,15 @@
 // состояний доехала до следующей ночи.
 //
 // Заменяет ручной прогон в шести вкладках.
-// Запуск: `npm run smoke:mafia -w @alias/ws` при поднятом `npm run dev`.
+// Запуск: `npm run smoke:mafia -w @igroteka/ws` при поднятом `npm run dev`.
 
 import "../src/env";
 import { io as ioClient, type Socket } from "socket.io-client";
-import type { MafiaView, MafiaPhase } from "@alias/shared/mafia";
+import type { MafiaView, MafiaPhase } from "@igroteka/shared/mafia";
 
 // По умолчанию бьём в dev-серверы. Чтобы проверить прод-сборку за прокси,
 // где web и ws на одном адресе:
-//   SMOKE_WEB=http://localhost SMOKE_WS=http://localhost npm run smoke:mafia -w @alias/ws
+//   SMOKE_WEB=http://localhost SMOKE_WS=http://localhost npm run smoke:mafia -w @igroteka/ws
 const WEB = process.env.SMOKE_WEB ?? "http://localhost:3000";
 const WS =
   process.env.SMOKE_WS ?? process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001";

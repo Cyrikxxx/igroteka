@@ -1,7 +1,7 @@
 // Общий ioredis-клиент (packages/shared/src/server/redis.ts).
 // Тот же REDIS_URL, что и у apps/web — оба читают и пишут один Redis.
 
-import { lazyRedis } from "@alias/shared/server/redis";
+import { lazyRedis } from "@igroteka/shared/server/redis";
 
 export const redis = lazyRedis("ws");
 
