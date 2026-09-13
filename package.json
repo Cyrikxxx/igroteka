@@ -2,6 +2,7 @@
   "name": "igroteka",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
   "workspaces": [
     "apps/*",
     "packages/*"
