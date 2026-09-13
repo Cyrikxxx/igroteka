@@ -2,7 +2,7 @@
 # Собирается из корня монорепо: контекст сборки — вся репа, иначе не видно
 # packages/shared и корневой prisma/schema.prisma.
 #
-#   docker build -f apps/web/Dockerfile -t alias-web .
+#   docker build -f apps/web/Dockerfile -t igroteka-web .
 
 # ─── Зависимости ───
 FROM node:22-bookworm-slim AS deps

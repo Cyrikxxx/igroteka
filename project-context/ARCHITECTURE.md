@@ -230,7 +230,8 @@ LAST_WORD → FINISHED`
 | `apps/ws/scripts/` | smoke-сценарии (в прод-образ не попадают) |
 | `apps/ws/tests/`, `packages/shared/tests/` | юнит-тесты |
 | `prisma/schema.prisma` | схема БД |
-| `prisma/data/alias-catalog.json` | словарь: подборки, темы, уровни, слова |
+| `prisma/data/alias-catalog.sample.json` | демонстрационный словарь: подборки, темы, уровни, слова |
+| `prisma/data/alias-catalog.json` | полный словарь, 8134 слова. Вне git, рядом с репозиторием |
 
 ---
 

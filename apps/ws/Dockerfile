@@ -1,7 +1,7 @@
 # Socket.io сервер (реалтайм обеих игр).
 # Собирается из корня монорепо — нужен packages/shared и prisma/schema.prisma.
 #
-#   docker build -f apps/ws/Dockerfile -t alias-ws .
+#   docker build -f apps/ws/Dockerfile -t igroteka-ws .
 
 # ─── Зависимости ───
 FROM node:22-bookworm-slim AS deps
