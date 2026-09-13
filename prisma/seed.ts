@@ -1,5 +1,13 @@
-// Seed: подборки, темы, уровни сложности и слова из prisma/data/alias-catalog.json.
-// Файл готовит `npx tsx scripts/import-alias-catalog.ts` из markdown-каталога.
+// Seed: подборки, темы, уровни сложности и слова.
+//
+// Словарь берётся из двух мест, в таком порядке:
+//   prisma/data/alias-catalog.json         полный, 8134 слова, вне git
+//   prisma/data/alias-catalog.sample.json  демонстрационный, 109 слов
+//
+// Полный каталог — главный актив игры, поэтому он в .gitignore и в публичный
+// репозиторий не попадает. Демонстрационный лежит в репозитории, чтобы проект
+// запускался у любого, кто его склонировал. Файл готовит
+// `npx tsx scripts/import-alias-catalog.ts` из markdown-каталога.
 //
 // Запуск: `npm run db:seed`.
 //
@@ -7,7 +15,7 @@
 // пересобирается целиком, а тема в новой раскладке может сменить id, из-за
 // чего ссылки старых партий всё равно стали бы мусором.
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { PrismaClient } from "@prisma/client";
 
@@ -70,9 +78,34 @@ async function wipe(): Promise<void> {
   await prisma.collection.deleteMany();
 }
 
+/**
+ * Полный каталог, если он есть, иначе демонстрационный. Какой именно взяли —
+ * печатаем: иначе «в категориях почти пусто» выглядит как поломка, хотя это
+ * ровно то, чего ждать от репозитория без словаря.
+ */
+function loadCatalog(): { catalog: Catalog; source: string; full: boolean } {
+  const full = resolve(__dirname, "data/alias-catalog.json");
+  const sample = resolve(__dirname, "data/alias-catalog.sample.json");
+  const file = existsSync(full) ? full : sample;
+  if (!existsSync(file)) {
+    throw new Error(`Не нашёл ни ${full}, ни ${sample}`);
+  }
+  return {
+    catalog: JSON.parse(readFileSync(file, "utf8")) as Catalog,
+    source: file,
+    full: file === full,
+  };
+}
+
 async function main(): Promise<void> {
-  const file = resolve(__dirname, "data/alias-catalog.json");
-  const catalog = JSON.parse(readFileSync(file, "utf8")) as Catalog;
+  const { catalog, source, full } = loadCatalog();
+  console.log(
+    full
+      ? `Словарь: полный каталог (${source})`
+      : `Словарь: демонстрационный набор (${source}).
+` +
+        "Полного каталога рядом нет — так и задумано в публичной версии.",
+  );
 
   console.log("Стираю старый словарь и партии…");
   await wipe();
