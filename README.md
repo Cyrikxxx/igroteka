@@ -112,7 +112,7 @@ Postgres.
 ```bash
 npm install
 cp .env.example .env
-npm run setup:local   # базы в Docker + миграции + словарь
+npm run setup:local   # клиент Prisma + базы в Docker + миграции + словарь
 npm run dev           # web :3000 + ws :3001
 ```
 

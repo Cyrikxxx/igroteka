@@ -27,7 +27,7 @@
     "db:generate": "prisma generate",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
-    "setup:local": "docker compose up -d --wait && prisma migrate deploy && prisma db seed"
+    "setup:local": "prisma generate && docker compose up -d --wait && prisma migrate deploy && prisma db seed"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
