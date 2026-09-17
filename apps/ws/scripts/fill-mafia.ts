@@ -111,10 +111,25 @@ class Bot {
   /** Что бот уже сделал в этой фазе — чтобы не слать одно и то же на каждый снимок. */
   private done = "";
 
+  /**
+   * Отказ сервера — в консоль, а не в пустоту. Раньше коллбэк был пустым, и
+   * ночь, целиком проигнорированная в режиме ведущего, выглядела как задумка.
+   */
+  private report(what: string) {
+    return (res?: { error?: string }) => {
+      if (res?.error) console.warn(`[fill] ${this.name}: ${what} отклонён — ${res.error}`);
+    };
+  }
+
   private async react(): Promise<void> {
     const v = this.view;
     if (!v) return;
-    const stamp = `${v.phase}:${v.day}:${v.vote?.round ?? 0}`;
+    // Шаг ночи входит в метку наравне с фазой: в режиме ведущего роли ходят
+    // по очереди внутри одной фазы NIGHT, и без него бот, промахнувшийся
+    // мимо своего окна, считал бы, что за эту ночь уже отработал. Ровно та
+    // же болезнь, что была со вторым туром голосования. В обычном режиме
+    // `night` не приходит вовсе, и метка остаётся прежней.
+    const stamp = `${v.phase}:${v.day}:${v.vote?.round ?? 0}:${v.night?.step ?? ""}:${v.night?.stage ?? ""}`;
     if (this.done === stamp) return;
 
     const me = v.you;
@@ -132,15 +147,24 @@ class Bot {
       const role = me.role;
       if (role !== "mafia" && role !== "don" && role !== "doctor" && role !== "sheriff" && role !== "maniac")
         return;
+      // В режиме ведущего ход принимают только в своё окно и только на
+      // стадии «действует»: вне его сервер ответит not_your_turn или
+      // not_yet. Чьё сейчас окно, считает сам сервер — у дона роль одна,
+      // а ходит он за мафию, и своими силами это не угадать.
+      if (v.settings.narrator && !(v.night?.yourTurn && v.night.stage === "act")) return;
       this.done = stamp;
       await sleep(600 + Math.random() * 2500);
+      // Пока бот думал, окно могло закрыться — шаг короче, чем кажется.
+      const now = this.view;
+      if (!now || now.phase !== "NIGHT") return;
+      if (now.settings.narrator && !(now.night?.yourTurn && now.night.stage === "act")) return;
       const action = role === "don" ? "mafia" : role;
       // Своих не трогаем: сервер такой ход всё равно не примет.
       const allies = new Set(me.partnerIds ?? []);
       const pool =
         action === "mafia" ? others.filter((p) => !allies.has(p.userId)) : others;
       const target = pick(pool);
-      if (target) this.sock.emit("mafia:night_action", { action, targetId: target.userId }, () => {});
+      if (target) this.sock.emit("mafia:night_action", { action, targetId: target.userId }, this.report("ход"));
       return;
     }
 
@@ -169,11 +193,11 @@ class Bot {
       // эту кнопку в деле не увидеть.
       const skipAllowed = v.settings.rules.allowSkipVote;
       if (skipAllowed && (pool.length === 0 || Math.random() < 0.2)) {
-        this.sock.emit("mafia:vote", { targetId: SKIP_VOTE }, () => {});
+        this.sock.emit("mafia:vote", { targetId: SKIP_VOTE }, this.report("голос"));
         return;
       }
       const target = pick(pool);
-      if (target) this.sock.emit("mafia:vote", { targetId: target.userId }, () => {});
+      if (target) this.sock.emit("mafia:vote", { targetId: target.userId }, this.report("голос"));
       return;
     }
 
