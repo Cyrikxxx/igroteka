@@ -103,7 +103,7 @@ async function main() {
       body: JSON.stringify({ displayName: name }),
     });
     if (!r.ok) throw new Error(`join ${name}: ${r.status}`);
-    joined.push(await r.json());
+    joined.push((await r.json()) as (typeof joined)[number]);
   }
 
   const socks: Socket[] = [await connectWS(created.wsToken, created.room.code, NAMES[0])];

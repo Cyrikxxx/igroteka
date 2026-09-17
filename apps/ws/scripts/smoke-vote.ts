@@ -158,7 +158,7 @@ async function mafiaKills(all: Client[]): Promise<string> {
   const mafia = all.find((c) => c.role === "mafia" || c.role === "don");
   if (!mafia) throw new Error("в раскладе нет мафии");
   const victim = mafia.view!.players.find(
-    (p) => p.alive && p.userId !== mafia.view!.you.userId && !p.you,
+    (p) => p.alive && p.userId !== mafia.view!.you.userId,
   );
   if (!victim) throw new Error("некого убивать");
   await mafia.emit("mafia:night_action", { action: "mafia", targetId: victim.userId });
@@ -193,7 +193,11 @@ const seenVote = (all: Client[]) => all.some((c) => c.seen.includes("VOTE"));
 /** Все живые, кроме жертвы, голосуют за неё. */
 async function cityVotes(all: Client[]): Promise<string> {
   const voter = all.find((c) => c.alive)!;
-  const candidates = voter.view!.players.filter((p) => p.alive && !p.you);
+  // «Не я» — по userId: поля `you` у игрока в виде нет, и прежняя проверка
+  // всегда была undefined, так что голосующий мог попасть в кандидаты сам.
+  const candidates = voter.view!.players.filter(
+    (p) => p.alive && p.userId !== voter.view!.you.userId,
+  );
   if (candidates.length === 0) throw new Error("не за кого голосовать");
   const target = candidates[0]!;
   const voters = all.filter(
