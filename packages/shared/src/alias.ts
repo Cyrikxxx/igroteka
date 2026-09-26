@@ -65,6 +65,17 @@ export interface BannedPlayer {
 }
 
 export interface RoomSnapshot {
+  /**
+   * Ревизия снимка, растёт на каждой записи.
+   *
+   * Нужна, чтобы клиент мог отбросить устаревший `room:state`. Дебаунсенная
+   * рассылка сперва читает снимок из Redis, и между чтением и отправкой в него
+   * успевает лечь новая фаза — тогда всем уходит снимок «из прошлого». Без
+   * номера отличить его от свежего нечем.
+   *
+   * Необязательное: у комнат, созданных до появления поля, его нет.
+   */
+  rev?: number;
   code: string;
   title: string | null;
   status: RoomStatus;
@@ -86,7 +97,21 @@ export interface RoomSnapshot {
   currentRoundNumber: number;
   teams: RoomSnapshotTeam[];
   spectators: RoomSnapshotPlayer[];
-  timer: { msLeft: number; paused: boolean } | null;
+  /**
+   * Состояние времени раунда.
+   *
+   * `msLeft` подставляется на каждой рассылке из живого RoundState — хранить
+   * его в снимке нельзя, он протухает через секунду. `endsAt` нужен только
+   * серверу: по нему таймер перевзводится после перезапуска процесса. Клиент
+   * считает от `msLeft` и досчитывает локально — часы телефона врут на минуты,
+   * и абсолютное серверное время ему не годится.
+   */
+  timer: {
+    msLeft: number;
+    paused: boolean;
+    endsAt: number | null;
+    durationMs: number;
+  } | null;
   scoreboard: { teamId: number; got: number; skip: number } | null;
   gameId: string | null;
   /** Маппинг локальный snapshot teamId → Postgres Team.id. См. `TeamIdMap`. */

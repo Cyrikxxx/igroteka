@@ -8,10 +8,10 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Clock, Minus, Target, Wifi } from "lucide-react";
 import AppShell from "@/components/common/AppShell";
 import Chip from "@/components/common/Chip";
+import RoundTimeField from "@/components/alias/RoundTimeField";
 import Toggle from "@/components/common/Toggle";
 import CategoryPicker from "@/components/alias/CategoryPicker";
 import {
-  ROUND_TIME_OPTIONS,
   WIN_SCORE_OPTIONS,
   ROUND_TIME_DEFAULT,
   WIN_SCORE_DEFAULT,
@@ -139,13 +139,7 @@ export default function RoomNewPage() {
               <div className="set-label">
                 <Clock /> Длительность раунда
               </div>
-              <div className="chip-row">
-                {ROUND_TIME_OPTIONS.map((v) => (
-                  <Chip key={v} active={roundTime === v} onClick={() => setRoundTime(v)}>
-                    {v} сек
-                  </Chip>
-                ))}
-              </div>
+              <RoundTimeField value={roundTime} onChange={setRoundTime} />
             </div>
             <div className="dotted" style={{ margin: "20px 0" }} />
             <div className="set-row">

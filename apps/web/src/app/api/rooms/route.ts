@@ -18,7 +18,9 @@ import { issueWsToken, wsConnectUrlFor } from "@/lib/ws-token";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   ROUND_TIME_DEFAULT,
+  ROUND_TIME_LIMITS,
   WIN_SCORE_DEFAULT,
+  WIN_SCORE_LIMITS,
   PENALTY_SKIP_DEFAULT,
 } from "@/constants/game";
 import type { CreateRoomResponse } from "@/types";
@@ -52,10 +54,10 @@ export async function POST(request: NextRequest) {
       ? settings.categoryIds.map((x: unknown) => Number(x)).filter(Number.isInteger)
       : [];
 
-    if (roundTime < 10 || roundTime > 300) {
+    if (roundTime < ROUND_TIME_LIMITS.min || roundTime > ROUND_TIME_LIMITS.max) {
       return NextResponse.json({ error: "roundTime out of range" }, { status: 400 });
     }
-    if (winScore < 0 || winScore > 1000) {
+    if (winScore < WIN_SCORE_LIMITS.min || winScore > WIN_SCORE_LIMITS.max) {
       return NextResponse.json({ error: "winScore out of range" }, { status: 400 });
     }
     if (categoryIds.length === 0) {

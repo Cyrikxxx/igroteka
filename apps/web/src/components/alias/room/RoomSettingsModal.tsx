@@ -5,11 +5,12 @@
 
 import { useEffect, useState } from "react";
 import { Clock, Minus, Target } from "lucide-react";
-import { ROUND_TIME_OPTIONS, WIN_SCORE_OPTIONS } from "@/constants/game";
+import { WIN_SCORE_OPTIONS } from "@/constants/game";
 import type { CatalogFromAPI } from "@/types";
 import CategoryPicker from "@/components/alias/CategoryPicker";
 import Modal from "@/components/common/Modal";
 import Chip from "@/components/common/Chip";
+import RoundTimeField from "@/components/alias/RoundTimeField";
 import Toggle from "@/components/common/Toggle";
 
 export interface RoomSettings {
@@ -85,13 +86,7 @@ function SettingsForm({
           <div className="set-label">
             <Clock /> Длительность раунда
           </div>
-          <div className="chip-row">
-            {ROUND_TIME_OPTIONS.map((v) => (
-              <Chip key={v} active={roundTime === v} onClick={() => setRoundTime(v)}>
-                {v} сек
-              </Chip>
-            ))}
-          </div>
+          <RoundTimeField value={roundTime} onChange={setRoundTime} />
         </div>
 
         <div className="set-row">

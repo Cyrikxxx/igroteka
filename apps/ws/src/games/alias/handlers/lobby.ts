@@ -22,6 +22,8 @@ import {
 import {
   MAX_TEAMS,
   MIN_TEAMS,
+  ROUND_TIME_LIMITS,
+  WIN_SCORE_LIMITS,
 } from "@igroteka/shared/constants";
 import { nextHostOfflineSince, canClaimHost } from "@igroteka/shared/host";
 import { mutate, load, remove } from "../snapshot";
@@ -35,7 +37,11 @@ import {
   maybeRehydrateReview,
   pauseIfExplainerDropped,
 } from "./round";
-import { scheduleStateBroadcast, broadcastStateNow } from "../broadcast";
+import {
+  scheduleStateBroadcast,
+  snapshotForClient,
+  forgetRoomBroadcast,
+} from "../broadcast";
 
 /**
  * Права хоста проверяем по снапшоту, а не по роли из WS-токена. Токен
@@ -107,7 +113,9 @@ export function registerLobbyHandlers(
       ack?.({ error: "room_not_found" });
       return;
     }
-    ack?.(snap);
+    // С живым временем: в снимке лежит остаток на момент записи, и вернувшийся
+    // получал бы полную длительность — таймер у него застывал бы до первого тика.
+    ack?.(await snapshotForClient(roomCode, snap));
     await broadcastState(ns, roomCode, snap);
     // Реконнект explainer'а — пере-эмитим текущее слово приватно.
     await maybeRehydrateExplainer(socket);
@@ -337,19 +345,27 @@ export function registerLobbyHandlers(
     if (!current) return ack?.({ error: "room_not_found" });
     if (current.phase !== "LOBBY") return ack?.({ error: "game_in_progress" });
 
+    // Значение вне диапазона раньше молча игнорировалось, а ответ уходил
+    // успешный: хост вводил 200, сервер держал 60, форма закрывалась — и
+    // никто не понимал, почему в партии не то, что выбрали.
+    if (
+      typeof payload?.roundTime === "number" &&
+      (payload.roundTime < ROUND_TIME_LIMITS.min || payload.roundTime > ROUND_TIME_LIMITS.max)
+    ) {
+      return ack?.({ error: "round_time_out_of_range" });
+    }
+    if (
+      typeof payload?.winScore === "number" &&
+      (payload.winScore < WIN_SCORE_LIMITS.min || payload.winScore > WIN_SCORE_LIMITS.max)
+    ) {
+      return ack?.({ error: "win_score_out_of_range" });
+    }
+
     const snap = await mutate(roomCode, (s) => {
-      if (
-        typeof payload?.roundTime === "number" &&
-        payload.roundTime >= 10 &&
-        payload.roundTime <= 300
-      ) {
+      if (typeof payload?.roundTime === "number") {
         s.settings.roundTime = Math.round(payload.roundTime);
       }
-      if (
-        typeof payload?.winScore === "number" &&
-        payload.winScore >= 0 &&
-        payload.winScore <= 1000
-      ) {
+      if (typeof payload?.winScore === "number") {
         s.settings.winScore = Math.round(payload.winScore);
       }
       if (typeof payload?.penaltySkip === "boolean") {
@@ -412,6 +428,7 @@ export function registerLobbyHandlers(
 
     ack?.({ ok: true });
     await remove(roomCode);
+    forgetRoomBroadcast(roomCode);
     await closeRoom(roomCode);
     const sockets = await ns.in(`room:${roomCode}`).fetchSockets();
     for (const sock of sockets) {
@@ -552,6 +569,7 @@ export function registerLobbyHandlers(
     // а код пусть освобождается сразу, не через таймер пустой комнаты.
     if (everyoneIn(snap).length === 0) {
       await remove(roomCode);
+    forgetRoomBroadcast(roomCode);
       await closeRoom(roomCode);
       return;
     }
