@@ -10,9 +10,13 @@
 //   t=51  таймер добивает раунд: фаза становится ROUND_REVIEW и рассылается
 //   t=53  чтение возвращает снимок ИЗ ПРОШЛОГО и уходит всем
 //
-// Лечится двумя замками. Немедленная рассылка снимает запланированную: она по
-// определению свежее. А то, что уже успело прочитаться, отсеивается по номеру
-// ревизии — снимок с не большим `rev`, чем последний разосланный, не уходит.
+// Здесь стоит первый из двух замков: немедленная рассылка снимает
+// запланированную — она по определению свежее. Второй замок на клиенте: он
+// держит ревизию последнего применённого снимка и отбрасывает всё, что не
+// новее. Отсеивать ещё и здесь заманчиво, но опасно: счётчик пришлось бы
+// держать в памяти процесса по коду комнаты, а комнаты истекают по TTL молча —
+// выпади тот же шестибуквенный код повторно, новая комната начала бы с единицы
+// против запомненных полусотни, и её рассылки исчезли бы целиком.
 
 import type { RoomSnapshot } from "@igroteka/shared/alias";
 import { load } from "./snapshot";
@@ -24,9 +28,6 @@ import {
 } from "../../lib/debounce";
 
 const debouncer = createDebouncer(STATE_BROADCAST_DEBOUNCE_MS);
-
-/** Последняя разосланная ревизия по комнате. */
-const sentRev = new Map<string, number>();
 
 /**
  * Подставить живое время раунда.
@@ -42,21 +43,10 @@ async function withLiveTimer(code: string, snap: RoomSnapshot): Promise<RoomSnap
   return { ...snap, timer: timerView(rs) };
 }
 
-/** Разослать, если снимок не старше уже разосланного. */
-function emitIfFresh(ns: AppNamespace, code: string, snap: RoomSnapshot): void {
-  const rev = snap.rev;
-  if (typeof rev === "number") {
-    const last = sentRev.get(code);
-    if (typeof last === "number" && rev <= last) return;
-    sentRev.set(code, rev);
-  }
-  ns.to(`room:${code}`).emit("room:state", snap);
-}
-
 export function scheduleStateBroadcast(ns: AppNamespace, code: string): void {
   debouncer.schedule(code, async () => {
     const snap = await load(code);
-    if (snap) emitIfFresh(ns, code, await withLiveTimer(code, snap));
+    if (snap) ns.to(`room:${code}`).emit("room:state", await withLiveTimer(code, snap));
   });
 }
 
@@ -72,13 +62,12 @@ export async function broadcastStateNow(
   snap: RoomSnapshot,
 ): Promise<void> {
   cancelStateBroadcast(code);
-  emitIfFresh(ns, code, await withLiveTimer(code, snap));
+  ns.to(`room:${code}`).emit("room:state", await withLiveTimer(code, snap));
 }
 
-/** Комната закрылась — забыть о ней, иначе Map растёт бесконечно. */
+/** Комната закрылась — снять запланированную рассылку, ей уже некуда идти. */
 export function forgetRoomBroadcast(code: string): void {
   cancelStateBroadcast(code);
-  sentRev.delete(code);
 }
 
 /** Снимок с живым таймером для ack room:hello. */

@@ -5,7 +5,7 @@
 //   • зритель выйти может: на ход он не влияет;
 //   • пропал объясняющий — раунд сам встаёт на паузу, время не горит;
 //   • вернулся — снимает паузу сам;
-//   • следующий объясняющий не в сети — ход передать нельзя;
+//   • следующий объясняющий не в сети — ход всё равно передаётся и ждёт его;
 //   • вернулся — ход проходит;
 //   • у хоста есть рычаг: завершить партию досрочно, счёт сохраняется.
 //
@@ -221,13 +221,19 @@ async function main() {
   all[ids.indexOf(nextId)].disconnect();
   await sleep(600);
 
-  const blocked = await emitAck<{ error?: string }>(backSock, "round:review_confirm", {});
-  assert(
-    blocked.error === "next_explainer_offline",
-    "ход не передаётся, пока следующий объясняющий не в сети",
+  // Раньше здесь стоял отказ: передать ход отсутствующему значило бы, что его
+  // время горит впустую. За столом это обернулось тем, что у объясняющего
+  // «пропадала кнопка» — телефоны блокируют экран постоянно. Теперь ход
+  // передаётся, а раунд отсутствующего стартует на паузе и ждёт его.
+  const passed = await emitAck<{ ok?: true; error?: string }>(
+    backSock,
+    "round:review_confirm",
+    {},
   );
+  assert(passed.ok === true, "ход передаётся, даже если следующий не в сети");
+  await sleep(600);
 
-  // ─── Вернулся — ход проходит ───
+  // ─── Вернулся — играет дальше ───
   const nextIdx = ids.indexOf(nextId);
   const nextBack = await connect(
     nextId === created.user.id ? created.wsToken : guests[nextIdx - 1].wsToken,
@@ -236,9 +242,11 @@ async function main() {
   await emitAck(nextBack, "room:hello", {});
   all[nextIdx] = nextBack;
   await sleep(500);
-  const passed = await emitAck<{ ok?: true; error?: string }>(backSock, "round:review_confirm", {});
-  assert(passed.ok === true, "как только он в сети — ход передаётся");
-  await sleep(600);
+  const sReturned = await snap();
+  assert(
+    sReturned.teams.some((t) => t.players.some((p) => p.userId === nextId && p.online)),
+    "вернувшийся снова в сети",
+  );
 
   // ─── Пропал в паузе между раундами → новый раунд стартует уже на паузе ───
   // Передачу хода мы бы не пропустили, а вот здесь раунд раньше начинался с
