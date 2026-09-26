@@ -60,3 +60,24 @@ export function msLeft(state: RoundState, now: number = Date.now()): number {
     (state.pausedAt ? now - state.pausedAt : 0);
   return Math.max(0, state.durationMs - elapsed);
 }
+
+/**
+ * Состояние времени для снимка комнаты.
+ *
+ * Живое время лежит только здесь, в Redis, а снимок рассылается дословно —
+ * поэтому остаток подставляется на каждой отправке, а не хранится. `endsAt`
+ * на паузе бессмысленен и равен null.
+ */
+export function timerView(
+  state: RoundState,
+  now: number = Date.now(),
+): { msLeft: number; paused: boolean; endsAt: number | null; durationMs: number } {
+  const paused = state.pausedAt !== null;
+  const left = msLeft(state, now);
+  return {
+    msLeft: left,
+    paused,
+    endsAt: paused ? null : now + left,
+    durationMs: state.durationMs,
+  };
+}

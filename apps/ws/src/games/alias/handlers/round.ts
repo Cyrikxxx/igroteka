@@ -32,6 +32,7 @@ import {
   clearWordsQueue,
 } from "../services/word";
 import {
+  timerView,
   saveRoundState,
   loadRoundState,
   deleteRoundState,
@@ -260,7 +261,7 @@ async function enterRoundActive(
 
   const updated = await mutate(code, (s) => {
     s.phase = "ROUND_ACTIVE";
-    s.timer = { msLeft: roundState.durationMs, paused: roundState.pausedAt !== null };
+    s.timer = timerView(roundState);
     s.scoreboard = { teamId: s.currentTeamId!, got: 0, skip: 0 };
   });
   if (!updated) return;

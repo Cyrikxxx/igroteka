@@ -18,6 +18,31 @@ export const ROUND_TIME_DEFAULT = 60;
 export const WIN_SCORE_DEFAULT = 50;
 export const PENALTY_SKIP_DEFAULT = false;
 
+/**
+ * Границы, внутри которых можно задать своё значение помимо пресетов.
+ *
+ * Те же числа, по которым сервер клампит присланное: разойдись форма с
+ * проверкой — введённое число молча заменялось бы на другое, и человек не
+ * понял бы, почему в партии не то, что он выбрал.
+ */
+export const ROUND_TIME_LIMITS = { min: 10, max: 300 } as const;
+export const WIN_SCORE_LIMITS = { min: 0, max: 1000 } as const;
+
+function clampTo(limits: { min: number; max: number }, fallback: number, n: number): number {
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(limits.min, Math.min(limits.max, Math.round(n)));
+}
+
+/** Длительность раунда в секундах, приведённая к допустимой. */
+export function clampRoundTime(n: number): number {
+  return clampTo(ROUND_TIME_LIMITS, ROUND_TIME_DEFAULT, n);
+}
+
+/** Счёт до победы, приведённый к допустимому. */
+export function clampWinScore(n: number): number {
+  return clampTo(WIN_SCORE_LIMITS, WIN_SCORE_DEFAULT, n);
+}
+
 export const WORDS_BATCH_SIZE = 50;
 
 export const ROOM_TTL_SECONDS = 60 * 60 * 24;

@@ -16,7 +16,9 @@ import {
   TRIO_PLAYERS_PER_TEAM,
   teamColorVar,
   ROUND_TIME_DEFAULT,
+  ROUND_TIME_LIMITS,
   WIN_SCORE_DEFAULT,
+  WIN_SCORE_LIMITS,
   PENALTY_SKIP_DEFAULT,
 } from "@/constants/game";
 import type { GameFormat } from "@/types";
@@ -89,17 +91,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "settings required" }, { status: 400 });
     }
     const roundTime = Number(settings.roundTime) || ROUND_TIME_DEFAULT;
-    const winScore = Number(settings.winScore) ?? WIN_SCORE_DEFAULT;
+    const winScore = Number.isFinite(Number(settings.winScore))
+      ? Number(settings.winScore)
+      : WIN_SCORE_DEFAULT;
     const penaltySkip = Boolean(settings.penaltySkip ?? PENALTY_SKIP_DEFAULT);
     const categoryIds: number[] = Array.isArray(settings.categoryIds)
       ? settings.categoryIds.map((x: unknown) => Number(x)).filter(Number.isInteger)
       : [];
 
     // Принимаем кастомные значения тоже (не только из presets), но ограничиваем.
-    if (!Number.isFinite(roundTime) || roundTime < 10 || roundTime > 300) {
+    if (
+      !Number.isFinite(roundTime) ||
+      roundTime < ROUND_TIME_LIMITS.min ||
+      roundTime > ROUND_TIME_LIMITS.max
+    ) {
       return NextResponse.json({ error: "roundTime out of range" }, { status: 400 });
     }
-    if (!Number.isFinite(winScore) || winScore < 0 || winScore > 1000) {
+    if (winScore < WIN_SCORE_LIMITS.min || winScore > WIN_SCORE_LIMITS.max) {
       return NextResponse.json({ error: "winScore out of range" }, { status: 400 });
     }
     if (categoryIds.length === 0) {

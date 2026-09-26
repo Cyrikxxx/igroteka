@@ -41,6 +41,11 @@ function snapshot(over: Partial<RoomSnapshot> = {}): RoomSnapshot {
   } as RoomSnapshot;
 }
 
+/** Таймер раунда в том виде, в каком его рассылает сервер. */
+function timer(msLeft: number, paused: boolean) {
+  return { msLeft, paused, endsAt: paused ? null : Date.now() + msLeft, durationMs: 60_000 };
+}
+
 let sock: FakeSocket;
 beforeEach(() => {
   sock = new FakeSocket();
@@ -76,7 +81,7 @@ describe("useRoom", () => {
   });
 
   it("вошёл в комнату на паузе — пауза видна", () => {
-    const { result } = mount(snapshot({ timer: { msLeft: 30_000, paused: true } }));
+    const { result } = mount(snapshot({ timer: timer(30_000, true) }));
     expect(result.current.tick?.paused).toBe(true);
   });
 
@@ -85,7 +90,7 @@ describe("useRoom", () => {
     // сам факт тика означает «время снова идёт». Раньше сюда протаскивалось
     // прежнее значение флага, и он оставался поднятым навсегда: кнопки
     // «угадал / пропустить» так и не оживали.
-    const { result } = mount(snapshot({ timer: { msLeft: 30_000, paused: true } }));
+    const { result } = mount(snapshot({ timer: timer(30_000, true) }));
     expect(result.current.tick?.paused).toBe(true);
 
     act(() => {
@@ -96,9 +101,9 @@ describe("useRoom", () => {
   });
 
   it("рассылка состояния доезжает до потребителя", () => {
-    const { result } = mount(snapshot({ timer: { msLeft: 30_000, paused: true } }));
+    const { result } = mount(snapshot({ timer: timer(30_000, true) }));
     act(() => {
-      sock.server("room:state", snapshot({ timer: { msLeft: 28_000, paused: false } }));
+      sock.server("room:state", snapshot({ timer: timer(28_000, false) }));
     });
     expect(result.current.snapshot?.timer?.paused).toBe(false);
   });
