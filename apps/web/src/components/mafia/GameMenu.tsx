@@ -9,7 +9,17 @@
 //
 // Сама панель общая с Алиасом, см. components/common/GameMenu.
 
-import { Pause, Play, Crown, Flag, LogOut } from "lucide-react";
+import {
+  Pause,
+  Play,
+  Crown,
+  Flag,
+  LogOut,
+  Volume2,
+  VolumeX,
+  Captions,
+  CaptionsOff,
+} from "lucide-react";
 import Menu, { type GameMenuItem } from "@/components/common/GameMenu";
 
 export interface MafiaGameMenuProps {
@@ -22,6 +32,18 @@ export interface MafiaGameMenuProps {
   /** Хоста нет в сети, но ждать ещё столько секунд. */
   claimSecondsLeft: number;
   hostGone: boolean;
+  /**
+   * Озвучка и субтитры — настройки ЭТОГО устройства, не комнаты. Живут в меню,
+   * а не кнопкой на экране: круглая кнопка динамика висела поверх игры и на
+   * части экранов налезала на нижние кнопки.
+   *
+   * Показываем только в режиме ведущего: без него говорить нечего.
+   */
+  narratorMode: boolean;
+  voiceOn: boolean;
+  captionsOn: boolean;
+  onToggleVoice: () => void;
+  onToggleCaptions: () => void;
   onPause: () => void;
   onResume: () => void;
   onEndGame: () => void;
@@ -59,6 +81,24 @@ export default function MafiaGameMenu(props: MafiaGameMenuProps) {
       label: "Завершить партию",
       hint: "Все вернутся в лобби",
       onClick: props.onEndGame,
+    });
+  }
+  if (props.narratorMode) {
+    items.push({
+      icon: props.voiceOn ? Volume2 : VolumeX,
+      label: props.voiceOn ? "Выключить озвучку" : "Озвучивать здесь",
+      hint: props.voiceOn
+        ? "Замолчит только этот телефон"
+        : "Этот телефон станет голосом ведущего",
+      onClick: props.onToggleVoice,
+    });
+    items.push({
+      icon: props.captionsOn ? Captions : CaptionsOff,
+      label: props.captionsOn ? "Скрыть субтитры" : "Показывать субтитры",
+      hint: props.captionsOn
+        ? "Реплики останутся только голосом"
+        : "Реплики ведущего текстом внизу экрана",
+      onClick: props.onToggleCaptions,
     });
   }
   items.push({

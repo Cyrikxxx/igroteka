@@ -522,7 +522,12 @@ export default function MafiaSettingsForm({
         on={s.rules.allowSkipVote}
         onChange={setRule("allowSkipVote")}
       />
-      <ToggleRow label="Раскрывать роль погибших" on={s.rules.revealRoles} onChange={setRule("revealRoles")} />
+      <ToggleRow
+        label="Раскрывать роль погибших"
+        sub="Роль выбывшего видит весь стол. С ведущим мёртвую роль ночью уже не зовут — скрывать нечего"
+        on={s.rules.revealRoles}
+        onChange={setRule("revealRoles")}
+      />
       <ToggleRow label="Голоса видны при голосовании" on={s.rules.openVotes} onChange={setRule("openVotes")} />
       <ToggleRow label="Дон скрыт от шерифа" on={s.rules.donHiddenFromSheriff} onChange={setRule("donHiddenFromSheriff")} />
       <ToggleRow label="Зрители видят роли" on={s.rules.spectatorsSeeRoles} onChange={setRule("spectatorsSeeRoles")} />

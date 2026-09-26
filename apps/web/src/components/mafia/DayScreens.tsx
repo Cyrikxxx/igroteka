@@ -20,6 +20,7 @@ import PhaseHead, { fmtClock } from "./PhaseHead";
 import PlayerCard, { PlayerGrid, ChoiceChip } from "./PlayerCard";
 import MafiaAvatar from "./MafiaAvatar";
 import { RoleChip, ROLE_META } from "./roleMeta";
+import NarrationCaption from "./NarrationCaption";
 
 /** Короткая подпись роли под именем погибшего. */
 const ROLE_LABEL: Record<string, string> = Object.fromEntries(
@@ -125,6 +126,7 @@ export function DiscussionScreen({
         ))}
       </PlayerGrid>
 
+      <NarrationCaption />
       <div style={{ padding: "12px 20px 22px" }}>
         {/* Обсуждение кончают все вместе. Прежде это была кнопка хоста — и
             стол вставал до таймера, стоило хосту погибнуть или пропасть. */}
@@ -245,6 +247,7 @@ export function VoteScreen({
           );
         })}
       </PlayerGrid>
+      <NarrationCaption />
       {view.settings.rules.allowSkipVote && (
         <div style={{ padding: "14px 20px 22px" }}>
           <button

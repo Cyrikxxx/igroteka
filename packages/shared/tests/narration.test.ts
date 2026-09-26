@@ -10,7 +10,12 @@ import {
   type MafiaPlayerFull,
   type MafiaRole,
 } from "../src/mafia";
-import { narrationFor, humanDuration } from "../src/mafia-narration";
+import {
+  narrationFor,
+  humanDuration,
+  speechMs,
+  narrationMinMs,
+} from "../src/mafia-narration";
 
 function p(id: string, role: MafiaRole, alive = true): MafiaPlayerFull {
   return {
@@ -59,11 +64,9 @@ describe("когда ведущий молчит", () => {
     expect(narrationFor(s)).toBeUndefined();
   });
 
-  it("в окне хода и в тишине после него — тоже", () => {
+  it("в окне хода — тоже", () => {
     const s = snap();
     s.night.step = { role: "mafia", stage: "act", index: 1, actMs: 20000 };
-    expect(narrationFor(s)).toBeUndefined();
-    s.night.step = { role: "mafia", stage: "gap", index: 1, actMs: 20000 };
     expect(narrationFor(s)).toBeUndefined();
   });
 });
@@ -75,16 +78,39 @@ describe("ночь", () => {
     expect(narrationFor(s)?.text).toContain("Просыпается доктор");
   });
 
-  it("фразы «роль засыпает» нет ни у одного шага", () => {
+  it("в тишине после хода роль засыпает", () => {
     const s = snap();
-    for (const role of ["sleep", "mafia", "doctor", "sheriff", "maniac"] as const) {
-      s.night.step = { role, stage: "announce", index: 0, actMs: 0 };
-      expect(narrationFor(s)?.text).not.toContain("засыпает доктор");
-      expect(narrationFor(s)?.text).not.toContain("Доктор засыпает");
+    s.night.step = { role: "doctor", stage: "gap", index: 2, actMs: 20000 };
+    expect(narrationFor(s)?.text).toBe("Доктор засыпает.");
+  });
+
+  it("у каждой роли есть и вызов, и засыпание", () => {
+    const s = snap();
+    for (const role of ["mafia", "doctor", "sheriff", "maniac"] as const) {
+      s.night.step = { role, stage: "announce", index: 1, actMs: 20000 };
+      expect(narrationFor(s)?.text).toContain("Просыпается");
+      s.night.step = { role, stage: "gap", index: 1, actMs: 20000 };
+      expect(narrationFor(s)?.text).toContain("засыпает");
     }
   });
 
-  it("ключ меняется от шага к шагу, а внутри шага — нет", () => {
+  it("у общей команды «город засыпает» пары нет — она никого не будила", () => {
+    const s = snap();
+    s.night.step = { role: "sleep", stage: "gap", index: 0, actMs: 0 };
+    expect(narrationFor(s)).toBeUndefined();
+  });
+
+  it("вызов и засыпание одного шага — разные ключи", () => {
+    // Клиент говорит по смене ключа: совпади они, засыпание никто бы не
+    // услышал, потому что вызов уже занял этот ключ.
+    const s = snap();
+    s.night.step = { role: "doctor", stage: "announce", index: 2, actMs: 20000 };
+    const call = narrationFor(s)?.key;
+    s.night.step = { role: "doctor", stage: "gap", index: 2, actMs: 20000 };
+    expect(narrationFor(s)?.key).not.toBe(call);
+  });
+
+  it("ключ меняется от шага к шагу, а внутри одной стадии — нет", () => {
     const s = snap();
     s.night.step = { role: "mafia", stage: "announce", index: 1, actMs: 20000 };
     const first = narrationFor(s)?.key;
@@ -181,5 +207,46 @@ describe("humanDuration", () => {
     expect(humanDuration(300)).toBe("5 минут");
     expect(humanDuration(45)).toBe("45 секунд");
     expect(humanDuration(21)).toBe("21 секунда");
+  });
+});
+
+// Фазу двигает таймер сервера, а речь идёт в браузере. Разъедутся — и реплика
+// оборвётся на полуслове: следующая начинается с cancel().
+describe("длина реплики", () => {
+  it("короткая фраза не удлиняет фазу", () => {
+    const s = snap({ phase: "VOTE_RESULT" });
+    s.vote = { round: 1, votes: {}, skipped: true };
+    // «Город решил никого не изгонять.» укладывается в базовое окно.
+    expect(narrationMinMs(s, 10000)).toBe(10000);
+  });
+
+  it("длинное утро растягивает фазу заметно дальше базы", () => {
+    const s = snap({ phase: "MORNING", day: 2 });
+    s.deaths = [
+      { day: 2, userId: "Аня", displayName: "Аня", role: "mafia", by: "mafia" },
+      { day: 2, userId: "Игорь", displayName: "Игорь", role: "civilian", by: "maniac" },
+    ];
+    // Точное число не проверяем: константы калибруются на слух, и тест на
+    // равенство ломался бы от каждой подкрутки.
+    expect(narrationMinMs(s, 5000)).toBeGreaterThan(8000);
+  });
+
+  it("без ведущего база возвращается как есть", () => {
+    // Иначе правка задела бы партии, где озвучки нет вовсе.
+    const s = snap({ phase: "MORNING" });
+    s.settings.narrator = false;
+    expect(narrationMinMs(s, 5000)).toBe(5000);
+  });
+
+  it("оценка растёт с длиной текста и имеет потолок", () => {
+    expect(speechMs("Да.")).toBeLessThan(speechMs("Просыпается доктор."));
+    expect(speechMs("а".repeat(100000))).toBeLessThanOrEqual(20000);
+  });
+
+  it("цифры считаются как слова, которыми их и читают", () => {
+    // «45» звучит как «сорок пять» — по символам вышло бы вдвое короче.
+    expect(speechMs("Осталось 45 секунд.")).toBeGreaterThan(
+      speechMs("Осталось ХХ секунд."),
+    );
   });
 });

@@ -21,6 +21,7 @@ import type { MafiaView, MafiaNightAction } from "@igroteka/shared/mafia";
 import PhaseHead from "./PhaseHead";
 import PlayerCard, { PlayerGrid, ChoiceChip } from "./PlayerCard";
 import { SheriffConfirm, SheriffVerdict } from "./SheriffCheck";
+import NarrationCaption from "./NarrationCaption";
 
 function StatusBar({
   icon: Icon,
@@ -69,42 +70,47 @@ function chip(text: string, bg: string, color: string): ReactNode {
  */
 export function NightHush({ day }: { day: number }) {
   return (
-    <div
-      style={{
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 18,
-        padding: "0 32px",
-        textAlign: "center",
-      }}
-    >
+    <>
       <div
         style={{
-          width: 96,
-          height: 96,
-          borderRadius: "50%",
+          flex: 1,
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid var(--mf-border)",
-          color: "var(--mf-text-dim)",
+          gap: 18,
+          padding: "0 32px",
+          textAlign: "center",
         }}
       >
-        <MoonStar size={44} strokeWidth={1.4} />
+        <div
+          style={{
+            width: 96,
+            height: 96,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid var(--mf-border)",
+            color: "var(--mf-text-dim)",
+          }}
+        >
+          <MoonStar size={44} strokeWidth={1.4} />
+        </div>
+        <div style={{ fontWeight: 800, fontSize: 32, letterSpacing: "-0.02em" }}>
+          Глаза закрыты
+        </div>
+        <div style={{ fontWeight: 600, fontSize: 15.5, color: "var(--mf-text-dim)", lineHeight: 1.5 }}>
+          Ночь {day}. Слушай ведущего —
+          <br />
+          он назовёт, когда просыпаться.
+        </div>
       </div>
-      <div style={{ fontWeight: 800, fontSize: 32, letterSpacing: "-0.02em" }}>
-        Глаза закрыты
-      </div>
-      <div style={{ fontWeight: 600, fontSize: 15.5, color: "var(--mf-text-dim)", lineHeight: 1.5 }}>
-        Ночь {day}. Слушай ведущего —
-        <br />
-        он назовёт, когда просыпаться.
-      </div>
-    </div>
+      {/* Этот экран страница рисует и сама — зрителям и выбывшим ночью, —
+          поэтому плашка живёт здесь, а не у мест вызова. */}
+      <NarrationCaption />
+    </>
   );
 }
 
@@ -191,6 +197,7 @@ export default function NightScreen({
             Утром узнаешь, что случилось.
           </div>
         </div>
+        <NarrationCaption />
         <StatusBar icon={VenetianMask} color="var(--mf-crimson)">
           город засыпает…
         </StatusBar>
@@ -254,6 +261,7 @@ export default function NightScreen({
             );
           })}
         </PlayerGrid>
+        <NarrationCaption />
         <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--mf-crimson)" : undefined}>
           {hint("Тапни по игроку, чтобы проголосовать")}
         </StatusBar>
@@ -301,6 +309,7 @@ export default function NightScreen({
             );
           })}
         </PlayerGrid>
+        <NarrationCaption />
         <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--role-doctor)" : undefined}>
           {hint("Тапни по игроку, чтобы вылечить")}
         </StatusBar>
@@ -356,6 +365,7 @@ export default function NightScreen({
             );
           })}
         </PlayerGrid>
+        <NarrationCaption />
         <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--mf-gold)" : undefined}>
           {hint("Тапни по игроку, чтобы проверить")}
         </StatusBar>
@@ -414,6 +424,7 @@ export default function NightScreen({
           );
         })}
       </PlayerGrid>
+      <NarrationCaption />
       <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--role-maniac)" : undefined}>
         {hint("Тапни по игроку")}
       </StatusBar>

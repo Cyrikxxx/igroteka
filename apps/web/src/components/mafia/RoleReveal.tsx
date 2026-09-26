@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Fingerprint, VenetianMask } from "lucide-react";
 import type { MafiaRole } from "@igroteka/shared/mafia";
 import { ROLE_META } from "./roleMeta";
+import NarrationCaption from "./NarrationCaption";
 
 function CardFace({ role, partners }: { role: MafiaRole; partners?: string[] }) {
   const m = ROLE_META[role];
@@ -175,6 +176,7 @@ export default function RoleReveal({
           Прижми и держи, чтобы увидеть роль
         </div>
       </div>
+      <NarrationCaption />
       <div style={{ padding: "0 20px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
         <button
           type="button"

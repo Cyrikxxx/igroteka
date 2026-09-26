@@ -29,23 +29,37 @@ const cast = () => [
   player("civ", "civilian"),
 ];
 
-/** Партия в режиме ведущего с нужным набором ролей. */
-function game(players = cast(), roles: Partial<MafiaSettings["roles"]> = {}) {
+/**
+ * Партия в режиме ведущего с нужным набором ролей.
+ *
+ * `revealRoles` вынесен в аргумент: от него зависит, зовут ли мёртвую роль, и
+ * половина тестов плана существует ровно ради этой развилки.
+ */
+function game(
+  players = cast(),
+  roles: Partial<MafiaSettings["roles"]> = {},
+  revealRoles = false,
+) {
   const base = snapshot(players);
   return snapshot(players, {
-    settings: { ...base.settings, narrator: true, roles: settingsWith(roles) },
+    settings: {
+      ...base.settings,
+      narrator: true,
+      roles: settingsWith(roles),
+      rules: { ...base.settings.rules, revealRoles },
+    },
   });
 }
 
 describe("план ночи", () => {
   it("зовёт только включённые роли и всегда мафию", () => {
     const s = game(cast(), { doctor: false, maniac: false });
-    expect(buildNightPlan(s.settings)).toEqual(["sleep", "mafia", "sheriff"]);
+    expect(buildNightPlan(s)).toEqual(["sleep", "mafia", "sheriff"]);
   });
 
   it("маньяк добавляется в конец", () => {
     const s = game(cast(), { maniac: true });
-    expect(buildNightPlan(s.settings)).toEqual([
+    expect(buildNightPlan(s)).toEqual([
       "sleep",
       "mafia",
       "doctor",
@@ -54,13 +68,44 @@ describe("план ночи", () => {
     ]);
   });
 
-  it("не зависит от того, кто жив: мёртвого доктора всё равно зовут", () => {
+  it("роли скрыты — мёртвого доктора зовут наравне с живым", () => {
+    // Иначе первая же ночь без доктора объявила бы столу, что доктора нет.
     const alive = game();
     const players = cast();
     players[3].alive = false; // доктор убит
     const dead = game(players);
-    expect(buildNightPlan(dead.settings)).toEqual(buildNightPlan(alive.settings));
-    expect(buildNightPlan(dead.settings)).toContain("doctor");
+    expect(buildNightPlan(dead)).toEqual(buildNightPlan(alive));
+    expect(buildNightPlan(dead)).toContain("doctor");
+  });
+
+  it("роли раскрываются — мёртвого доктора не зовут", () => {
+    // Стол увидел его роль ещё утром: скрывать нечего, тянуть пустое окно незачем.
+    const players = cast();
+    players[3].alive = false;
+    expect(buildNightPlan(game(players, {}, true))).not.toContain("doctor");
+  });
+
+  it("роли раскрываются — живого доктора зовут по-прежнему", () => {
+    expect(buildNightPlan(game(cast(), {}, true))).toContain("doctor");
+  });
+
+  it("мёртвый маньяк выпадает по тому же правилу", () => {
+    const players = [...cast(), player("man", "maniac")];
+    const roles = { maniac: true };
+    expect(buildNightPlan(game(players, roles, true))).toContain("maniac");
+    players[5].alive = false;
+    expect(buildNightPlan(game(players, roles, true))).not.toContain("maniac");
+  });
+
+  it("мафия остаётся в плане, даже если вся мертва", () => {
+    // Вымершая мафия означает, что партия уже кончилась; страховка от ночи
+    // из одного «город засыпает» дешевле разбора такого бага.
+    const players = cast();
+    players[0].alive = false;
+    players[1].alive = false;
+    const plan = buildNightPlan(game(players, {}, true));
+    expect(plan).toContain("mafia");
+    expect(plan[0]).toBe("sleep");
   });
 });
 

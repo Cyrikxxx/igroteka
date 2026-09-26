@@ -6,7 +6,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Volume2, VolumeX } from "lucide-react";
 import MafiaShell from "@/components/mafia/MafiaShell";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import RoleReveal from "@/components/mafia/RoleReveal";
@@ -22,6 +21,7 @@ import {
 } from "@/components/mafia/DayScreens";
 import FinaleScreen from "@/components/mafia/FinaleScreen";
 import GameMenu from "@/components/mafia/GameMenu";
+import { NarrationCaptionProvider } from "@/components/mafia/NarrationCaption";
 import {
   PauseOverlay,
   ReconnectOverlay,
@@ -34,6 +34,7 @@ import {
 import { useMafiaRoom } from "@/hooks/useMafiaRoom";
 import { useNarrator } from "@/hooks/useNarrator";
 import { useVoicePref } from "@/hooks/useVoicePref";
+import { useCaptionPref } from "@/hooks/useCaptionPref";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useHostClaim } from "@/hooks/useHostClaim";
 import { loadRoomCreds, clearRoomCreds, type RoomCredentials } from "@/lib/room-session";
@@ -111,6 +112,7 @@ export default function MafiaPlayPage() {
   // голос выбирается в лобби, в настройках хоста.
   const narratorMode = Boolean(view?.settings.narrator);
   const voice = useVoicePref(view?.you.isHost ?? false);
+  const captions = useCaptionPref();
   useNarrator({
     narration: view?.narration,
     enabled: narratorMode && voice.on,
@@ -204,6 +206,11 @@ export default function MafiaPlayPage() {
     onEndGame: () => setEndGameAsk(true),
     onClaimHost: claimHost,
     onLeave: () => setLeaveAsk(true),
+    narratorMode,
+    voiceOn: voice.on,
+    captionsOn: captions.on,
+    onToggleVoice: () => voice.toggle(),
+    onToggleCaptions: captions.toggle,
   };
   // Два варианта одного меню. В шапке фазы оно стоит в потоке, рядом с
   // таймером: накладка ложилась ровно на него — обе стороны держатся правого
@@ -374,61 +381,13 @@ export default function MafiaPlayPage() {
 
   return (
     <>
-      {screen()}
-
-      {narratorMode ? (
-        <button
-          type="button"
-          aria-label={voice.on ? "Выключить озвучку на этом устройстве" : "Озвучивать на этом устройстве"}
-          onClick={() => voice.toggle()}
-          style={{
-            position: "fixed",
-            right: 16,
-            bottom: 16,
-            zIndex: 70,
-            width: 44,
-            height: 44,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: voice.on ? "var(--mf-crimson)" : "var(--mf-surface-2)",
-            border: "1px solid var(--mf-border)",
-            color: voice.on ? "#fff" : "var(--mf-text-dim)",
-            cursor: "pointer",
-          }}
-        >
-          {voice.on ? <Volume2 size={19} /> : <VolumeX size={19} />}
-        </button>
-      ) : null}
-
-      {/* Реплика ведущего текстом: у части телефонов русского голоса нет, и
-          стол должен уметь играть, читая с экрана. */}
-      {narratorMode && view.narration ? (
-        <div
-          role="status"
-          style={{
-            position: "fixed",
-            left: 16,
-            right: 16,
-            bottom: 72,
-            zIndex: 65,
-            margin: "0 auto",
-            maxWidth: 420,
-            padding: "10px 14px",
-            borderRadius: 14,
-            textAlign: "center",
-            fontSize: 13.5,
-            fontWeight: 700,
-            lineHeight: 1.4,
-            color: "var(--mf-text-dim)",
-            background: "rgba(5,5,9,0.72)",
-            border: "1px solid var(--mf-border)",
-          }}
-        >
-          {view.narration.text}
-        </div>
-      ) : null}
+      {/* Текст реплики раздаётся экранам контекстом, а место в разметке каждый
+          выбирает сам — см. NarrationCaption. */}
+      <NarrationCaptionProvider
+        value={narratorMode && captions.on ? (view.narration ?? null) : null}
+      >
+        {screen()}
+      </NarrationCaptionProvider>
 
       {paused ? (
         <PauseOverlay

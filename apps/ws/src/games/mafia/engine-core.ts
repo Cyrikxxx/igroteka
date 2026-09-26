@@ -9,7 +9,6 @@ import {
   type MafiaSnapshot,
   type MafiaDeathCause,
   type MafiaEvent,
-  type MafiaSettings,
   type MafiaNightStepRole,
   SKIP_VOTE,
 } from "@igroteka/shared/mafia";
@@ -217,15 +216,25 @@ export function allNightActorsDone(s: MafiaSnapshot): boolean {
 // ─────────── Шаги ночи (режим ведущего) ───────────
 
 /**
- * Порядок ролей на ночь. Берётся ИЗ НАСТРОЕК, а не из живых: мёртвую роль
- * ведущий зовёт наравне с живой. Строй план по живым — и первая же ночь без
- * доктора объявила бы столу, что доктора больше нет.
+ * Порядок ролей на ночь. Состав зависит от того, раскрываются ли роли погибших.
+ *
+ * Роли СКРЫТЫ — мёртвую роль ведущий зовёт наравне с живой. Строй план по живым,
+ * и первая же ночь без доктора объявила бы столу, что доктора больше нет; пустое
+ * окно держит nightStepActMs, чтобы шаг не проскакивал мгновенно.
+ *
+ * Роли РАСКРЫВАЮТСЯ — стол увидел роль погибшего ещё утром, скрывать нечего, и
+ * тянуть ради этого пустое окно незачем: шаг пропускаем, ночь короче.
+ *
+ * Мафия в плане всегда: вымершая мафия означает, что партия уже кончилась, и
+ * страховка от ночи из одного «город засыпает» дешевле, чем разбор такого бага.
  */
-export function buildNightPlan(settings: MafiaSettings): MafiaNightStepRole[] {
+export function buildNightPlan(s: MafiaSnapshot): MafiaNightStepRole[] {
   const plan: MafiaNightStepRole[] = ["sleep", "mafia"];
-  if (settings.roles.doctor) plan.push("doctor");
-  if (settings.roles.sheriff) plan.push("sheriff");
-  if (settings.roles.maniac) plan.push("maniac");
+  const skip = (role: MafiaNightStepRole) =>
+    s.settings.rules.revealRoles && !nightStepHasActor(s, role);
+  if (s.settings.roles.doctor && !skip("doctor")) plan.push("doctor");
+  if (s.settings.roles.sheriff && !skip("sheriff")) plan.push("sheriff");
+  if (s.settings.roles.maniac && !skip("maniac")) plan.push("maniac");
   return plan;
 }
 

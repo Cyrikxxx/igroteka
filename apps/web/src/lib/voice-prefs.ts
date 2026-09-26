@@ -8,6 +8,7 @@
 
 const KEY = "alias.mafiaVoice";
 const VOICE_KEY = "alias.mafiaVoiceName";
+const CAPTION_KEY = "alias.mafiaCaptions";
 
 export type VoicePref = "on" | "off";
 
@@ -55,5 +56,30 @@ export function saveVoiceURI(uri: string): void {
     localStorage.setItem(VOICE_KEY, uri);
   } catch {
     // Приватный режим — переживём, вернётся голос по умолчанию.
+  }
+}
+
+/**
+ * Показывать ли реплики ведущего текстом. Тоже про устройство: за столом один
+ * читает с экрана, потому что голоса на его телефоне нет, а другому плашка
+ * мешает смотреть на игроков.
+ *
+ * По умолчанию включено — без неё стол без синтеза остался бы без ведущего.
+ */
+export function loadCaptionPref(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return localStorage.getItem(CAPTION_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+export function saveCaptionPref(on: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(CAPTION_KEY, on ? "on" : "off");
+  } catch {
+    // Приватный режим — переживём, вернутся субтитры по умолчанию.
   }
 }

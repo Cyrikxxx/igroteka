@@ -5,6 +5,10 @@
 // всё равно случается. Если он исчезнет, стол будет узнавать о смерти
 // доктора раньше, чем о ней объявят.
 //
+// Комната нарочно с revealRoles: false. Маскировка мёртвой роли нужна только
+// там, где роль погибшего скрыта: когда роли раскрываются, стол и так всё
+// знает с утра, и мёртвого доктора ночью законно не зовут.
+//
 // Запуск: `npm run smoke:narrator -w @igroteka/ws` при поднятом `npm run dev`.
 
 import "../src/env";
@@ -65,7 +69,9 @@ class Client {
           // Шаг ночи по нижней границе — иначе смок идёт минутами.
           timers: { nightStep: 8, discussion: 30, vote: 15, lastWord: 10 },
           // Первый день без голосования: нам нужна вторая ночь, а не суд.
-          rules: { firstDayNoVote: true },
+          // revealRoles: false — иначе мёртвого доктора не позовут и проверка
+          // маскировки ниже потеряет смысл.
+          rules: { firstDayNoVote: true, revealRoles: false },
         },
       }),
     });
@@ -222,6 +228,16 @@ async function main(): Promise<void> {
 
   // Лечит не себя: иначе мафия промахнётся и утро будет пустым.
   await actInTurn(doctor, "doctor", sheriff.id);
+
+  // ─── Сходившую роль ведущий провожает спать ───
+  // Фраза живёт в стадии gap, и сходивший уходит туда сразу после хода.
+  await waitFor(
+    "«доктор засыпает»",
+    () => host.said.some((t) => t.includes("Доктор засыпает")),
+    15000,
+  );
+  console.log("[sleep] ведущий проводил доктора спать");
+
   await actInTurn(sheriff, "sheriff", mafias[0].id);
 
   await waitPhase(host, "MORNING");

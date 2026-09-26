@@ -10,6 +10,7 @@ import MafiaAvatar from "./MafiaAvatar";
 import { RoleChip } from "./roleMeta";
 import PhaseHead from "./PhaseHead";
 import { EventFeed } from "./Chronicle";
+import NarrationCaption from "./NarrationCaption";
 
 const PHASE_LABEL: Record<string, string> = {
   NIGHT: "Ночь",
@@ -110,6 +111,7 @@ export default function SpectatorScreen({
           </div>
         ))}
       </div>
+      <NarrationCaption />
     </>
   );
 }

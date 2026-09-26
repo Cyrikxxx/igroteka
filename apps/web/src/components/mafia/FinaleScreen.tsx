@@ -9,6 +9,7 @@ import { fateText } from "@/lib/mafia-fate";
 import MafiaAvatar from "./MafiaAvatar";
 import { RoleChip } from "./roleMeta";
 import { Chronicle } from "./Chronicle";
+import NarrationCaption from "./NarrationCaption";
 
 const WIN_META: Record<MafiaWinner, { title: string; color: string; Icon: LucideIcon }> = {
   city: { title: "Победа города", color: "var(--alias-green)", Icon: Shield },
@@ -96,6 +97,7 @@ export default function FinaleScreen({
         ) : null}
       </div>
 
+      <NarrationCaption />
       <div style={{ padding: "14px 20px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
         {isHost ? (
           <button type="button" className="mf-btn mf-btn-crimson" style={{ width: "100%" }} onClick={onRematch}>

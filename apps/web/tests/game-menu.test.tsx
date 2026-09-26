@@ -22,6 +22,11 @@ const mafiaProps = {
   onEndGame: noop,
   onClaimHost: noop,
   onLeave: noop,
+  narratorMode: false,
+  voiceOn: false,
+  captionsOn: true,
+  onToggleVoice: noop,
+  onToggleCaptions: noop,
 };
 
 describe("меню партии", () => {
@@ -134,5 +139,42 @@ describe("меню в шапке фазы Мафии", () => {
     render(<MafiaGameMenu {...mafiaProps} />);
     expect(screen.getByLabelText("Меню игры").querySelector("svg")?.classList.toString())
       .toContain("lucide-menu");
+  });
+});
+
+// Озвучка и субтитры переехали сюда с экрана: круглая кнопка динамика висела
+// поверх игры и на части экранов ложилась на нижние кнопки.
+describe("озвучка и субтитры в меню", () => {
+  it("без режима ведущего их нет", () => {
+    render(<MafiaGameMenu {...mafiaProps} />);
+    fireEvent.click(screen.getByLabelText("Меню игры"));
+    expect(screen.queryByText("Озвучивать здесь")).toBeNull();
+    expect(screen.queryByText("Скрыть субтитры")).toBeNull();
+  });
+
+  it("с ведущим оба пункта на месте и зовут своё действие", () => {
+    const onToggleVoice = vi.fn();
+    const onToggleCaptions = vi.fn();
+    render(
+      <MafiaGameMenu
+        {...mafiaProps}
+        narratorMode
+        onToggleVoice={onToggleVoice}
+        onToggleCaptions={onToggleCaptions}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("Меню игры"));
+    fireEvent.click(screen.getByText("Озвучивать здесь"));
+    fireEvent.click(screen.getByLabelText("Меню игры"));
+    fireEvent.click(screen.getByText("Скрыть субтитры"));
+    expect(onToggleVoice).toHaveBeenCalledTimes(1);
+    expect(onToggleCaptions).toHaveBeenCalledTimes(1);
+  });
+
+  it("подписи отражают текущее состояние", () => {
+    render(<MafiaGameMenu {...mafiaProps} narratorMode voiceOn captionsOn={false} />);
+    fireEvent.click(screen.getByLabelText("Меню игры"));
+    expect(screen.getByText("Выключить озвучку")).toBeTruthy();
+    expect(screen.getByText("Показывать субтитры")).toBeTruthy();
   });
 });

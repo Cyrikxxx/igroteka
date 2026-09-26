@@ -37,13 +37,26 @@ const WINNER_WORD: Record<MafiaWinner, string> = {
   maniac: "маньяк",
 };
 
-/** Вызов роли ночью. Фразы «роль засыпает» нет: её заменяет вызов следующей. */
+/** Вызов роли ночью. Парная ей фраза засыпания — в STEP_SLEEP. */
 const STEP_CALL: Record<MafiaNightStepRole, string> = {
   sleep: "Город засыпает. Все закрывают глаза.",
   mafia: "Просыпается мафия. Мафия, выберите жертву.",
   doctor: "Просыпается доктор. Доктор, кого будешь лечить?",
   sheriff: "Просыпается шериф. Шериф, кого проверишь?",
   maniac: "Просыпается маньяк. Маньяк, выбери жертву.",
+};
+
+/**
+ * Роль закрывает глаза. Звучит в паузе после её хода — стадии gap.
+ *
+ * У общей команды «Город засыпает» пары нет: она никого не будила, и будить
+ * обратно некого. Тип это и фиксирует.
+ */
+const STEP_SLEEP: Record<Exclude<MafiaNightStepRole, "sleep">, string> = {
+  mafia: "Мафия засыпает.",
+  doctor: "Доктор засыпает.",
+  sheriff: "Шериф засыпает.",
+  maniac: "Маньяк засыпает.",
 };
 
 function plural(n: number, forms: [string, string, string]): string {
@@ -64,6 +77,54 @@ export function humanDuration(seconds: number): string {
     return `${m} ${plural(m, ["минута", "минуты", "минут"])}`;
   }
   return `${seconds} ${plural(seconds, ["секунда", "секунды", "секунд"])}`;
+}
+
+// ─────────── Сколько звучит реплика ───────────
+//
+// Фазу двигает таймер сервера, а произносит текст браузер игрока. Если фраза
+// длиннее окна фазы, следующая реплика обрывает её на полуслове: speak()
+// начинает с cancel(). Сервер сам сочиняет текст — он же и прикидывает, сколько
+// текст звучит, и не закрывает фазу раньше времени.
+//
+// Числа подбирались на слух на синтезе с rate 0.95 — калибровать здесь.
+
+/** Символов в секунду. */
+const SPEECH_CPS = 14;
+/** Пока голос раскачается. */
+const SPEECH_LEAD_MS = 400;
+/** Пауза на точке. */
+const SPEECH_SENTENCE_MS = 250;
+/** Тишина после последнего слова, чтобы фраза не упиралась в следующую. */
+const SPEECH_TAIL_MS = 500;
+/** Потолок: длиннее любой реплики, которую способен собрать narrationFor. */
+const SPEECH_MAX_MS = 20000;
+
+/**
+ * Сколько примерно звучит текст.
+ *
+ * Цифра весит один символ, а читается словом («45 секунд» — это «сорок пять
+ * секунд»), поэтому считается за четыре.
+ */
+export function speechMs(text: string): number {
+  const digits = text.match(/\d/g)?.length ?? 0;
+  const sentences = text.match(/[.!?]/g)?.length ?? 0;
+  const weighted = text.length + digits * 3;
+  const ms =
+    SPEECH_LEAD_MS + (weighted / SPEECH_CPS) * 1000 + sentences * SPEECH_SENTENCE_MS;
+  return Math.min(Math.round(ms), SPEECH_MAX_MS);
+}
+
+/**
+ * Пол длительности фазы: не короче базового окна и не короче реплики, которая
+ * в этой фазе звучит.
+ *
+ * Реплики нет — в том числе когда ведущий выключен вовсе, — и база возвращается
+ * как есть: партия без ведущего идёт ровно теми же таймерами, что и раньше.
+ */
+export function narrationMinMs(s: MafiaSnapshot, baseMs: number): number {
+  const narration = narrationFor(s);
+  if (!narration) return baseMs;
+  return Math.max(baseMs, speechMs(narration.text) + SPEECH_TAIL_MS);
 }
 
 /** «Максим», «Максим и Аня», «Максим, Аня и Игорь». */
@@ -133,10 +194,24 @@ export function narrationFor(s: MafiaSnapshot): MafiaNarration | undefined {
 
     case "NIGHT": {
       const step = s.night.step;
-      // Говорим только в момент вызова: в окне хода и в тишине после него
-      // ведущий молчит.
-      if (!step || step.stage !== "announce") return undefined;
-      return { key: key(step.index, step.role), text: STEP_CALL[step.role] };
+      if (!step) return undefined;
+      // Вызов роли и её засыпание — две реплики одного шага, и ключи у них
+      // обязаны различаться: клиент говорит по смене ключа, и на совпавшем
+      // вторая фраза была бы проглочена.
+      if (step.stage === "announce") {
+        return {
+          key: key(step.index, step.role, "call"),
+          text: STEP_CALL[step.role],
+        };
+      }
+      if (step.stage === "gap" && step.role !== "sleep") {
+        return {
+          key: key(step.index, step.role, "sleep"),
+          text: STEP_SLEEP[step.role],
+        };
+      }
+      // В окне хода ведущий молчит.
+      return undefined;
     }
 
     case "MORNING":

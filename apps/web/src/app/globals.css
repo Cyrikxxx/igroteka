@@ -1333,6 +1333,36 @@ html { scrollbar-color: var(--bg-4) transparent; }
     max-width: 560px;
     min-height: calc(100dvh / var(--mf-zoom));
   }
+
+  /* Реплика ведущего текстом.
+     Строка в потоке, а не накладка: футеры экранов бывают от нуля (у зрителей
+     список идёт до края) до ~224 px (раздача ролей с тремя кнопками), и любой
+     общий отступ у накладки где-нибудь да ложился на кнопки. Стоя перед
+     футером, плашка отнимает высоту у контента выше — тот везде на flex: 1, —
+     и кнопки остаются на месте.
+     pointer-events убраны на всякий случай: кликать в плашку незачем. */
+  .mf-caption {
+    align-self: center;
+    width: calc(100% - 32px);
+    max-width: 420px;
+    margin: 0 auto 12px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    text-align: center;
+    font-size: 13.5px;
+    font-weight: 700;
+    line-height: 1.4;
+    color: var(--mf-text-dim);
+    background: rgba(5, 5, 9, 0.72);
+    border: 1px solid var(--mf-border);
+    pointer-events: none;
+    opacity: 1;
+    /* Длительность продублирована в NarrationCaption.tsx: там по ней считают,
+       когда убирать плашку из разметки. Менять надо в обоих местах. */
+    transition: opacity 600ms ease;
+  }
+  /* Ведущий договорил — строка гаснет, не дожидаясь конца фазы. */
+  .mf-caption[data-faded] { opacity: 0; }
   /* Лобби, настройки и лендинг уже широкие и на большом экране смотрятся
      нормально — их не трогаем. */
   .mf-frame-wide { max-width: 920px; }

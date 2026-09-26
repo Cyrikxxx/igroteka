@@ -19,6 +19,7 @@ import {
   type MafiaNightStepRole,
   type MafiaNightAction,
 } from "@igroteka/shared/mafia";
+import { narrationMinMs } from "@igroteka/shared/mafia-narration";
 import {
   applyEnterNight,
   killPlayer,
@@ -40,6 +41,9 @@ import { persistFinishedGame } from "./services/persist";
 import { reopenRoom, closeRoom as closeRoomRecord } from "../../services/room-lifecycle";
 import type { MafiaNamespace } from "./io-types";
 
+// Базовые окна фаз без собственной настройки. Это именно ПОЛ: если реплика
+// ведущего длиннее, narrationMinMs растянет фазу под неё — иначе следующая
+// реплика обрывала бы недоговорённую (speak начинает с cancel).
 const MORNING_MS = 5000;
 const VOTE_RESULT_MS = 4500;
 
@@ -51,7 +55,7 @@ export async function enterNight(ns: MafiaNamespace, code: string): Promise<void
     if (s.settings.narrator) {
       // За одним столом ночь идёт по шагам: сначала общая команда закрыть
       // глаза, дальше роли по очереди.
-      s.night.plan = buildNightPlan(s.settings);
+      s.night.plan = buildNightPlan(s);
       s.night.step = { role: "sleep", stage: "announce", index: 0, actMs: 0 };
       s.timerEndsAt = Date.now() + NIGHT_SLEEP_MS;
     } else {
@@ -78,10 +82,15 @@ async function setNightStep(
   ns: MafiaNamespace,
   code: string,
   step: MafiaNightStep,
-  ms: number,
+  baseMs: number,
 ): Promise<void> {
+  // В окне хода (act) реплики нет, и окно остаётся ровно таким, каким его
+  // посчитал nightStepActMs: иначе случайная пауза мёртвой роли поплыла бы и
+  // перестала маскировать её смерть.
+  let ms = baseMs;
   const snap = await mutate(code, (s) => {
     s.night.step = step;
+    ms = narrationMinMs(s, baseMs);
     s.timerEndsAt = Date.now() + ms;
     s.timerPaused = false;
     s.timerRemainingMs = undefined;
@@ -167,14 +176,20 @@ export async function maybeEndNightStepEarly(
 }
 
 async function enterMorning(ns: MafiaNamespace, code: string): Promise<void> {
+  // Длину считаем ВНУТРИ mutate: итоги ночи уже записаны, значит текст реплики
+  // окончательный. Снаружи то же число уходит в таймер — если посчитать его
+  // отдельно, timerEndsAt разойдётся с таймером в памяти, и восстановление
+  // после рестарта ws начнёт врать.
+  let ms = MORNING_MS;
   const snap = await mutate(code, (s) => {
     s.phase = "MORNING";
-    s.timerEndsAt = Date.now() + MORNING_MS;
+    ms = narrationMinMs(s, MORNING_MS);
+    s.timerEndsAt = Date.now() + ms;
     s.timerPaused = false;
   });
   if (!snap) return;
   await broadcastStateNow(ns, code);
-  startTimer(ns, code, MORNING_MS, () => onTimeout(ns, code));
+  startTimer(ns, code, ms, () => onTimeout(ns, code));
 }
 
 /**
@@ -184,16 +199,18 @@ async function enterMorning(ns: MafiaNamespace, code: string): Promise<void> {
  * наступает (см. afterDiscussion).
  */
 async function enterDiscussion(ns: MafiaNamespace, code: string): Promise<void> {
+  let ms = 0;
   const snap = await mutate(code, (s) => {
     s.phase = "DISCUSSION";
-    s.timerEndsAt = Date.now() + s.settings.timers.discussion * 1000;
+    ms = narrationMinMs(s, s.settings.timers.discussion * 1000);
+    s.timerEndsAt = Date.now() + ms;
     s.timerPaused = false;
     // Голоса за пропуск — свои на каждое обсуждение.
     s.discussionSkips = [];
   });
   if (!snap) return;
   await broadcastStateNow(ns, code);
-  startTimer(ns, code, snap.settings.timers.discussion * 1000, () => onTimeout(ns, code));
+  startTimer(ns, code, ms, () => onTimeout(ns, code));
 }
 
 async function afterDiscussion(ns: MafiaNamespace, code: string): Promise<void> {
@@ -213,18 +230,21 @@ async function enterVote(
   round: 1 | 2,
   leaders: string[] | null,
 ): Promise<void> {
+  let ms = 0;
   const snap = await mutate(code, (s) => {
     s.phase = "VOTE";
     s.vote = { round, votes: {}, leaders: leaders ?? undefined };
-    s.timerEndsAt = Date.now() + s.settings.timers.vote * 1000;
+    ms = narrationMinMs(s, s.settings.timers.vote * 1000);
+    s.timerEndsAt = Date.now() + ms;
     s.timerPaused = false;
   });
   if (!snap) return;
   await broadcastStateNow(ns, code);
-  startTimer(ns, code, snap.settings.timers.vote * 1000, () => onTimeout(ns, code));
+  startTimer(ns, code, ms, () => onTimeout(ns, code));
 }
 
 async function tallyPhase(ns: MafiaNamespace, code: string): Promise<void> {
+  let ms = VOTE_RESULT_MS;
   const snap = await mutate(code, (s) => {
     const res = tallyVotes(s);
     s.vote.leaders = res.leaders;
@@ -234,12 +254,14 @@ async function tallyPhase(ns: MafiaNamespace, code: string): Promise<void> {
     if (res.tie) logEvent(s, { kind: "vote_tie" });
     if (res.skipped) logEvent(s, { kind: "vote_skip" });
     s.phase = "VOTE_RESULT";
-    s.timerEndsAt = Date.now() + VOTE_RESULT_MS;
+    // После присвоения итогов голосования: реплика называет выбывшего.
+    ms = narrationMinMs(s, VOTE_RESULT_MS);
+    s.timerEndsAt = Date.now() + ms;
     s.timerPaused = false;
   });
   if (!snap) return;
   await broadcastStateNow(ns, code);
-  startTimer(ns, code, VOTE_RESULT_MS, () => onTimeout(ns, code));
+  startTimer(ns, code, ms, () => onTimeout(ns, code));
 }
 
 async function afterVoteResult(ns: MafiaNamespace, code: string): Promise<void> {
@@ -262,15 +284,17 @@ async function afterVoteResult(ns: MafiaNamespace, code: string): Promise<void> 
 }
 
 async function enterLastWord(ns: MafiaNamespace, code: string): Promise<void> {
+  let ms = 0;
   const snap = await mutate(code, (s) => {
     s.phase = "LAST_WORD";
     s.pendingElim = s.vote.eliminated;
-    s.timerEndsAt = Date.now() + s.settings.timers.lastWord * 1000;
+    ms = narrationMinMs(s, s.settings.timers.lastWord * 1000);
+    s.timerEndsAt = Date.now() + ms;
     s.timerPaused = false;
   });
   if (!snap) return;
   await broadcastStateNow(ns, code);
-  startTimer(ns, code, snap.settings.timers.lastWord * 1000, () => onTimeout(ns, code));
+  startTimer(ns, code, ms, () => onTimeout(ns, code));
 }
 
 export async function afterLastWord(ns: MafiaNamespace, code: string): Promise<void> {
@@ -439,13 +463,16 @@ export async function resumePhase(
     current.phase === "NIGHT" &&
     Boolean(current.settings.narrator) &&
     Boolean(current.night.step);
-  const remaining = recall ? NIGHT_ANNOUNCE_MS : (current.timerRemainingMs ?? 0);
+  let remaining = recall ? NIGHT_ANNOUNCE_MS : (current.timerRemainingMs ?? 0);
   const snap = await mutate(code, (s) => {
     s.timerPaused = false;
     s.timerRemainingMs = undefined;
-    s.timerEndsAt = Date.now() + remaining;
     s.narrationEpoch = (s.narrationEpoch ?? 0) + 1;
     if (recall && s.night.step) s.night.step = { ...s.night.step, stage: "announce" };
+    // После отката стадии: реплику зачитывают заново целиком, и окно должно
+    // вместить её, а не остаток прежнего.
+    if (recall) remaining = narrationMinMs(s, NIGHT_ANNOUNCE_MS);
+    s.timerEndsAt = Date.now() + remaining;
   });
   if (!snap) return false;
   await broadcastStateNow(ns, code);

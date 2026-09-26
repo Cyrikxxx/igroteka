@@ -5,6 +5,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import NarrationCaption from "./NarrationCaption";
 
 export default function Announce({
   icon: Icon,
@@ -74,6 +75,7 @@ export default function Announce({
         </div>
         {children}
       </div>
+      <NarrationCaption />
       {footer ? <div style={{ padding: "0 20px 24px" }}>{footer}</div> : null}
     </>
   );
