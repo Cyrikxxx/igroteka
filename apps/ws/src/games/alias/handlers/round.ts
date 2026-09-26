@@ -24,6 +24,7 @@ import {
   nextExplainerFor,
 } from "@igroteka/shared/snapshot-builders";
 import { mutate, load, save } from "../snapshot";
+import { broadcastStateNow } from "../broadcast";
 import { prisma } from "../../../prisma";
 import {
   fetchWordsBatch,
@@ -68,10 +69,6 @@ async function findExplainerSocket(
   const sockets = await ns.in(`room:${code}`).fetchSockets();
   const found = sockets.find((s) => s.data.userId === userId);
   return (found as unknown as AppSocket) ?? null;
-}
-
-function broadcastState(ns: AppNamespace, code: string, snap: RoomSnapshot) {
-  ns.to(`room:${code}`).emit("room:state", snap);
 }
 
 function broadcastPhase(
@@ -266,7 +263,7 @@ async function enterRoundActive(
   });
   if (!updated) return;
 
-  broadcastState(ns, code, updated);
+  await broadcastStateNow(ns, code, updated);
   broadcastPhase(ns, code, updated, roundState.durationMs);
 
   // Приватный emit первого слова
@@ -429,7 +426,7 @@ export async function pauseIfExplainerDropped(
   const snap = await mutate(code, (s) => {
     if (s.timer) s.timer.paused = true;
   });
-  if (snap) broadcastState(ns, code, snap);
+  if (snap) await broadcastStateNow(ns, code, snap);
 }
 
 // ─── round:end (досрочный завершить раунд) ────────────────────────────────
@@ -489,7 +486,7 @@ async function finishRound(
   });
   if (!updated) return;
 
-  broadcastState(ns, code, updated);
+  await broadcastStateNow(ns, code, updated);
   broadcastPhase(ns, code, updated);
 
   ns.to(`room:${code}`).emit("round:review", {
@@ -557,14 +554,11 @@ async function handleReviewConfirm(
   const dbTeamId = snap.teamIdMap[rs.teamId];
   if (!dbTeamId) return { error: "team_id_not_mapped" };
 
-  // Передавать ход некому: следующий объясняющий не в сети. Раунд не
-  // фиксируем и остаёмся на итогах — иначе ход ушёл бы человеку, который его
-  // не увидит, и партия встала бы без объясняющего. Клиент блокирует кнопку
-  // тем же правилом; здесь — на случай, если его обойдут.
-  const next = nextExplainerFor(snap);
-  if (next && !next.player.online) {
-    return { error: "next_explainer_offline" };
-  }
+  // Ход можно передать и тому, кого сейчас нет в сети. Раньше здесь стоял
+  // отказ: время пошло бы у отсутствующего и сгорело впустую. Теперь раунд
+  // начинается по нажатию, поэтому ход просто подождёт на экране «Начать»,
+  // пока человек вернётся, — а за столом телефоны блокируют экран постоянно,
+  // и прежний отказ читался как «кнопка передачи хода пропала».
 
   // Готовим данные для финализации
   const snapTeam = snap.teams.find((t) => t.id === rs.teamId);
@@ -651,7 +645,7 @@ async function handleReviewConfirm(
     gameId: snap.gameId,
   });
 
-  broadcastState(ns, code, committed);
+  await broadcastStateNow(ns, code, committed);
   broadcastPhase(ns, code, committed);
 
   if (result.gameFinished) {
@@ -693,7 +687,7 @@ async function endGame(
     s.scoreboard = null;
   });
   if (snap) {
-    broadcastState(ns, code, snap);
+    await broadcastStateNow(ns, code, snap);
     broadcastPhase(ns, code, snap);
   }
   await closeRoom(code);
@@ -724,7 +718,7 @@ export function registerRoundHandlers(
     ack?.(res);
     if ("ok" in res) {
       const snap = await load(socket.data.roomCode);
-      if (snap) broadcastState(ns, socket.data.roomCode, snap);
+      if (snap) await broadcastStateNow(ns, socket.data.roomCode, snap);
     }
   });
   socket.on("round:resume", async (_payload, ack) => {
@@ -732,7 +726,7 @@ export function registerRoundHandlers(
     ack?.(res);
     if ("ok" in res) {
       const snap = await load(socket.data.roomCode);
-      if (snap) broadcastState(ns, socket.data.roomCode, snap);
+      if (snap) await broadcastStateNow(ns, socket.data.roomCode, snap);
     }
   });
   socket.on("round:end", async (_payload, ack) => {

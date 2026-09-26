@@ -134,6 +134,28 @@ export default function PlayPage() {
     };
   }, [finishedGameId]);
 
+  // Итоги раунда приходят отдельным событием, и оно может потеряться — например
+  // уйти ровно в момент переподключения телефона. Экран без них работает
+  // (кнопка передачи хода на месте), но список слов пустой, поэтому вежливо
+  // перезапрашиваем: room:hello идемпотентен и на сервере дёргает досылку
+  // итогов. Три попытки с растущей паузой — чтобы не устроить шторм.
+  const reviewRetryRef = useRef(0);
+  const inReview = snapshot?.phase === "ROUND_REVIEW";
+  useEffect(() => {
+    if (!inReview) {
+      reviewRetryRef.current = 0;
+      return;
+    }
+    if (review) return;
+    const attempt = reviewRetryRef.current;
+    if (attempt >= 3) return;
+    const id = window.setTimeout(() => {
+      reviewRetryRef.current = attempt + 1;
+      emit("room:hello", {}, () => {});
+    }, 1500 * (attempt + 1));
+    return () => window.clearTimeout(id);
+  }, [inReview, review, emit]);
+
   const prevPausedRef = useRef(false);
   useEffect(() => {
     const prev = prevPausedRef.current;
@@ -199,9 +221,7 @@ export default function PlayPage() {
     emit("round:review_confirm", {}, (resp: unknown) => {
       if (resp && typeof resp === "object" && "error" in (resp as Record<string, unknown>)) {
         setActionError(
-          (resp as { error: string }).error === "next_explainer_offline"
-            ? "Следующий объясняющий не в сети — ход передать некому."
-            : `Не удалось передать ход: ${(resp as { error: string }).error}`,
+          `Не удалось передать ход: ${(resp as { error: string }).error}`,
         );
       }
     });
@@ -630,6 +650,11 @@ export default function PlayPage() {
             isExplainer={isExplainer}
             nextExplainerOffline={nextExplainerOffline}
             nextExplainerName={nextUp?.player.displayName ?? "Следующий игрок"}
+            fallbackCounts={
+              snapshot.scoreboard
+                ? { got: snapshot.scoreboard.got, skip: snapshot.scoreboard.skip }
+                : null
+            }
           />
         </AppShell>
         {modals}
@@ -784,7 +809,9 @@ function GameTop({
 }
 
 // ─── Round review ───
-function ReviewView({
+// Экспортируется ради теста: экран обязан показывать кнопку передачи хода
+// даже без пришедших итогов.
+export function ReviewView({
   role,
   trio,
   pairName,
@@ -795,6 +822,7 @@ function ReviewView({
   isExplainer,
   nextExplainerOffline,
   nextExplainerName,
+  fallbackCounts,
 }: {
   role: Role;
   trio: boolean;
@@ -805,19 +833,22 @@ function ReviewView({
   onToggle: (wordId: number) => void;
   onConfirm: () => void;
   isExplainer: boolean;
-  /** Следующий объясняющий не в сети — ход передавать некому. */
+  /** Следующий объясняющий не в сети. Ход передать можно — он подождёт. */
   nextExplainerOffline: boolean;
   nextExplainerName: string;
+  /**
+   * Счёт из снимка комнаты — на случай, если разбор слов ещё не доехал.
+   * Экран целиком на нём висеть не должен: раньше без него вместо кнопки
+   * показывалось «Подсчитываем итоги…», и ход становилось нечем передать.
+   */
+  fallbackCounts: { got: number; skip: number } | null;
 }) {
-  if (!review) {
-    return (
-      <p className="muted" style={{ textAlign: "center" }}>
-        Подсчитываем итоги…
-      </p>
-    );
-  }
-  const guessedCount = review.words.filter((w) => w.guessed).length;
-  const skipped = review.words.filter((w) => !w.guessed).length;
+  const guessedCount = review
+    ? review.words.filter((w) => w.guessed).length
+    : (fallbackCounts?.got ?? 0);
+  const skipped = review
+    ? review.words.filter((w) => !w.guessed).length
+    : (fallbackCounts?.skip ?? 0);
   const score = guessedCount - (penaltySkip ? skipped : 0);
 
   return (
@@ -829,7 +860,9 @@ function ReviewView({
         </h1>
         <p className="h-sub">
           {isExplainer
-            ? "Тапни слово, чтобы переключить «угадано / пропуск», если где-то ошиблись."
+            ? review
+              ? "Тапни слово, чтобы переключить «угадано / пропуск», если где-то ошиблись."
+              : "Подтягиваем слова раунда — подтвердить ход можно уже сейчас."
             : trio
               ? `Итоги подтверждает объясняющий (ты — ${role === "guesser" ? "угадывал" : "наблюдатель"}).`
               : `Команда подтверждает итоги (ты — ${role === "guesser" ? "в команде" : "наблюдатель"}).`}
@@ -858,19 +891,21 @@ function ReviewView({
 
         {isExplainer ? (
           <>
-            {/* Передать ход тому, кого нет в сети, нельзя: он его не увидит,
-                и партия встала бы без объясняющего. Ждём его возвращения. */}
+            {/* Кнопка доступна всегда. Раньше она гасла, когда следующий
+                игрок был не в сети, — а телефоны за столом блокируют экран
+                постоянно, и для человека это выглядело как «кнопка пропала».
+                Ход теперь начинается по нажатию, так что спящий телефон
+                просто подождёт на экране «Начать», ничего не сгорит. */}
             <button
               type="button"
               className="btn btn-primary btn-lg btn-block"
-              disabled={nextExplainerOffline}
               onClick={onConfirm}
             >
               Подтвердить · передать ход
             </button>
             {nextExplainerOffline && (
               <p className="muted" style={{ fontSize: 13, marginTop: 10, color: "var(--warn)" }}>
-                {nextExplainerName} не в сети — ход передать пока нельзя. Ждём, когда
+                {nextExplainerName} не в сети. Ход перейдёт к нему и подождёт, пока он
                 вернётся.
               </p>
             )}
@@ -885,10 +920,17 @@ function ReviewView({
       <div className="card summary-words">
         <div className="row-between" style={{ marginBottom: 14 }}>
           <h2 className="h-title">Слова раунда</h2>
-          <span className="pill pill-mono">{pluralize(review.words.length, WORDS)}</span>
+          <span className="pill pill-mono">
+            {review ? pluralize(review.words.length, WORDS) : "…"}
+          </span>
         </div>
         <div className="words-list">
-          {review.words.map((w) => (
+          {!review ? (
+            <p className="muted" style={{ fontSize: 13 }}>
+              Подтягиваем слова раунда…
+            </p>
+          ) : null}
+          {(review?.words ?? []).map((w) => (
             <div
               key={w.wordId}
               className={"word-row " + (w.guessed ? "got" : "skip")}

@@ -37,7 +37,11 @@ import {
   maybeRehydrateReview,
   pauseIfExplainerDropped,
 } from "./round";
-import { scheduleStateBroadcast, broadcastStateNow } from "../broadcast";
+import {
+  scheduleStateBroadcast,
+  snapshotForClient,
+  forgetRoomBroadcast,
+} from "../broadcast";
 
 /**
  * Права хоста проверяем по снапшоту, а не по роли из WS-токена. Токен
@@ -109,7 +113,9 @@ export function registerLobbyHandlers(
       ack?.({ error: "room_not_found" });
       return;
     }
-    ack?.(snap);
+    // С живым временем: в снимке лежит остаток на момент записи, и вернувшийся
+    // получал бы полную длительность — таймер у него застывал бы до первого тика.
+    ack?.(await snapshotForClient(roomCode, snap));
     await broadcastState(ns, roomCode, snap);
     // Реконнект explainer'а — пере-эмитим текущее слово приватно.
     await maybeRehydrateExplainer(socket);
@@ -422,6 +428,7 @@ export function registerLobbyHandlers(
 
     ack?.({ ok: true });
     await remove(roomCode);
+    forgetRoomBroadcast(roomCode);
     await closeRoom(roomCode);
     const sockets = await ns.in(`room:${roomCode}`).fetchSockets();
     for (const sock of sockets) {
@@ -562,6 +569,7 @@ export function registerLobbyHandlers(
     // а код пусть освобождается сразу, не через таймер пустой комнаты.
     if (everyoneIn(snap).length === 0) {
       await remove(roomCode);
+    forgetRoomBroadcast(roomCode);
       await closeRoom(roomCode);
       return;
     }

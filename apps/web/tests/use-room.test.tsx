@@ -136,3 +136,74 @@ describe("useRoom", () => {
     expect(result.current.status).toBe("closed");
   });
 });
+
+// Из-за этой гонки за столом пропадала кнопка «Подтвердить · передать ход».
+// Дебаунсенная рассылка на сервере читает снимок из Redis, а отправляет уже
+// после — и в промежуток успевает лечь новая фаза. Снимок «из прошлого»
+// прилетал вдогонку и стирал уже пришедшие итоги раунда; следующего снимка
+// можно было ждать до чьего-нибудь переподключения.
+describe("устаревшие снимки", () => {
+  const REVIEW = {
+    teamId: 1,
+    words: [{ wordId: 1, text: "маяк", guessed: true, order: 1 }],
+    scorePreview: 1,
+  };
+
+  it("снимок со старой ревизией не применяется", () => {
+    const { result } = mount(snapshot({ rev: 5, currentRoundNumber: 5 }));
+    act(() => {
+      sock.server("room:state", snapshot({ rev: 4, currentRoundNumber: 4 }));
+    });
+    expect(result.current.snapshot?.currentRoundNumber).toBe(5);
+  });
+
+  it("снимок с новой ревизией применяется", () => {
+    const { result } = mount(snapshot({ rev: 5, currentRoundNumber: 5 }));
+    act(() => {
+      sock.server("room:state", snapshot({ rev: 6, currentRoundNumber: 6 }));
+    });
+    expect(result.current.snapshot?.currentRoundNumber).toBe(6);
+  });
+
+  it("опоздавший снимок с прежней фазой не гасит итоги раунда", () => {
+    const { result } = mount(snapshot({ rev: 1 }));
+    act(() => {
+      sock.server("round:phase", { phase: "ROUND_REVIEW" });
+      sock.server("round:review", REVIEW);
+    });
+    expect(result.current.review).not.toBeNull();
+
+    act(() => {
+      // Ревизия НОВЕЕ — снимок применяется, фильтр его не отсекает. Проверяем
+      // именно второй замок: итоги гасит переход фазы, а не содержимое снимка.
+      sock.server("room:state", snapshot({ rev: 2, phase: "ROUND_ACTIVE" }));
+    });
+    expect(result.current.snapshot?.phase).toBe("ROUND_ACTIVE");
+    expect(result.current.review).not.toBeNull();
+  });
+
+  it("итоги гасит переход фазы, а не снимок", () => {
+    const { result } = mount(snapshot({ rev: 1 }));
+    act(() => {
+      sock.server("round:phase", { phase: "ROUND_REVIEW" });
+      sock.server("round:review", REVIEW);
+    });
+    expect(result.current.review).not.toBeNull();
+
+    act(() => {
+      sock.server("round:phase", { phase: "PRE_ROUND" });
+    });
+    expect(result.current.review).toBeNull();
+  });
+
+  it("у комнат без ревизии снимки проходят как раньше", () => {
+    // Комнаты, созданные до появления поля, лежат в Redis без него — если бы
+    // фильтр их отбрасывал, первый же живой стол после выката перестал бы
+    // получать состояние вовсе.
+    const { result } = mount(snapshot({ currentRoundNumber: 1 }));
+    act(() => {
+      sock.server("room:state", snapshot({ currentRoundNumber: 2 }));
+    });
+    expect(result.current.snapshot?.currentRoundNumber).toBe(2);
+  });
+});

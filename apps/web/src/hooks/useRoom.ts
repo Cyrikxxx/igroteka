@@ -74,6 +74,11 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
   const [review, setReview] = useState<RoundReviewPayload | null>(null);
   const [lastCommitted, setLastCommitted] = useState<RoundCommittedPayload | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  // Ревизия последнего применённого снимка. Дебаунсенная рассылка на сервере
+  // читает снимок до смены фазы, а отправляет после, и снимок «из прошлого»
+  // приходит уже вдогонку — применив его, экран откатывался назад и, в
+  // частности, терял кнопку передачи хода.
+  const revRef = useRef<number | null>(null);
 
   const emit = useCallback<EmitFn>((event, payload, ack) => {
     socketRef.current?.emit(event, payload, ack);
@@ -83,6 +88,22 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
     if (!opts) return;
     const sock = connectToRoom(opts);
     socketRef.current = sock;
+
+    /**
+     * Не старее ли пришедший снимок уже применённого.
+     *
+     * Проверка трёхсоставная нарочно: у комнат, созданных до появления поля,
+     * ревизии нет, и их снимки обязаны проходить — иначе первый же живой стол
+     * после выката перестал бы получать состояние вовсе.
+     */
+    const isFresh = (s: RoomSnapshot): boolean => {
+      const rev = s.rev;
+      if (typeof rev !== "number") return true;
+      const last = revRef.current;
+      if (typeof last === "number" && rev <= last) return false;
+      revRef.current = rev;
+      return true;
+    };
 
     const onConnect = () => {
       setStatus("connected");
@@ -97,24 +118,28 @@ export function useRoom(opts: UseRoomOptions | null): UseRoomResult {
           return;
         }
         const snap = resp as RoomSnapshot;
+        // Ответ на hello — такой же возможный опоздавший, как и room:state:
+        // пока он шёл, состояние могло уйти вперёд.
+        if (!isFresh(snap)) return;
         setSnapshot(snap);
-        // При входе в комнату с активным раундом — синхронизируем таймер из snapshot
+        // Время в ack живое — сервер подставляет остаток из RoundState.
         if (snap.timer) setTick({ msLeft: snap.timer.msLeft, paused: snap.timer.paused });
       });
     };
     const onState = (s: RoomSnapshot) => {
+      if (!isFresh(s)) return;
       setSnapshot(s);
-      // При смене фазы чистим review/word, если ушли из соответствующих стейтов
-      if (s.phase !== "ROUND_REVIEW") setReview(null);
-      if (s.phase !== "ROUND_ACTIVE") {
-        // оставляем currentWord на короткий момент перехода
-        if (s.phase === "BETWEEN_ROUNDS" || s.phase === "PRE_ROUND") {
-          setCurrentWord(null);
-        }
-      }
       if (!s.timer) setTick(null);
     };
+    // Итоги раунда и текущее слово гасим ЗДЕСЬ, а не по снимку. round:phase —
+    // событие перехода: оно приходит ровно один раз и не несёт состояния,
+    // поэтому протухшим не бывает. Раньше это делал onState, и опоздавший
+    // снимок со старой фазой стирал уже пришедшие итоги — стол оставался на
+    // «Подсчитываем итоги…» без кнопки, и следующего снимка можно было ждать
+    // до чьего-нибудь переподключения.
     const onPhase = (p: RoundPhasePayload) => {
+      if (p.phase !== "ROUND_REVIEW") setReview(null);
+      if (p.phase === "PRE_ROUND" || p.phase === "BETWEEN_ROUNDS") setCurrentWord(null);
       if (p.phase === "ROUND_ACTIVE") {
         setWordCount({ got: 0, skip: 0 });
         if (p.durationMs) setTick({ msLeft: p.durationMs, paused: false });
