@@ -26,7 +26,7 @@ import {
   MAX_TEAMS,
   MAX_PLAYERS_PER_TEAM,
   TRIO_TEAMS,
-  ROUND_TIME_OPTIONS,
+  ROUND_TIME_LIMITS,
   WIN_SCORE_OPTIONS,
 } from "@igroteka/shared/constants";
 import {
@@ -56,8 +56,9 @@ interface RuleSet {
 const ALIAS_MIN_PLAYERS = TRIO_TEAMS;
 const ALIAS_MAX_PLAYERS = MAX_TEAMS * MAX_PLAYERS_PER_TEAM;
 
-const ROUND_MIN = ROUND_TIME_OPTIONS[0];
-const ROUND_MAX = ROUND_TIME_OPTIONS[ROUND_TIME_OPTIONS.length - 1];
+// Границы, а не крайние пресеты: время раунда можно задать и своё.
+const ROUND_MIN = ROUND_TIME_LIMITS.min;
+const ROUND_MAX = ROUND_TIME_LIMITS.max;
 const SCORE_MIN = WIN_SCORE_OPTIONS[0];
 const SCORE_MAX = WIN_SCORE_OPTIONS[WIN_SCORE_OPTIONS.length - 1];
 

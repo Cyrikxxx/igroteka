@@ -15,6 +15,7 @@ import { primeSpeech, speak, VOICE_SAMPLE } from "@/lib/narrator";
 import { loadVoiceURI, saveVoiceURI } from "@/lib/voice-prefs";
 import { useVoices } from "@/hooks/useVoices";
 import { useHydrated } from "@/hooks/useHydrated";
+import { usePresetNumber } from "@/hooks/usePresetNumber";
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -141,21 +142,13 @@ function TimerRow({
   onChange: (v: number) => void;
   limits: { min: number; max: number };
 }) {
-  // Значение не из списка — значит его уже задали руками, и поле должно быть
-  // открыто сразу.
-  const [manual, setManual] = useState(() => !options.some((o) => o.v === value));
-  // Пока человек печатает, держим строку как есть: клампить на каждой букве
-  // нельзя — набирая «120», после первой цифры получишь минимум.
-  const [draft, setDraft] = useState<string | null>(null);
-
-  const commit = () => {
-    const raw = draft;
-    setDraft(null);
-    if (raw === null) return;
-    const n = Number(raw.replace(",", "."));
-    if (!Number.isFinite(n) || n <= 0) return;
-    onChange(Math.max(limits.min, Math.min(limits.max, Math.round(n))));
-  };
+  // Механика «пресеты плюс своё» общая с Алиасом — см. usePresetNumber.
+  const field = usePresetNumber({
+    value,
+    presets: options.map((o) => o.v),
+    onChange,
+    clamp: (n) => Math.max(limits.min, Math.min(limits.max, Math.round(n))),
+  });
 
   return (
     <div
@@ -173,17 +166,13 @@ function TimerRow({
           <button
             key={o.v}
             type="button"
-            className={"mf-preset" + (!manual && value === o.v ? " on" : "")}
-            onClick={() => {
-              setManual(false);
-              setDraft(null);
-              onChange(o.v);
-            }}
+            className={"mf-preset" + (field.isPicked(o.v) ? " on" : "")}
+            onClick={() => field.pickPreset(o.v)}
           >
             {o.label}
           </button>
         ))}
-        {manual ? (
+        {field.manual ? (
           <input
             className="mf-num"
             type="number"
@@ -191,27 +180,20 @@ function TimerRow({
             min={limits.min}
             max={limits.max}
             aria-label={`${label}: своё время в секундах`}
-            value={draft ?? String(value)}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commit}
+            value={field.inputValue}
+            onChange={(e) => field.setDraft(e.target.value)}
+            onBlur={field.commit}
             onKeyDown={(e) => {
               if (e.key === "Enter") e.currentTarget.blur();
             }}
           />
         ) : (
-          <button
-            type="button"
-            className="mf-preset"
-            onClick={() => {
-              setManual(true);
-              setDraft(null);
-            }}
-          >
+          <button type="button" className="mf-preset" onClick={field.openManual}>
             Своё
           </button>
         )}
       </div>
-      {manual ? (
+      {field.manual ? (
         <div className="mf-setting-sub">
           Секунды, от {limits.min} до {limits.max}. Сейчас — {fmtTime(value)}.
         </div>

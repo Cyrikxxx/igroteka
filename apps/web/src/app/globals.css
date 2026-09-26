@@ -530,6 +530,19 @@ html { scrollbar-color: var(--bg-4) transparent; }
   }
   .chip:hover { border-color: var(--line-strong); }
   .chip.on { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+  /* Поле для своего значения — в той же оправе, что и чипсы рядом, иначе оно
+     читается как чужеродный элемент формы. Стрелки-спиннеры убраны: на них
+     невозможно попасть пальцем, а ширину поля они съедают. */
+  .chip-num {
+    width: 96px;
+    font-family: var(--font-mono);
+    border-color: var(--accent);
+    outline: none;
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .chip-num::-webkit-outer-spin-button,
+  .chip-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
   /* ============================================================
      Team card
@@ -951,6 +964,8 @@ html { scrollbar-color: var(--bg-4) transparent; }
   .set-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
   .set-label { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: clamp(15px, 1vw, 18px); flex-wrap: wrap; }
   .set-label svg { width: 19px; height: 19px; color: var(--accent); }
+  /* Пояснение под строкой настройки: границы своего значения и что выбрано. */
+  .set-sub { margin-top: 8px; font-size: 13px; color: var(--fg-2); }
   .set-hint { width: 100%; color: var(--fg-3); font-weight: 500; font-size: 12.5px; font-family: var(--font-mono); padding-left: 29px; }
   .summary-card .summary-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 14px; }
   .summary-stats > div { display: flex; flex-direction: column; gap: 3px; }

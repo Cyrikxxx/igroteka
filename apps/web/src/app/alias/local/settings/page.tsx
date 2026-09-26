@@ -14,10 +14,11 @@ import {
   DEFAULT_LOCAL_SETUP,
   type LocalSetupState,
 } from "@/lib/local-setup";
-import { ROUND_TIME_OPTIONS, WIN_SCORE_OPTIONS } from "@/constants/game";
+import { WIN_SCORE_OPTIONS } from "@/constants/game";
 import { pluralize, WORDS, CATEGORIES } from "@/lib/plural";
 import type { CatalogFromAPI, GameFromAPI } from "@/types";
 import AppShell from "@/components/common/AppShell";
+import RoundTimeField from "@/components/alias/RoundTimeField";
 import { useHydrated } from "@/hooks/useHydrated";
 import Stepper from "@/components/common/Stepper";
 import Chip from "@/components/common/Chip";
@@ -120,13 +121,7 @@ export default function LocalSettingsPage() {
               <div className="set-label">
                 <Clock /> Длительность раунда
               </div>
-              <div className="chip-row">
-                {ROUND_TIME_OPTIONS.map((v) => (
-                  <Chip key={v} active={state.settings.roundTime === v} onClick={() => setRoundTime(v)}>
-                    {v} сек
-                  </Chip>
-                ))}
-              </div>
+              <RoundTimeField value={state.settings.roundTime} onChange={setRoundTime} />
             </div>
             <div className="dotted" style={{ margin: "20px 0" }} />
             <div className="set-row">
