@@ -1285,7 +1285,13 @@ html { scrollbar-color: var(--bg-4) transparent; }
     .game-counts--big { gap: 12px; width: 100%; }
     .game-counts--big .gc { flex: 1; padding: 14px 10px; font-size: clamp(24px, 8vw, 34px); }
     .game-actions { gap: 10px; }
-    .summary-words { max-height: none; }
+    /* Список слов прокручивается внутри карточки и на телефоне тоже.
+       Раньше здесь стояло max-height: none — ограничение снималось, полсотни
+       слов разворачивались во всю длину, и кнопка «Подтвердить · передать ход»
+       уезжала на тысячи пикселей вверх. На десктопе её было видно, на телефоне
+       до неё нужно было догадаться домотать обратно, и ход вставал.
+       dvh, а не vh: у мобильных браузеров адресная строка съедает высоту. */
+    .summary-words { max-height: min(46dvh, 420px); }
     .steps { gap: 8px; }
     .step-sep { width: 16px; }
   }
