@@ -169,6 +169,8 @@ export function VoteScreen({
   const round2 = vote?.round === 2;
   const candidates = vote?.leaders ?? [];
   const tally = vote?.tally;
+  // Кто за кого — приходит только при включённой настройке «голоса видны».
+  const voters = vote?.voters;
   const max = tally ? Math.max(0, ...Object.values(tally)) : 0;
   const skipVotes = tally?.[SKIP_VOTE] ?? 0;
   // Своих мафия видит и днём: ночью подпись есть, а днём её не было, хотя
@@ -239,7 +241,13 @@ export function VoteScreen({
                 ) : undefined
               }
               subline={
-                mates.has(p.userId) ? (
+                // Имена важнее пометки «напарник»: её мафия и так знает, а
+                // расклад голосов меняется каждую секунду и нужен всем.
+                voters?.[p.userId]?.length ? (
+                  <span className="mf-vote-voters" title={voters[p.userId].join(", ")}>
+                    {voters[p.userId].join(", ")}
+                  </span>
+                ) : mates.has(p.userId) ? (
                   <span style={{ color: "var(--mf-crimson)" }}>напарник</span>
                 ) : undefined
               }

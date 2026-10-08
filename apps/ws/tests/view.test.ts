@@ -232,3 +232,32 @@ describe("пропуск обсуждения", () => {
     expect(buildView(snapshot(cast()), "civ").discussionSkip).toBeUndefined();
   });
 });
+
+// Настройка называется «голоса видны при голосовании», но до сих пор
+// отдавала одни цифры: по ним нельзя было ни спросить «почему ты за меня»,
+// ни поймать мафию на дружном голосовании.
+describe("кто за кого голосует", () => {
+  const voting = (openVotes: boolean) => {
+    const players = cast();
+    const base = snapshot(players);
+    return snapshot(players, {
+      phase: "VOTE",
+      settings: { ...base.settings, rules: { ...base.settings.rules, openVotes } },
+      vote: { round: 1, votes: { maf: "civ", doc: "civ", sh: "maf" } },
+    });
+  };
+
+  it("при включённой настройке приходят имена, а не только счёт", () => {
+    const view = buildView(voting(true), "civ");
+    expect(view.vote?.tally?.civ).toBe(2);
+    expect(view.vote?.voters?.civ).toHaveLength(2);
+    expect(view.vote?.voters?.maf).toEqual(["sh"]);
+  });
+
+  it("при выключенной имён нет вовсе", () => {
+    const view = buildView(voting(false), "civ");
+    expect(view.vote?.voters).toBeUndefined();
+    // И сериализация их не протаскивает окольным путём.
+    expect(JSON.stringify(view)).not.toContain("voters");
+  });
+});

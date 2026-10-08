@@ -127,20 +127,31 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
       seeAll ||
       snap.phase === "VOTE_RESULT" ||
       snap.phase === "LAST_WORD";
+    // Имена голосующих — только при явно включённой настройке. В VOTE_RESULT
+    // счёт показывается всем, но раскрывать там ещё и поимённый расклад
+    // значило бы обойти выключенный тумблер окольным путём.
+    const showVoters = snap.settings.rules.openVotes || seeAll;
     let tally: Record<string, number> | undefined;
+    let voters: Record<string, string[]> | undefined;
     if (showTally) {
       tally = {};
-      for (const target of Object.values(snap.vote.votes)) {
+      if (showVoters) voters = {};
+      for (const [voterId, target] of Object.entries(snap.vote.votes)) {
         // Скип считается наравне с игроками и попадает в tally под своим
         // ключом: на кнопке «никого не изгонять» видно, сколько за неё.
         if (target === SKIP_VOTE && !snap.settings.rules.allowSkipVote) continue;
         tally[target] = (tally[target] ?? 0) + 1;
+        if (voters) {
+          const name = snap.players.find((p) => p.userId === voterId)?.displayName;
+          if (name) voters[target] = [...(voters[target] ?? []), name];
+        }
       }
     }
     vote = {
       round: snap.vote.round,
       skipped: snap.vote.skipped,
       tally,
+      voters,
       totalVoters: aliveIds.length,
       votedCount: Object.keys(snap.vote.votes).length,
       leaders: snap.vote.leaders,

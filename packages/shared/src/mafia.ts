@@ -552,6 +552,13 @@ export interface MafiaVoteView {
   skipped?: boolean;
   /** targetId -> кол-во голосов. Заполнено, если openVotes или ты зритель/мёртв. */
   tally?: Record<string, number>;
+  /**
+   * targetId -> имена тех, кто за него голосует. Заполнено только при
+   * openVotes (и у тех, кому и так видно всё): настройка называется
+   * «голоса видны», а до сих пор отдавались одни цифры — по ним нельзя было
+   * ни спросить «почему ты за меня», ни поймать мафию на дружном голосовании.
+   */
+  voters?: Record<string, string[]>;
   totalVoters: number;
   votedCount: number;
   leaders?: string[];

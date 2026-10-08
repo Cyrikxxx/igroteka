@@ -1540,6 +1540,17 @@ html { scrollbar-color: var(--bg-4) transparent; }
     font-size: 11.5px; font-weight: 700; line-height: 1;
   }
   .mf-player-offline { color: var(--mf-text-faint); }
+  /* Имена голосующих. Строка одна и той же высоты, что и прочие подписи, —
+     иначе карточки прыгали бы на каждый чужой голос. Длинный список
+     обрезаем: кто именно, видно по первым, а точное число — на счётчике. */
+  .mf-vote-voters {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--mf-text-dim);
+    font-weight: 600;
+  }
 
   /* Плашки по углам: слева мой выбор, справа чужие голоса. */
   .mf-card-badge { position: absolute; top: -9px; }
