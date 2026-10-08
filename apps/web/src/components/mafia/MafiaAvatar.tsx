@@ -1,4 +1,13 @@
 // Аватар-кружок с первой буквой имени. Палитра по индексу (из дизайна Мафии).
+//
+// Два независимых признака, и путать их нельзя:
+//
+//   • жив ли человек — цвет самого кружка; погибший серый;
+//   • есть ли связь — точка в углу, серая когда человек не в сети.
+//
+// Раньше оффлайн тоже гасил весь кружок, и живой с моргнувшим Wi-Fi выглядел
+// ровно как убитый. А у погибшего точка не рисовалась вовсе — по мёртвому
+// нельзя было понять, сидит он ещё за столом или закрыл вкладку.
 
 const AVATAR_COLORS = [
   "#7f5af0",
@@ -23,7 +32,7 @@ export default function MafiaAvatar({
   idx?: number;
   size?: number;
   dead?: boolean;
-  /** Не в сети: аватар гаснет, в углу серая точка. */
+  /** Не в сети: в углу серая точка. Сам кружок при этом не гаснет. */
   offline?: boolean;
 }) {
   const bg = AVATAR_COLORS[idx % AVATAR_COLORS.length];
@@ -35,8 +44,8 @@ export default function MafiaAvatar({
         width: size,
         height: size,
         borderRadius: "50%",
-        background: dead ? "#2a2a33" : offline ? "#3a3b45" : bg,
-        color: dead || offline ? "#8b8c98" : "rgba(255,255,255,0.92)",
+        background: dead ? "#2a2a33" : bg,
+        color: dead ? "#8b8c98" : "rgba(255,255,255,0.92)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -47,9 +56,9 @@ export default function MafiaAvatar({
       }}
     >
       {(name?.[0] ?? "?").toUpperCase()}
-      {/* Метка «не в сети» — только у живых: у погибшего свои приметы, и две
-          пометки на одном кружке читаются как одна ошибка. */}
-      {offline && !dead ? (
+      {/* Точка связи. Рисуется и у погибшего: стол должен видеть, кто ещё
+          здесь, а кто ушёл, — от этого зависит, ждать его или заканчивать. */}
+      {offline ? (
         <span
           aria-hidden="true"
           style={{
