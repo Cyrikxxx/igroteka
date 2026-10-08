@@ -171,7 +171,11 @@ export const DEFAULT_MAFIA_SETTINGS: MafiaSettings = {
   timers: { night: 60, discussion: 120, vote: 45, lastWord: 30, nightStep: 20 },
   rules: {
     allowSkipVote: true,
-    revealRoles: true,
+    // Выключено: классическая партия роль погибшего не называет — иначе из
+    // первой же смерти стол узнаёт, был ли шериф в живых, и дальше считает
+    // расклад на бумажке вместо того, чтобы слушать друг друга. Кому так
+    // привычнее — включают осознанно.
+    revealRoles: false,
     openVotes: true,
     donHiddenFromSheriff: false,
     spectatorsSeeRoles: true,

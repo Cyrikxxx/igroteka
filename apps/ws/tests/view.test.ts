@@ -62,7 +62,10 @@ describe("роли погибших", () => {
   it("при revealRoles=true роль убитого видна", () => {
     const players = cast();
     players[0].alive = false;
+    const base = snapshot(players);
     const s = snapshot(players, {
+      // Явно: по умолчанию роли погибших теперь скрыты.
+      settings: { ...base.settings, rules: { ...base.settings.rules, revealRoles: true } },
       deaths: [
         { userId: "maf", displayName: "maf", role: "mafia", day: 1, by: "vote" },
       ],

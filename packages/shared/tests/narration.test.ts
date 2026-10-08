@@ -222,6 +222,8 @@ describe("длина реплики", () => {
 
   it("длинное утро растягивает фазу заметно дальше базы", () => {
     const s = snap({ phase: "MORNING", day: 2 });
+    // Роли в реплике — самая длинная её часть, а по умолчанию они скрыты.
+    s.settings.rules.revealRoles = true;
     s.deaths = [
       { day: 2, userId: "Аня", displayName: "Аня", role: "mafia", by: "mafia" },
       { day: 2, userId: "Игорь", displayName: "Игорь", role: "civilian", by: "maniac" },
