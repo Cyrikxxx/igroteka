@@ -23,6 +23,24 @@ import PlayerCard, { PlayerGrid, ChoiceChip } from "./PlayerCard";
 import { SheriffConfirm, SheriffVerdict } from "./SheriffCheck";
 import NarrationCaption from "./NarrationCaption";
 
+/**
+ * Кнопка «Подтвердить» под сеткой.
+ *
+ * Второй шаг после тапа по игроку. Раньше ход засчитывался сразу, и это
+ * стоило трёх неприятностей: случайное касание становилось ходом; передумать
+ * было нельзя; а шериф, ходивший последним, не успевал прочитать результат
+ * проверки — ночь обрывалась ровно в момент его тапа.
+ */
+function ConfirmBar({ label, onConfirm }: { label: string; onConfirm: () => void }) {
+  return (
+    <div style={{ padding: "6px 20px 14px" }}>
+      <button type="button" className="mf-btn mf-btn-crimson" onClick={onConfirm}>
+        <Check size={17} /> {label}
+      </button>
+    </div>
+  );
+}
+
 function StatusBar({
   icon: Icon,
   color,
@@ -117,10 +135,13 @@ export function NightHush({ day }: { day: number }) {
 export default function NightScreen({
   view,
   onAction,
+  onConfirm,
   menu,
 }: {
   view: MafiaView;
   onAction: (action: MafiaNightAction, targetId: string | null) => void;
+  /** Зафиксировать выбор. Без ведущего ночь ждёт подтверждения каждого. */
+  onConfirm: () => void;
   /** Служебное меню партии: стоит в шапке фазы, рядом с таймером. */
   menu?: ReactNode;
 }) {
@@ -140,10 +161,23 @@ export default function NightScreen({
   // такой ход всё равно отклонит.
   const night = view.night;
   const locked = Boolean(night && night.stage !== "act");
+
+  // Без ведущего выбор надо зафиксировать: тап только намечает цель.
+  // С ведущим шага нет — там темп задаёт он, и подтверждать нечего.
+  const confirmed = you.nightConfirmed === true;
+  const needsConfirm = !night && acted && !confirmed;
+  const progress = you.nightConfirmProgress;
+
   const hint = (prompt: string): string => {
     if (night?.stage === "announce") return "Слушай ведущего…";
     if (night?.stage === "gap") return "Ход принят. Закрывай глаза";
-    if (acted) return night ? "Ход принят" : "Ход принят. Ждём остальных…";
+    if (night) return acted ? "Ход принят" : prompt;
+    if (confirmed) {
+      return progress && progress.done < progress.total
+        ? `Ход принят. Ждём остальных — ${progress.done} из ${progress.total}`
+        : "Ход принят. Ждём остальных…";
+    }
+    if (acted) return "Нажми «Подтвердить», чтобы зафиксировать";
     return prompt;
   };
 
@@ -261,6 +295,7 @@ export default function NightScreen({
             );
           })}
         </PlayerGrid>
+        {needsConfirm ? <ConfirmBar label="Подтвердить жертву" onConfirm={onConfirm} /> : null}
         <NarrationCaption />
         <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--mf-crimson)" : undefined}>
           {hint("Тапни по игроку, чтобы проголосовать")}
@@ -309,6 +344,7 @@ export default function NightScreen({
             );
           })}
         </PlayerGrid>
+        {needsConfirm ? <ConfirmBar label="Подтвердить лечение" onConfirm={onConfirm} /> : null}
         <NarrationCaption />
         <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--role-doctor)" : undefined}>
           {hint("Тапни по игроку, чтобы вылечить")}
@@ -386,7 +422,14 @@ export default function NightScreen({
           <SheriffVerdict
             name={targetName}
             isMafia={Boolean(verdict)}
-            onClose={() => setVerdictClosed(target)}
+            onClose={() => {
+              setVerdictClosed(target);
+              // Закрыл вердикт — значит прочитал. Это и есть подтверждение
+              // хода шерифа: до него ночь не закончится, даже если он
+              // сходил последним. Раньше она обрывалась на его тапе, и
+              // результат проверки он так и не видел.
+              if (!night) onConfirm();
+            }}
           />
         ) : null}
       </>
@@ -424,6 +467,7 @@ export default function NightScreen({
           );
         })}
       </PlayerGrid>
+      {needsConfirm ? <ConfirmBar label="Подтвердить жертву" onConfirm={onConfirm} /> : null}
       <NarrationCaption />
       <StatusBar icon={acted ? Check : MousePointerClick} color={acted ? "var(--role-maniac)" : undefined}>
         {hint("Тапни по игроку")}

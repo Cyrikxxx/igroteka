@@ -2,7 +2,7 @@
 // фазами хостом. Валидация роли/цели/фазы — здесь; переходы — в engine.
 
 import { mutate, load } from "../snapshot";
-import { logEvent } from "../engine-core";
+import { logEvent, nightActors } from "../engine-core";
 import { SKIP_VOTE } from "@igroteka/shared/mafia";
 import { scheduleStateBroadcast } from "../broadcast";
 import { clearTimer } from "../services/scheduler";
@@ -101,12 +101,53 @@ export function registerMafiaGameHandlers(
       } else if (action === "maniac") {
         s.night.maniacTarget = targetId ?? undefined;
       }
+      // Передумал — подтверждение снимается: иначе можно было бы зафиксировать
+      // одну цель, а потом молча переставить на другую уже «подтверждённым».
+      s.night.acted = s.night.acted.filter((id) => id !== userId);
     });
     if (!snap) return ack?.({ error: "room_not_found" });
     ack?.({ ok: true });
     scheduleStateBroadcast(ns, code);
     if (snap.settings.narrator) await maybeEndNightStepEarly(ns, code, action);
     else await maybeResolveNightEarly(ns, code);
+  });
+
+  // ─── Подтверждение ночного выбора ───
+  //
+  // Второй шаг после тапа по игроку. Нужен ради трёх вещей: случайное
+  // касание не становится ходом; шериф, сходивший последним, успевает
+  // прочитать результат проверки до утра; передумать можно до самого
+  // подтверждения. В режиме ведущего шага нет — там темп задаёт он.
+  socket.on("mafia:night_confirm", async (_payload, ack) => {
+    const snap0 = await load(code);
+    if (!snap0) return ack?.({ error: "room_not_found" });
+    if (snap0.phase !== "NIGHT") return ack?.({ error: "not_night" });
+    if (snap0.timerPaused) return ack?.({ error: "paused" });
+    if (snap0.settings.narrator) return ack?.({ error: "narrator_mode" });
+
+    const me = snap0.players.find((p) => p.userId === userId);
+    if (!me || !me.alive) return ack?.({ error: "not_active" });
+    if (!nightActors(snap0).includes(userId)) return ack?.({ error: "wrong_role" });
+
+    // Подтверждать нечего, пока цель не выбрана. Пропустить ход можно —
+    // просто не подтверждая: по таймеру пустой выбор так и останется пустым.
+    const hasTarget =
+      me.role === "mafia" || me.role === "don"
+        ? Boolean(snap0.night.mafiaVotes[userId])
+        : me.role === "doctor"
+          ? Boolean(snap0.night.doctorTarget)
+          : me.role === "sheriff"
+            ? Boolean(snap0.night.sheriffTarget)
+            : Boolean(snap0.night.maniacTarget);
+    if (!hasTarget) return ack?.({ error: "no_target" });
+
+    const snap = await mutate(code, (s) => {
+      if (!s.night.acted.includes(userId)) s.night.acted.push(userId);
+    });
+    if (!snap) return ack?.({ error: "room_not_found" });
+    ack?.({ ok: true });
+    scheduleStateBroadcast(ns, code);
+    await maybeResolveNightEarly(ns, code);
   });
 
   // ─── Дневной голос ───

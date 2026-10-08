@@ -315,6 +315,7 @@ export default function MafiaPlayPage() {
             onAction={(action, targetId) =>
               emit("mafia:night_action", { action, targetId }, () => {})
             }
+            onConfirm={() => emit("mafia:night_confirm", {}, () => {})}
           />
         </MafiaShell>
       );

@@ -15,6 +15,7 @@ import type {
 } from "@igroteka/shared/mafia";
 import { roleTeam, SKIP_VOTE } from "@igroteka/shared/mafia";
 import { narrationFor } from "@igroteka/shared/mafia-narration";
+import { nightActors } from "./engine-core";
 
 function findSelf(
   snap: MafiaSnapshot,
@@ -110,6 +111,19 @@ export function buildView(snap: MafiaSnapshot, userId: string): MafiaView {
     you.sheriffResults = snap.night.sheriffResults;
   } else if (myRole === "maniac") {
     you.nightTarget = snap.night.maniacTarget;
+  }
+
+  // Подтверждение хода. Прогресс («двое из трёх») видят все ночные роли:
+  // без него непонятно, ждать ли ещё кого-то или это ты один не нажал.
+  if (snap.phase === "NIGHT" && !snap.settings.narrator) {
+    const actors = nightActors(snap);
+    if (actors.includes(userId)) {
+      you.nightConfirmed = snap.night.acted.includes(userId);
+      you.nightConfirmProgress = {
+        done: actors.filter((id) => snap.night.acted.includes(id)).length,
+        total: actors.length,
+      };
+    }
   }
 
   if (snap.vote.votes[userId]) you.voted = snap.vote.votes[userId];

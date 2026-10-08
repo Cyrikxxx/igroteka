@@ -6,6 +6,7 @@ import {
   decideMafiaTarget,
   tallyVotes,
   allNightActorsDone,
+  nightActors,
   allVoted,
   applyEnterNight,
   overrunSurvivors,
@@ -258,15 +259,20 @@ describe("tallyVotes", () => {
 });
 
 describe("готовность фазы", () => {
-  it("ночь не резолвится, пока не сходили все роли", () => {
+  it("ночь не резолвится, пока не подтвердили все роли", () => {
     const s = snapshot([
       player("maf", "mafia"),
       player("doc", "doctor"),
       player("civ", "civilian"),
     ]);
+    // Выставленной цели мало: тап её только намечает.
     s.night.mafiaVotes = { maf: "civ" };
-    expect(allNightActorsDone(s)).toBe(false);
     s.night.doctorTarget = "civ";
+    expect(allNightActorsDone(s)).toBe(false);
+
+    s.night.acted = ["maf"];
+    expect(allNightActorsDone(s)).toBe(false);
+    s.night.acted = ["maf", "doc"];
     expect(allNightActorsDone(s)).toBe(true);
   });
 
@@ -277,6 +283,28 @@ describe("готовность фазы", () => {
       player("civ", "civilian"),
     ]);
     s.night.mafiaVotes = { maf: "civ" };
+    s.night.acted = ["maf"];
+    expect(allNightActorsDone(s)).toBe(true);
+  });
+
+  it("мирных ночью не ждут вовсе", () => {
+    const s = snapshot([player("maf", "mafia"), player("civ", "civilian")]);
+    expect(nightActors(s)).toEqual(["maf"]);
+  });
+
+  it("шериф досматривает проверку: ночь ждёт его подтверждения", () => {
+    // Он ходит последним чаще прочих, и раньше ночь обрывалась ровно на его
+    // тапе — результат проверки он так и не видел.
+    const s = snapshot([
+      player("maf", "mafia"),
+      player("sh", "sheriff"),
+      player("civ", "civilian"),
+    ]);
+    s.night.mafiaVotes = { maf: "civ" };
+    s.night.sheriffTarget = "maf";
+    s.night.acted = ["maf"];
+    expect(allNightActorsDone(s)).toBe(false);
+    s.night.acted = ["maf", "sh"];
     expect(allNightActorsDone(s)).toBe(true);
   });
 

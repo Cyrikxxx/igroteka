@@ -196,21 +196,33 @@ export function tallyVotes(s: MafiaSnapshot): TallyResult {
   return { leaders, eliminated: winner, skipped: false, tie: false };
 }
 
-/** Все ли, кто ходит ночью, уже сходили — можно ли резолвить раньше таймера. */
+/** Живые игроки, от которых этой ночью ждут хода. */
+export function nightActors(s: MafiaSnapshot): string[] {
+  return s.players
+    .filter(
+      (p) =>
+        p.alive &&
+        (p.role === "mafia" ||
+          p.role === "don" ||
+          p.role === "doctor" ||
+          p.role === "sheriff" ||
+          p.role === "maniac"),
+    )
+    .map((p) => p.userId);
+}
+
+/**
+ * Все ли ночные роли подтвердили ход — можно ли резолвить раньше таймера.
+ *
+ * Считаем именно подтверждения, а не выставленные цели. Раньше ночь
+ * обрывалась, как только последний ткнул в игрока: шериф, ходивший
+ * последним, не успевал увидеть результат проверки, а случайное касание
+ * мгновенно становилось ходом. По таймеру цели по-прежнему засчитываются
+ * любые, подтверждённые или нет, — см. resolveNight.
+ */
 export function allNightActorsDone(s: MafiaSnapshot): boolean {
-  for (const p of s.players) {
-    if (!p.alive) continue;
-    if (p.role === "mafia" || p.role === "don") {
-      if (!s.night.mafiaVotes[p.userId]) return false;
-    } else if (p.role === "doctor") {
-      if (!s.night.doctorTarget) return false;
-    } else if (p.role === "sheriff") {
-      if (!s.night.sheriffTarget) return false;
-    } else if (p.role === "maniac") {
-      if (!s.night.maniacTarget) return false;
-    }
-  }
-  return true;
+  const confirmed = new Set(s.night.acted);
+  return nightActors(s).every((id) => confirmed.has(id));
 }
 
 // ─────────── Шаги ночи (режим ведущего) ───────────

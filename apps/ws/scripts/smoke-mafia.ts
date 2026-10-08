@@ -201,8 +201,12 @@ async function main(): Promise<void> {
   const victim = clients.find((c) => c.role === "civilian");
   if (!victim) throw new Error("в раскладе нет мирного — проверь состав");
 
+  // Тап только намечает цель; ночь ждёт подтверждения каждой роли. Без
+  // ведущего это отдельное событие — иначе случайное касание становилось
+  // ходом, а шериф, сходивший последним, не успевал прочитать проверку.
   for (const m of mafias) {
     await m.emit("mafia:night_action", { action: "mafia", targetId: victimId(victim) });
+    await m.emit("mafia:night_confirm", {});
   }
   if (sheriff) {
     const target = mafias[0];
@@ -217,11 +221,14 @@ async function main(): Promise<void> {
     if (second?.error !== "already_checked") {
       throw new Error(`вторая проверка шерифа прошла: ${JSON.stringify(second)}`);
     }
+    // У шерифа подтверждение означает «вердикт прочитан».
+    await sheriff.emit("mafia:night_confirm", {});
   }
   if (doctor) {
     // Лечим не жертву — иначе ночь пройдёт без смертей и утро будет пустым.
     const self = victimId(doctor);
     await doctor.emit("mafia:night_action", { action: "doctor", targetId: self });
+    await doctor.emit("mafia:night_confirm", {});
   }
 
   await waitPhase(host, "MORNING");

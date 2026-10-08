@@ -164,7 +164,12 @@ class Bot {
       const pool =
         action === "mafia" ? others.filter((p) => !allies.has(p.userId)) : others;
       const target = pick(pool);
-      if (target) this.sock.emit("mafia:night_action", { action, targetId: target.userId }, this.report("ход"));
+      if (target) {
+        this.sock.emit("mafia:night_action", { action, targetId: target.userId }, this.report("ход"));
+        // Без ведущего ночь ждёт подтверждения: бот, который только тапнул,
+        // держал бы стол до конца таймера каждую ночь.
+        this.sock.emit("mafia:night_confirm", {}, this.report("подтверждение"));
+      }
       return;
     }
 

@@ -39,6 +39,14 @@ export interface MafiaClientToServerEvents {
     payload: { action: MafiaNightAction; targetId: string | null },
     ack?: Ack<OkErr>,
   ) => void;
+  /**
+   * Зафиксировать ночной выбор. До этого цель только намечена: её видят
+   * напарники, её можно поменять, и случайный тап ничего не решает. Ночь
+   * кончается досрочно, когда подтвердили все живые роли.
+   *
+   * В режиме ведущего не принимается: там темп задаёт он.
+   */
+  "mafia:night_confirm": (payload: Record<string, never>, ack?: Ack<OkErr>) => void;
   "mafia:vote": (payload: { targetId: string | null }, ack?: Ack<OkErr>) => void;
   /**
    * «Пропустить обсуждение» — переключатель, доступный каждому живому.

@@ -162,6 +162,8 @@ async function mafiaKills(all: Client[]): Promise<string> {
   );
   if (!victim) throw new Error("некого убивать");
   await mafia.emit("mafia:night_action", { action: "mafia", targetId: victim.userId });
+  // Ход фиксируется отдельным событием: тап только намечает цель.
+  await mafia.emit("mafia:night_confirm", {});
   return victim.displayName;
 }
 
