@@ -10,6 +10,8 @@ import {
   describeComposition,
   MAFIA_TIMER_LIMITS,
   type MafiaSettings,
+  maxMafiaFor,
+  MAFIA_COUNT_MAX,
 } from "@igroteka/shared/mafia";
 import { primeSpeech, speak, VOICE_SAMPLE } from "@/lib/narrator";
 import { loadVoiceURI, saveVoiceURI } from "@/lib/voice-prefs";
@@ -319,14 +321,28 @@ export default function MafiaSettingsForm({
   playerCount: number;
 }) {
   const s = value;
-  const setRole = (k: keyof MafiaSettings["roles"]) => (v: boolean) =>
-    onChange({ ...s, roles: { ...s.roles, [k]: v } });
+  // Включили ещё одну особую роль — мирных осталось меньше, и потолок мафий
+  // опустился. Подрезаем тут же, иначе счётчик продолжал бы показывать число,
+  // которого в партии уже не будет.
+  const setRole = (k: keyof MafiaSettings["roles"]) => (v: boolean) => {
+    const roles = { ...s.roles, [k]: v };
+    const cap = Math.min(MAFIA_COUNT_MAX, maxMafiaFor(playerCount, roles));
+    const mafiaCount =
+      typeof s.mafiaCount === "number" ? Math.min(s.mafiaCount, cap) : s.mafiaCount;
+    onChange({ ...s, roles, mafiaCount });
+  };
   const setRule = (k: keyof MafiaSettings["rules"]) => (v: boolean) =>
     onChange({ ...s, rules: { ...s.rules, [k]: v } });
   const setTimer = (k: keyof MafiaSettings["timers"]) => (v: number) =>
     onChange({ ...s, timers: { ...s.timers, [k]: v } });
 
   const manual = typeof s.mafiaCount === "number";
+  // Потолок считает та же функция, что и движок при раздаче ролей. Раньше
+  // счётчик крутился до восьми при любом составе: на пятерых можно было
+  // выставить шесть мафий, форма это показывала, а в партии всё равно
+  // выдавалось столько, сколько влезает, — и обещание не сходилось с игрой.
+  const maxMafia = Math.min(MAFIA_COUNT_MAX, maxMafiaFor(playerCount, s.roles));
+  const mafiaNow = manual ? Math.min(s.mafiaCount as number, maxMafia) : 0;
   const seg = (active: boolean): React.CSSProperties => ({
     flex: 1,
     padding: "9px 0",
@@ -407,22 +423,20 @@ export default function MafiaSettingsForm({
                 type="button"
                 className="mf-btn mf-btn-surface"
                 style={{ width: 34, height: 34, minHeight: 34, padding: 0, borderRadius: 9 }}
-                onClick={() =>
-                  onChange({ ...s, mafiaCount: Math.max(1, (s.mafiaCount as number) - 1) })
-                }
+                disabled={mafiaNow <= 1}
+                onClick={() => onChange({ ...s, mafiaCount: Math.max(1, mafiaNow - 1) })}
               >
                 <Minus size={16} />
               </button>
               <span className="mf-mono" style={{ minWidth: 18, textAlign: "center", fontWeight: 700 }}>
-                {s.mafiaCount as number}
+                {mafiaNow}
               </span>
               <button
                 type="button"
                 className="mf-btn mf-btn-surface"
                 style={{ width: 34, height: 34, minHeight: 34, padding: 0, borderRadius: 9 }}
-                onClick={() =>
-                  onChange({ ...s, mafiaCount: Math.min(8, (s.mafiaCount as number) + 1) })
-                }
+                disabled={mafiaNow >= maxMafia}
+                onClick={() => onChange({ ...s, mafiaCount: Math.min(maxMafia, mafiaNow + 1) })}
               >
                 <Plus size={16} />
               </button>

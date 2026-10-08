@@ -206,7 +206,7 @@ export function normalizeMafiaSettings(
 
   if (x.mafiaCount === "auto") out.mafiaCount = "auto";
   else if (typeof x.mafiaCount === "number")
-    out.mafiaCount = Math.max(1, Math.min(8, Math.round(x.mafiaCount)));
+    out.mafiaCount = Math.max(1, Math.min(MAFIA_COUNT_MAX, Math.round(x.mafiaCount)));
 
   if (typeof x.narrator === "boolean") out.narrator = x.narrator;
 
@@ -257,6 +257,25 @@ export interface MafiaComposition {
  * минимум 1. Дон — одна из мафий, если включён и мафий ≥2. Спец-роли по
  * тогглам. Остаток — мирные (минимум 1 гарантирован клампом).
  */
+/**
+ * Потолок числа мафий при этом составе и этих ролях.
+ *
+ * Хотя бы один мирный должен остаться, иначе играть не во что: город
+ * проигрывает в первую же ночь. Формула одна на движок и на форму настроек —
+ * разойдись они, форма обещала бы состав, которого в партии не будет.
+ */
+/** Выше этого ручной счётчик мафий не поднимается ни при каком составе. */
+export const MAFIA_COUNT_MAX = 8;
+
+export function maxMafiaFor(
+  players: number,
+  roles: MafiaSettings["roles"],
+): number {
+  const specials =
+    (roles.sheriff ? 1 : 0) + (roles.doctor ? 1 : 0) + (roles.maniac ? 1 : 0);
+  return Math.max(1, Math.floor(players) - specials - 1);
+}
+
 export function computeComposition(
   n: number,
   settings: MafiaSettings,
@@ -272,8 +291,7 @@ export function computeComposition(
     (settings.roles.doctor ? 1 : 0) +
     (settings.roles.maniac ? 1 : 0);
 
-  // Хотя бы один мирный должен остаться: мафий не больше n - specials - 1.
-  const mafiaTotal = Math.max(1, Math.min(wantMafia, players - specials - 1));
+  const mafiaTotal = Math.min(wantMafia, maxMafiaFor(players, settings.roles));
   const don = settings.roles.don && mafiaTotal >= 2 ? 1 : 0;
 
   const sheriff = settings.roles.sheriff ? 1 : 0;
